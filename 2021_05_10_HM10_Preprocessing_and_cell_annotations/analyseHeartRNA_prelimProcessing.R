@@ -1,5 +1,4 @@
 
-
 readHeartCDS <- function(pathToBBIdirs){
 	# List of samples to read in. Note that W137 failed in this prep, so I'm reading in all 14 others
 	samplesToRead <- c("W134.Apex", "W135.Left.Vent", "W136.Apex", "W136.Left.Vent",
@@ -21,7 +20,7 @@ getQCParams = function(){
 	qcParams["useMitoCutoff"] = TRUE
 	qcParams["mitoCutoff"] = 10.0
 	# Background Correction Options
-	qcParams["usePackerBGcorrection"] = TRUE
+	qcParams["usePackerBGcorrection"] = FALSE
 	qcParams["useSouopX"] = FALSE
 	qcParams["soupX_assumption"] = .2
 	qcParams["useMNN"] = TRUE
@@ -113,11 +112,91 @@ colData(cellCDS)$new_scrub_score = newScrubResults$New_Scrub_Score
 cellCDS = getCorrectedCDS(cellCDS, fullCDS, qcParams)
 processingNote = addPostScrubletProcNote(processingNote, qcParams)
 
-# Make some QC plots
+# First, need to re-find size factors after discarding so many low-quality "nuclei"/"cells"
+set.seed(7)
+cellCDS <- monocle3::estimate_size_factors(cellCDS)
+cellCDS <- preprocess_cds(cellCDS)
+
+# Use MNN?
+set.seed(7)
+if (qcParams[["useMNN"]] ){
+	cellCDS <- align_cds(cellCDS, alignment_group = qcParams[["mnnCategory"]])
+	processingNote = paste0(processingNote, "MNN=", qcParams[["mnnCategory"]])
+} else{
+	processingNote = paste0(processingNote, "MNN=none" )
+}
 cellCDS <- reduce_dimension(cellCDS)
+
 # QC of the remaining cells
 makeQCplots(cellCDS[,colData(cellCDS)$n.umi > 99], processingNote=processingNote, makeUMAP=TRUE,
 	genesToShow = c("GSN", "LDB2", "KCNAB1", "RBPJ", "TTN", "THEMIS"), geneSetName="MiscHeartMarkers")
+
+plotUMAP_Monocle(cellCDS, processingNote, "sampleName", 
+	outputPath=paste0("./plots/QC_", processingNote, "/"), show_labels=FALSE)
+
+##################################################################################################################################################################
+
+handleClustering = function(inputCDS, processingNote, inputKval){
+	inputCDS = cluster_cells(inputCDS, k = inputKval)
+	colData(inputCDS)$partition_label = as.character(partitions(inputCDS))
+	colData(inputCDS)$cluster_label = as.character(clusters(inputCDS))
+	# Automatically generate plots for the clusters and partitions
+	dir.create(file.path("./plots", paste0(processingNote, "K=", as.character(inputKval))), showWarnings=FALSE)
+	outputPath = paste0("./plots/", paste0(processingNote, "K=", as.character(inputKval)), "/")
+	# Make the plots
+	plotUMAP_Monocle(inputCDS, paste0("k=", as.character(inputKval), "_", processingNote), "cluster_label", show_labels=TRUE, outputPath=outputPath)
+	plotUMAP_Monocle(inputCDS, paste0("k=", as.character(inputKval), "_", processingNote), "partition_label", show_labels=TRUE, outputPath=outputPath)
+	# Return
+	return(inputCDS)
+}
+
+# Cluster cells
+print("Clustering Cells Now")
+set.seed(7)
+kVal = 40
+cellCDS = handleClustering(cellCDS, processingNote, kVal)
+
+
+
+# Try working with some high-level cell types
+library(garnett)
+
+garnettMarkerPath= "/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/data/garnettModels/heartModels/"
+markerFileToUse =  "heartBroadMarkV2" #"heartBroadMarkers"
+
+garnettModelPath = makeGarnettModelHuman(cellCDS, garnettMarkerPath, markerFileToUse,
+                 processingNote, returnPath=TRUE)
+
+# garnettModelPath = paste0(garnettMarkerPath, markerFileToUse, "_trainedOn_",
+# 			processingNote, ".rds")
+
+# Cluster, so I can use cluster_extend
+colData(cellCDS)$garnett_cluster = colData(cellCDS)$partition_label
+cellCDS = applyGarnettModelHuman(cellCDS, garnettModelPath)
+
+# Take a look at the results
+outputPath = paste0("./plots/", paste0(processingNote, "K=", as.character(kVal)), "/")
+plotUMAP_Monocle(cellCDS, paste0("k=", as.character(kVal), "_", processingNote, markerFileToUse), "cluster_ext_type", show_labels=FALSE, outputPath=outputPath)
+
+# Takee a look at the distribution of the cell_type calls vs. clusters
+propDF = plotGroupedProportions(cellCDS, paste0(processingNote, markerFileToUse), "partition_label", "cluster_ext_type", 
+        pathToPlot=paste0("./plots/", processingNote, "K=", as.character(kVal), "/"), 
+        widthToUse=1800)
+# propTotDF = (propDF %>% group_by(partition_label) %>% summarise(propSum=sum(Freq)))
+
+
+
+# Write an output of the cells as they've been processed. Make a full CDS and one
+#    with just the endothelial + vascular smooth muscle cells
+processingNoteWithK = paste0(processingNote, "K=", as.character(kVal))
+saveRDS(cellCDS, paste0("./rdsOutput/allCells_", processingNoteWithK, ".rds"))
+
+# Now get the endothelial CDS
+endothOrVSMclusts = c("4", "7", "8", "6", "13")
+endothCDS = cellCDS[,colData(cellCDS)$partition_label %in% endothOrVSMclusts]
+saveRDS(endothCDS, paste0("./rdsOutput/endothelium_", processingNoteWithK, ".rds"))
+
+
 
 
 

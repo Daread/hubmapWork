@@ -228,13 +228,15 @@ allCellCDS = hardAssignDonors(allCellCDS)
 
 allCellCDS = hardAssignTentativeClustLabels(allCellCDS, processingNote, oldProcNote)
 
+
+endothCDS = hardAssignHighLevelCellTypes(endothCDS)
+pureEndothCDS = endothCDS[,colData(endothCDS)$highLevelCellType=="Endothelium"]
+
 # Overall endothelium, by donor
 thisPlot = makeFacetedProportionPlot_withFill(allCellCDS, processingNote, "sample", "highLevelCellType", 
 							fillCol = "Donor", subsetPropsToShow=c("Endothelium"), colorCol = "Anatomical_Site" )
 
-endothCDS = hardAssignHighLevelCellTypes(endothCDS)
 
-pureEndothCDS = endothCDS[,colData(endothCDS)$highLevelCellType=="Endothelium"]
 thisPlot = makeFacetedProportionPlot_withFill(pureEndothCDS, processingNote, "sample", "hardCodedCellType", 
 							fillCol = "Donor", colorCol = "Anatomical_Site" #, subsetPropsToShow=c("Endothelium")
 							)
@@ -298,6 +300,151 @@ markerTestRes = endotheliumMarkerTestList[["marker_test_res"]]
 
 # Save the results
 write.csv(markerTestRes, paste0("./rdsOutput/",  "litvKnownSubtypeMarkersOnly_", ".csv"))
+
+
+
+
+
+# Alternate strategy: Run DE testing for subtypes of endothelium, set up as a series
+#   of regression fits of one-vs-rest
+# thisSubtype = "Endocardium"
+
+# thisSubtype = "Venous Endothelium"
+
+subTypeList = c("Venous Endothelium", "Endocardium", "Arterial + Capillary",
+				 "Lymphatic + Venous", "Lymphatic Endothelium")
+cdsVec = list(onlyMarkerEndoCDS, pureEndothCDS)
+names(cdsVec) = c("Markers_Only", "Full_Transcr")
+
+for (eachInd in 1:length(cdsVec)){
+	thisCDS = cdsVec[[eachInd]]
+	thisName = names(cdsVec)[eachInd]
+	print(paste0("Working on ", thisName))
+	for (thisSubtype in subTypeList){
+		print(paste0("Working on ", thisSubtype))
+		oneVsRestResult = runDEtestSubsetByCateg(thisCDS, "highLevelCellType",
+											 "Endothelium", 
+	                                        "hardCodedCellType", "Lymphatic Endothelium", 
+	                                        covarToIncl = c("Donor", "Anatomical_Site"),
+	                                        catToCompareVsRest=thisSubtype)
+		fitCoef = monocle3::coefficient_table(oneVsRestResult)
+		fitCoef = fitCoef[c("gene_short_name", "estimate", "std_err", "test_val", "p_value",
+							"term", "q_value")]
+		subtypeTests = fitCoef %>% filter(term == paste0("hardCodedCellType", thisSubtype))
+
+		# Write to a csv
+		noWhitespaceType = gsub(" ", "_", thisSubtype)
+		outputName = paste0("./rdsOutput/DE_outputs/Endoth_DE_Tets_", thisName,
+					"_for_", noWhitespaceType, ".csv")
+		dfOutput = as.data.frame(subtypeTests)
+		dfOutput$cellSubtype = noWhitespaceType
+		write.csv(dfOutput, outputName)
+		# print(paste0("For ", thisSubtype))
+		# print(subtypeTests)
+		# print(" ")
+	}
+}
+
+
+# Also just make a dot plot of expression
+png(paste0("./plots/Dot_Plot_Endothlial_Markers.png"))
+thisPlot = monocle3::plot_genes_by_group(pureEndothCDS, allMarkersLitv,
+								group_cells_by="hardCodedCellType")
+print(thisPlot)
+dev.off()
+
+
+
+
+# Next, run some regression testing to see if I can find differences by anatomical site.
+#
+anatomicalSiteVec = as.vector(levels(as.factor(colData(pureEndothCDS)$Anatomical_Site)))
+
+
+cellsExpressedCutoff = .01
+# Run on 7-8-21.
+for (eachInd in 1:length(cdsVec)){
+	thisCDS = cdsVec[[eachInd]]
+	thisName = names(cdsVec)[eachInd]
+	print(paste0("Working on ", thisName))
+	for (eachSubtype in subTypeList){
+		print(paste0("Working on ", eachSubtype))
+		# Filter to only keep genes expressed in >1% of cells
+		subtypeCDS = thisCDS[,colData(thisCDS)$hardCodedCellType == eachSubtype]
+		rowData(subtypeCDS)$fracCellsExpr = (rowSums(exprs(subtypeCDS) != 0) /
+								nrow(colData(subtypeCDS)))
+		subtypeCDS = subtypeCDS[rowData(subtypeCDS)$fracCellsExpr > cellsExpressedCutoff,]
+
+		anatomTestRes = runDEtestSubsetByCateg(subtypeCDS, "hardCodedCellType",
+												 eachSubtype,  
+	                                        "Anatomical_Site", "Apex", 
+	                                        covarToIncl = c("Donor"),
+	                                        errorDistribution = "quasipoisson")
+		fitCoef = monocle3::coefficient_table(anatomTestRes)
+		fitCoef = fitCoef[c("gene_short_name", "estimate", "std_err", "test_val", "p_value",
+							"term", "q_value")]
+		
+		# subtypeTests = fitCoef %>% 
+		# 			filter(term %in% paste0("Anatomical_Site", anatomicalSiteVec))
+		# Write to a csv
+		noWhitespaceType = gsub(" ", "_", eachSubtype)
+		outputName = paste0("./rdsOutput/DE_outputs/Endoth_Anatomic_Tests_", thisName,
+					"_for_", noWhitespaceType, "min", as.character(cellsExpressedCutoff),
+					"cellsExpr", ".csv")
+		dfOutput = as.data.frame(fitCoef)
+		dfOutput$cellSubtype = noWhitespaceType
+		write.csv(dfOutput, outputName)
+	}
+}
+
+
+
+# thisCDS = cdsVec[[2]]
+# thisName = names(cdsVec)[2]
+
+# # Filter for expressed genes
+# rowData(thisCDS)$fracCellsExpressed = (rowSums(exprs(thisCDS) != 0) / 
+# 										nrow(colData(thisCDS)) )
+
+
+
+
+# This block was run 7-7-21. Doesn't filter by fraction of cells expressed at all, 
+#     and only was saving the coefficients from the anatomical site fits
+# for (eachInd in 1:length(cdsVec)){
+# 	thisCDS = cdsVec[[eachInd]]
+# 	thisName = names(cdsVec)[eachInd]
+# 	print(paste0("Working on ", thisName))
+# 	for (eachSubtype in subTypeList){
+# 		print(paste0("Working on ", eachSubtype))
+# 		anatomTestRes = runDEtestSubsetByCateg(thisCDS, "hardCodedCellType",
+# 												 eachSubtype,  
+# 	                                        "Anatomical_Site", "Apex", 
+# 	                                        covarToIncl = c("Donor"),
+# 	                                        errorDistribution = "quasipoisson")
+# 		fitCoef = monocle3::coefficient_table(anatomTestRes)
+# 		fitCoef = fitCoef[c("gene_short_name", "estimate", "std_err", "test_val", "p_value",
+# 							"term", "q_value")]
+		
+# 		subtypeTests = fitCoef %>% 
+# 					filter(term %in% paste0("Anatomical_Site", anatomicalSiteVec))
+# 		# browser()
+# 		# Write to a csv
+# 		noWhitespaceType = gsub(" ", "_", eachSubtype)
+# 		outputName = paste0("./rdsOutput/DE_outputs/Endoth_Anatomic_Tests_", thisName,
+# 					"_for_", noWhitespaceType, ".csv")
+# 		dfOutput = as.data.frame(subtypeTests)
+# 		dfOutput$cellSubtype = noWhitespaceType
+# 		write.csv(dfOutput, outputName)
+# 	}
+# }
+
+
+
+
+
+
+
 
 
 

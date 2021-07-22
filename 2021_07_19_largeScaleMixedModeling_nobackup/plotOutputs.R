@@ -1,0 +1,132 @@
+
+library(ggplot2)
+library(dplyr)
+
+library("optparse")
+
+print("Libraries loaded, starting now")
+
+# Get the passed parameters
+option_list = list(
+  make_option(c("-m", "--modelNotes"), type="character", 
+  			default="_fix_Anatomical_Site_rand_Donor_HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40addAllTypes_MMresult", 
+              help="Processing note from model fitting", metavar="character"),
+  make_option(c("-c", "--cellType"), type="character", 
+  			default="Endocardium", 
+              help="Cell type for which the model was fit", metavar="character")
+)
+opt_parser = OptionParser(option_list=option_list)
+opt = parse_args(opt_parser)
+
+cellType = opt$cellType
+modelFitDescription = opt$modelNotes
+
+# Read in the fit
+rdsPath = "./rdsOutput/mixedModels/"
+fitResults = readRDS(paste0(rdsPath, cellType, modelFitDescription))
+
+# Get the coefficients and p-values for all the fixed effects
+fixedCoefsToGet = rownames(fitResults[1,"model_summary"][[1]]$coefficients)
+fixedCoefsToGet = fixedCoefsToGet[!(fixedCoefsToGet %in% c("(Intercept)"))]
+
+# Store the fits for different fixed effects as separate DFs, for now
+fixedEffectDFlist = vector(mode="list", length=length(fixedCoefsToGet))
+counter = 1
+for (eachCoef in fixedCoefsToGet){
+	# Set up DF
+	#thisDF = data.frame()
+	thisDF = NULL
+	thisDF$gene = fitResults[["gene_short_name"]]
+	thisDF = as.data.frame(thisDF)
+	thisDF$coefficientName = eachCoef
+
+	# Loop through and get the relevant coefficients and p values
+	for (eachInd in 1:nrow(fitResults)){
+
+		thisDF[eachInd,"coefficientValue"] = (
+			fitResults[["model_summary"]][[eachInd]]$coefficients[eachCoef,"Estimate"])
+		thisDF[eachInd,"pval"] = (
+			fitResults[["model_summary"]][[eachInd]]$coefficients[eachCoef,"Pr(>|z|)"])
+		thisDF[eachInd,"negLog10Pval"] = -log10(thisDF[eachInd,"pval"])
+		thisDF[eachInd, "Donor_Stddev"] = attr(fitResults[["model_summary"]][[eachInd]]$varcor[["Donor"]], "stddev")
+	}
+
+	# Also get the adjust p values by benjamini hochberg
+	thisDF$q_val = p.adjust(thisDF$pval, method = "BH")
+
+	# Save
+	fixedEffectDFlist[[counter]] = thisDF
+	counter	= counter + 1
+}
+names(fixedEffectDFlist) = fixedCoefsToGet
+
+
+outputDir = paste0("./plots/", cellType, modelFitDescription, "/")
+dir.create(outputDir)
+
+qValCutoff = .2
+# Make some plots
+for (eachCoef in fixedCoefsToGet){
+	dfHere = fixedEffectDFlist[[eachCoef]]
+
+	# Not different levels of q value
+
+	dfHere$q_value_range = ifelse(dfHere$q_val > .2, ">.2",
+					ifelse(dfHere$q_val > .1, ".1_to_.2", 
+					ifelse(dfHere$q_val > .05, ".05_to_.1", "<.05")))
+
+
+	print(str(dfHere))
+	# Volcano plot
+	png(paste0(outputDir, cellType, "_volcano_", eachCoef, ".png"),
+		height=1000, width=1000, res=200)
+	myPlot = ggplot(dfHere, 
+		aes_string(x="coefficientValue", y="negLog10Pval", color="q_value_range")) +
+		xlab("Coefficient") + ylab("-log10(P value)") + 
+		ggtitle(paste0("Volcano plot for ", eachCoef)) + geom_point()
+	print(myPlot)
+	dev.off()
+
+	# Also print histogram of the inter-donor variation
+	png(paste0(outputDir, cellType, "_Donor_Stddev.png"))
+	myPlot = ggplot(dfHere, 
+		aes_string("Donor_Stddev")) + geom_histogram() + 
+		xlab("Inter-donor Random Effect Standard Deviation") +
+		ggtitle(paste0("Donor Variation in ", cellType))
+	print(myPlot)
+	dev.off()
+}
+
+
+print("All Done")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

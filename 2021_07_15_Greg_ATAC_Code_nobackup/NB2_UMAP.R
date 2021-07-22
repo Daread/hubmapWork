@@ -36,7 +36,9 @@ options(DelayedArray.block.size=1000e7)
 #                "W144.heart.apex.s1", 
 #                "W145.heart.apex.s1", "W145.heart.LV.s1",
 #               "W146.heart.apex.s1", "W146.heart.LV.s1")
-samples = c("allHeartATAC")
+samples = c("allHeartATAC", "W144.heart.apex.s1", "W135.heart.LV.s1")
+
+useMNN = TRUE
 
 # create summary table for samples 
 df = data.frame(sample = character(), n_filteredCells = numeric(), n_filteredFeatures = numeric(),
@@ -59,7 +61,17 @@ for(s in samples){
   #cds_f = align_cds(cds_f, preprocess_method = "LSI", residual_model_formula_str = ~log(umi))
   print("UMAP Reduction Now")
   reducedDim(cds_f) <- reducedDim(cds_f)[,2:50] # removes 1st LSI component
-  cds_f = reduce_dimension(cds_f, reduction_method = 'UMAP', preprocess_method = "LSI")
+  # Now try MNN this time
+  # DFR
+  if (useMNN){
+    processingNote = "MNN_offLSI_DroppedFirstComponentBeforeMNN"
+    cds_f = align_cds(cds_f, preprocess_method = "LSI", residual_model_formula_str = ~log(umi))
+    cds_f = reduce_dimension(cds_f, reduction_method = 'UMAP', preprocess_method = "Aligned")
+  } else{
+    processingNote = "noMNN"
+    cds_f = reduce_dimension(cds_f, reduction_method = 'UMAP', preprocess_method = "LSI")
+  }
+  
   print("Clustering cells")
   cds_f = cluster_cells(cds_f)
   
@@ -71,7 +83,7 @@ for(s in samples){
   colData(cds_f)$cluster <- cds_f@clusters$UMAP$clusters
   TCdat_pr = data.frame(colData(cds_f))
   
-  pdf(paste0("monocle3_UMAP", s, ".pdf"), width = 2, height = 1.75)
+  png(paste0("monocle3_UMAP", processingNote, "_", s, ".png"), width = 600, height = 400, res=200)
     print(ggplot(TCdat_pr, aes(x = UMAP_1, y = UMAP_2, color = cluster)) +
             geom_point_rast(data = TCdat_pr, size = 0.75, stroke = 0) +
             theme(legend.position = "none", text = element_text(size = 12),  
@@ -82,6 +94,10 @@ for(s in samples){
             guides(guides(colour = guide_legend(override.aes = list(size=1.5)))) +
             monocle3:::monocle_theme_opts())
   dev.off()
+
+  plotUMAP_Monocle(cds_f, processingNote, "cluster", outputPath="./")
+  plotUMAP_Monocle(cds_f, processingNote, "sampleName", outputPath = "./", show_labels=FALSE)
+
   ## aggregate sample data for sumamry table
   tissue = s
   ncells = ncol(cds_f)
@@ -98,54 +114,57 @@ for(s in samples){
 }
 
 
-# DFR
-##################################
-basepath = "/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_15_Greg_ATAC_Code_nobackup/"
-dir.create(paste0(basepath, "plots/"))
-out_dir = paste0(basepath, "plots/")
-dir.create(out_dir)
-setwd(out_dir)
-
-
-processingNote = "noMNN"
-# Shuffle the cds
-set.seed(7)
-cds_f = cds_f[sample(1:nrow(cds_f)), sample(1:ncol(cds_f))]
-plotUMAP_Monocle(cds_f, processingNote, "cluster", outputPath=out_dir)
-plotUMAP_Monocle(cds_f, processingNote, "sampleName", outputPath=out_dir, show_labels=FALSE)
-
-# 
-alignedCDS = preprocess_cds(cds_f, method = "PCA", num_dimensions=50)
-alignedCDS = align_cds(alignedCDS, alignment_group = "sampleName")
-processingNote = "mnnBySample"
-alignedCDS = reduce_dimension(alignedCDS, preprocess_method="Aligned")
-plotUMAP_Monocle(alignedCDS, processingNote, "cluster", outputPath=out_dir)
-plotUMAP_Monocle(alignedCDS, processingNote, "sampleName", outputPath=out_dir, show_labels=FALSE)
-
-processingNote = paste0(processingNote, "dropFirstPC")
 
 
 
-reducedDim(alignedCDS) = reducedDim(alignedCDS)[,2:29]
+# # DFR
+# ##################################
+# basepath = "/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_15_Greg_ATAC_Code_nobackup/"
+# dir.create(paste0(basepath, "plots/"))
+# out_dir = paste0(basepath, "plots/")
+# dir.create(out_dir)
+# setwd(out_dir)
 
 
-alignedCDSTwoOn = reduce_dimension(alignedCDS, preprocess_method="Aligned")
-plotUMAP_Monocle(alignedCDSTwoOn, processingNote, "cluster", outputPath=out_dir)
-plotUMAP_Monocle(alignedCDSTwoOn, processingNote, "sampleName", outputPath=out_dir, show_labels=FALSE)
+# processingNote = "noMNN"
+# # Shuffle the cds
+# set.seed(7)
+# cds_f = cds_f[sample(1:nrow(cds_f)), sample(1:ncol(cds_f))]
+# plotUMAP_Monocle(cds_f, processingNote, "cluster", outputPath=out_dir)
+# plotUMAP_Monocle(cds_f, processingNote, "sampleName", outputPath=out_dir, show_labels=FALSE)
 
-  # reducedDim(cds_f) <- reducedDim(cds_f)[,2:50] 
+# # 
+# alignedCDS = preprocess_cds(cds_f, method = "PCA", num_dimensions=50)
+# alignedCDS = align_cds(alignedCDS, alignment_group = "sampleName")
+# processingNote = "mnnBySample"
+# alignedCDS = reduce_dimension(alignedCDS, preprocess_method="Aligned")
+# plotUMAP_Monocle(alignedCDS, processingNote, "cluster", outputPath=out_dir)
+# plotUMAP_Monocle(alignedCDS, processingNote, "sampleName", outputPath=out_dir, show_labels=FALSE)
+
+# processingNote = paste0(processingNote, "dropFirstPC")
 
 
-# Now also try aligning and plotting
-processingNote = "mnnBySampleUsingLSI"
-alignByLSICDS = align_cds(cds_f, alignment_group = "sampleName", preprocess_method = "LSI")
-alignByLSICDS = reduce_dimension(alignByLSICDS, preprocess_method="Aligned")
+
+# reducedDim(alignedCDS) = reducedDim(alignedCDS)[,2:29]
+
+
+# alignedCDSTwoOn = reduce_dimension(alignedCDS, preprocess_method="Aligned")
+# plotUMAP_Monocle(alignedCDSTwoOn, processingNote, "cluster", outputPath=out_dir)
+# plotUMAP_Monocle(alignedCDSTwoOn, processingNote, "sampleName", outputPath=out_dir, show_labels=FALSE)
+
+#   # reducedDim(cds_f) <- reducedDim(cds_f)[,2:50] 
+
+
+# # Now also try aligning and plotting
+# processingNote = "mnnBySampleUsingLSI"
+# alignByLSICDS = align_cds(cds_f, alignment_group = "sampleName", preprocess_method = "LSI")
+# alignByLSICDS = reduce_dimension(alignByLSICDS, preprocess_method="Aligned")
 
 
 
 
-plotUMAP_Monocle(alignByLSICDS, processingNote, "cluster", outputPath=out_dir)
-plotUMAP_Monocle(alignByLSICDS, processingNote, "sampleName", outputPath=out_dir, show_labels=FALSE)
+# plotUMAP_Monocle(alignByLSICDS, processingNote, "cluster", outputPath=out_dir)
+# plotUMAP_Monocle(alignByLSICDS, processingNote, "sampleName", outputPath=out_dir, show_labels=FALSE)
 
 
 

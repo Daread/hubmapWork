@@ -53,6 +53,9 @@ for(s in samples){
   cds_f = cds_p[,colData(cds_p)$cell %in% fcells$cell]
   cds_f <- detect_genes(cds_f)
   cds_f = cds_f[rowData(cds_f)$num_cells_expressed > p.cutoff,]
+
+  colData(cds_f)$sampleName = s
+
   # reduce dimensions
   set.seed(2017) # ensures reproducibility of previous random number generation
   print("Prelim Processing")
@@ -95,8 +98,8 @@ for(s in samples){
             monocle3:::monocle_theme_opts())
   dev.off()
 
-  plotUMAP_Monocle(cds_f, processingNote, "cluster", outputPath="./")
-  plotUMAP_Monocle(cds_f, processingNote, "sampleName", outputPath = "./", show_labels=FALSE)
+  plotUMAP_Monocle(cds_f, paste0(processingNote, "_", s), "cluster", outputPath="./")
+  plotUMAP_Monocle(cds_f, paste0(processingNote, "_", s), "sampleName", outputPath = "./", show_labels=FALSE)
 
   ## aggregate sample data for sumamry table
   tissue = s

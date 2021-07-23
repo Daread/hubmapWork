@@ -3,6 +3,7 @@ basepath = "/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_15_
 dir.create(paste0(basepath, "archr/results/NB6/"))
 out_dir = paste0(basepath, "archr/results/NB6/")
 setwd(out_dir)
+set.seed(7)
 
 # load requirements
 suppressPackageStartupMessages({

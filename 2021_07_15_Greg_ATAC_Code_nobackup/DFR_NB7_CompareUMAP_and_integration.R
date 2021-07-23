@@ -13,6 +13,10 @@ suppressPackageStartupMessages({
   library(Seurat)
 })
 
+library(uwot)
+
+source("/net/trapnell/vol1/home/readdf/trapLabDir/sharedProjectCode/utility/singleCellUtilFuncs.R")
+
 library("optparse")
 # Get the passed parameters
 option_list = list(
@@ -71,6 +75,7 @@ cds.rna = cds.rna[,colData(cds.rna)$sampleName == opt$sampleRNAname]
 cds.a.b = cds.a.b[, colData(cds.a.b)$Sample == samplesATACnames[opt$sampleRNAname]]
 cds.atac.g = cds.a.g
 cds.atac.b = cds.a.b
+cds.r = cds.rna
 
 # Make an output directory, if it doesn't exist
 out_dir = paste0(basepath, "archr/results/NB7/")
@@ -101,7 +106,7 @@ se.atac$tech <- "atac"
 
 ##########################
 # convert RNA cds to seurat object
-cds.rna = cds.r
+# cds.rna = cds.r
 
 rna.matrix <- counts(cds.rna)
 se.rna <- CreateSeuratObject(counts = rna.matrix, assay = "RNA", project = paste0(opt$sampleRNAname, "_RNA"))
@@ -115,6 +120,7 @@ se.rna$tech <- "rna"
 ################################################################################################################################################
 
 getUMAP_GregNB6_ATAC_way <- function(inputSeObj, processingNote, sampleName){
+  set.seed(7)
   # preprocess to find anchors (highly variable features) between ATAC and gene activity matrices
   DefaultAssay(inputSeObj) <- "ACTIVITY"
   inputSeObj <- FindVariableFeatures(inputSeObj)
@@ -127,7 +133,8 @@ getUMAP_GregNB6_ATAC_way <- function(inputSeObj, processingNote, sampleName){
   inputSeObj <- RunLSI(inputSeObj, n = 50, scale.max = NULL)
   inputSeObj <- RunUMAP(inputSeObj, reduction = "lsi", dims = 2:50)
 
-  png(paste0("Greg_ATC_Method_UMAP_", processingNote, sampleName, ".png" ), width = 5, height = 4.5)
+  png(paste0("Greg_ATC_Method_UMAP_", processingNote, sampleName, ".png" ), 
+          width = 1000, height = 900, res=200)
   print(DimPlot(inputSeObj, reduction = "umap", group.by = "tech"))
   dev.off()
 
@@ -135,6 +142,7 @@ getUMAP_GregNB6_ATAC_way <- function(inputSeObj, processingNote, sampleName){
 }
 
 getUMAP_GregNB6_RNA_way <- function(inputSeObj, processingNote, sampleName){
+  set.seed(7)
 
   # preprocess the RNA counts matrix with seurat
   inputSeObj <- NormalizeData(inputSeObj, normalization.method = "LogNormalize", scale.factor = 10000)
@@ -148,13 +156,15 @@ getUMAP_GregNB6_RNA_way <- function(inputSeObj, processingNote, sampleName){
   inputSeObj <- FindClusters(inputSeObj, resolution = 0.5)
   inputSeObj <- RunUMAP(inputSeObj, dims = 1:10)
 
-  png(paste0("Greg_RNA_Method_UMAP_", processingNote, sampleName, ".png" ), width = 5, height = 4.5)
+  png(paste0("Greg_RNA_Method_UMAP_", processingNote, sampleName, ".png" ), 
+          width = 1000, height = 900, res=200)
   print(DimPlot(inputSeObj, reduction = "umap", group.by = "highLevelCellType"))
   dev.off()
 
 }
 
 getUMAP_minimalistSeurat <- function(inputSeObj, processingNote, sampleName, assayName){
+  set.seed(7)
     # preprocess the RNA counts matrix with seurat
   inputSeObj <- NormalizeData(inputSeObj) #, normalization.method = "LogNormalize", scale.factor = 10000)
   inputSeObj <- FindVariableFeatures(inputSeObj, selection.method = "vst", nfeatures = nrow(inputSeObj))
@@ -164,48 +174,184 @@ getUMAP_minimalistSeurat <- function(inputSeObj, processingNote, sampleName, ass
   # reduce dimensions
   inputSeObj <- RunPCA(inputSeObj) #, features = VariableFeatures(object = inputSeObj))
   # Cluster cells
-  inputSeObj <- FindNeighbors(inputSeObj) #, dims = 1:10)
-  inputSeObj <- FindClusters(inputSeObj) #, resolution = 0.5)
-  inputSeObj <- RunUMAP(inputSeObj, dims = 1:50)
+  inputSeObj <- FindNeighbors(inputSeObj, dims = 1:10)
+  inputSeObj <- FindClusters(inputSeObj, resolution = 0.5)
+  inputSeObj <- RunUMAP(inputSeObj, dims = 1:20)
 
-  png(paste0("Minimalist_Method_", assayName, "_UMAP_", processingNote, sampleName, ".png" ), width = 5, height = 4.5)
+  png(paste0("Minimalist_Method_", assayName, "_UMAP_", processingNote, sampleName, ".png" ), 
+          width = 1000, height = 900, res=200)
   print(DimPlot(inputSeObj, reduction = "umap", group.by = "tech"))
   dev.off()
 
+  return(inputSeObj)
 }
+
+getMonocleUMAPfromCDS<- function(inputCDS, processingNote, sampleName, assayName){
+  set.seed(7)
+  inputCDS = estimate_size_factors(inputCDS)
+  inputCDS = preprocess_cds(inputCDS)
+  inputCDS = reduce_dimension(inputCDS)
+  # Now plot
+  plotUMAP_Monocle(inputCDS, paste0("MonocleProcessUMAP_", processingNote, "_", assayName, "_", sampleName),
+             "sampleName", outputPath = "./", show_labels=FALSE)
+  generalHeartMarkers = c("GSN", "LDB2", "KCNAB1", "TTN", "RBPJ", "THEMIS", "MYH11")
+  plotUMAP_Monocle_genes(inputCDS, paste0("MonocleProcessUMAP_", processingNote, "_", assayName, "_", sampleName),
+           generalHeartMarkers, "GeneralMarkers",
+          outputPath = "./")
+  return(inputCDS)
+
+}
+
+
 
 # DFR: New code from here on, versus NB6.5
 #    
 DefaultAssay(se.atac) <- "ACTIVITY" # Originally did this with the code for pre-processing ATAC fo the solo UMAP
 processingNote = "CompareUMAPs"
+
 seObjList = list(se.atac, se.rna)
 names(seObjList) = c("ATAC", "RNA")
+# seObjList = list(se.atac)
+# names(seObjList) = c("ATAC")
+
+# Try a co-embedding one of two ways: First, try MNN
+rnaCDS_genesInATAC = cds.rna[rowData(cds.rna)$gene_short_name %in% rowData(cds.a.g)$gene_short_name,]
+colData(rnaCDS_genesInATAC)$tech = "RNA"
+atacCDS_genesInRNA = cds.a.g[rowData(cds.a.g)$gene_short_name %in% rowData(cds.rna)$gene_short_name,]
+colData(atacCDS_genesInRNA)$tech = "ATAC"
+# Combine
+atacAndRNA_cds_genesIntersected = combine_cds(list(rnaCDS_genesInATAC, atacCDS_genesInRNA))
 
 
+
+
+
+
+mnnCoembedATAC_and_RNA <- function(inputCDS, processingNote, inputSample, 
+                              mnnResidStr = NULL){
+  set.seed(7)
+  # Need to re-estimate size factors and so on
+  inputCDS = estimate_size_factors(inputCDS)
+  inputCDS = preprocess_cds(inputCDS)
+  inputCDS = align_cds(inputCDS, alignment_group="tech", residual_model_formula_str=mnnResidStr)
+  # UMAP it
+  inputCDS = reduce_dimension(inputCDS)
+  # Plot
+  plotUMAP_Monocle(inputCDS, paste0(processingNote, "_MNN_Coembed_", inputSample), "tech",
+                  show_labels =FALSE, outputPath = "./")
+  return(inputCDS)
+}
+
+# First, try MNN based co-embedding
+mnnRes = mnnCoembedATAC_and_RNA(atacAndRNA_cds_genesIntersected, processingNote, opt$sampleRNAname)
+
+# Shuffle the order
+mnnRes = mnnRes[sample(1:nrow(mnnRes)), sample(1:ncol(mnnRes))]
+
+# Make a few more plots off this
+generalHeartMarkers = c("GSN", "LDB2", "KCNAB1", "TTN", "RBPJ", "THEMIS", "MYH11")
+plotUMAP_Monocle_genes(mnnRes, paste0(processingNote, "_MNN_Coembed_", opt$sampleRNAname),
+           generalHeartMarkers, "GeneralMarkers",outputPath = "./")
+
+# Plot lots of QC plots
+columnsToColor = c("tech", "log10_umi", "NucleosomeRatio", "PromoterRatio", "ReadsInTSS", "TSSEnrichment",
+        "highLevelCellType")
+for (eachCol in columnsToColor){
+  plotUMAP_Monocle(mnnRes, paste0(processingNote, "_MNN_Coembed_", opt$sampleRNAname),
+           eachCol, outputPath = "./", show_labels=FALSE)
+}
+
+##################################
+# Second, I'll try running parametric UMAP and embedding ATAC data based on an embedding defined for RNA data
+atacAndRNA_cds_genesIntersected = estimate_size_factors(atacAndRNA_cds_genesIntersected)
+atacAndRNA_cds_genesIntersected = preprocess_cds(atacAndRNA_cds_genesIntersected)
+
+# Get the PC coordinates
+rnaOnlyPostPCA_cds = atacAndRNA_cds_genesIntersected[,colData(atacAndRNA_cds_genesIntersected)$tech == "RNA"]
+rnaPCmatrix = reducedDims(rnaOnlyPostPCA_cds)$PCA
+rnaUMAPres = uwot::umap(rnaPCmatrix, ret_model=TRUE)
+
+# Apply to ATAC
+atacOnlyPostPCA_cds = atacAndRNA_cds_genesIntersected[,colData(atacAndRNA_cds_genesIntersected)$tech == "ATAC"]
+atacPCmatrix = reducedDims(atacOnlyPostPCA_cds)$PCA
+atacUMAPres = umap_transform(atacPCmatrix, rnaUMAPres)
+
+
+plotCombinedUMAP <- function(rnaUMAPres, atacUMAPres, processingNote, sampleName){
+  # Get ATAC into a dataframe
+  atacDF = as.data.frame(atacUMAPres)
+  colnames(atacDF) = c("UMAP1", "UMAP2")
+  atacDF$tech = "ATAC"
+
+  # Get from RNA
+  rnaDF = as.data.frame(rnaUMAPres[["embedding"]])
+  colnames(rnaDF) = c("UMAP1", "UMAP2")
+  rnaDF$tech = "RNA"
+
+  # Combine
+  comboDF = rbind(atacDF, rnaDF)
+
+  # browser()
+
+  # Plot
+  png(paste0("./", processingNote, "_UMAP_Parametric_Coembed_", sampleName, ".png"),
+          width=1000, height=1000, res=200)
+  myPlot = ggplot(comboDF, aes_string(x="UMAP1", y="UMAP2", color="tech")) + 
+          ggtitle(paste0("Parametric embed atac from RNA, ", sampleName)) + 
+          geom_point()
+  print(myPlot)
+
+  dev.off()
+
+  return(comboDF )
+}
+
+
+
+# Combine a plot of these
+parametricCoembedRes = plotCombinedUMAP(rnaUMAPres, atacUMAPres, processingNote, opt$sampleRNAname)
+
+
+
+
+
+####################################################################################
 # Get the UMAP one of different ways for each
 for (eachName in names(seObjList)){
   print(paste0("Working on ", eachName))
   thisSeObj = seObjList[[eachName]]
 
-  # print("Getting UMAP as Greg set up with Seurat pre-processing")
-  # if (eachName == "ATAC"){
-  #   umapRes = getUMAP_GregNB6_ATAC_way(thisSeObj, processingNote, opt$sampleRNAname)
-  # }
-  # # If RNA, use Greg's method for RNA as done in NB 6
-  # if (eachName == "RNA"){
-  #   umapRes = getUMAP_GregNB6_RNA_way(thisSeObj, processingNote, opt$sampleRNAname)
-  # }
+  print("Getting UMAP as Greg set up with Seurat pre-processing")
+  if (eachName == "ATAC"){
+    umapRes = getUMAP_GregNB6_ATAC_way(thisSeObj, processingNote, opt$sampleRNAname)
+  }
+  # If RNA, use Greg's method for RNA as done in NB 6
+  if (eachName == "RNA"){
+    umapRes = getUMAP_GregNB6_RNA_way(thisSeObj, processingNote, opt$sampleRNAname)
+  }
   
   print("Getting UMAP with minimalist Seurat pre-processing")
   if (eachName == "ATAC"){
     DefaultAssay(thisSeObj) <- "ACTIVITY"
   }
-  umapRes = getUMAP_minimalistSeurat(thisSeObj, processingNote, opt$sampleRNAname, eachName)
+  umapResult = getUMAP_minimalistSeurat(thisSeObj, processingNote, opt$sampleRNAname, eachName)
+
+  # Now Monocle Style
+  if (eachName == "RNA"){
+    thisCDS = cds.rna
+  } else {
+    thisCDS = cds.a.g
+    colData(thisCDS)$sampleName = opt$sampleRNAname
+  }
+  umapresult = getMonocleUMAPfromCDS(thisCDS, processingNote, opt$sampleRNAname, eachName)
 
 }
 
 
-
+  # png(paste0("Minimalist_Method_", eachName, "_UMAP_", processingNote, opt$sampleRNAname), 
+  #       width = 1000, height = 900, res=200)
+  # print(DimPlot(umapResult, reduction = "umap", group.by = "tech"))
+  # dev.off()
 
 
 

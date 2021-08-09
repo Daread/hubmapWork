@@ -20,8 +20,12 @@ option_list = list(
   make_option(c("-p", "--processingNote"), type="character", 
   			default="HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40addAllTypes", 
               help="Processing note from upstream CDS", metavar="character"),
-    make_option(c("-s", "--sampleRNAname"), type="character", default="W144.Apex", 
-              help="Sample to integrate", metavar="character")
+    make_option(c("-s", "--sampleRNAname"), type="character", default="All_Cells", 
+              help="Sample to integrate", metavar="character"),
+    make_option(c("-u", "--useSubset"), type="character", default="Subset", 
+              help="Subset or All", metavar="character"),
+    make_option(c("-a", "--atacProc"), type="character", default="FRIP=0.2_FRIT=0.05UMI=1000", 
+              help="Subset or All", metavar="character")
 )
 opt_parser = OptionParser(option_list=option_list)
 opt = parse_args(opt_parser)
@@ -65,16 +69,28 @@ cds.rna = new_cell_data_set(expression_data = cm,
 cds.r = cds.rna
 
 # Get the ATAC cds
-cds.a.g = readRDS("HM10_all_heart_apex_ATAC_cds_g.RDS")
-cds.a.b = readRDS("HM10_all_heart_apex_ATAC_cds_b.RDS")
+atacProcNote = opt$atacProc # "FRIP=0.2_FRIT=0.05UMI=1000"
+
+cds.a.g = readRDS(paste0("HM10_all_heart", atacProcNote, "_ATAC_cds_g.RDS"))
+cds.a.b = readRDS(paste0("HM10_all_heart", atacProcNote, "_ATAC_cds_b.RDS"))
+
+myCounts = (as.data.frame(colData(cds.a.g)) %>% count(Sample))
+print(myCounts)
 
 
-# Subset names
+# # Subset names
+# opt$sampleRNAname = "W144.Apex"
+
+# opt$useSubset = "All"
 
 # Get the subsets for these ones only
-cds.a.g = cds.a.g[, colData(cds.a.g)$Sample == samplesATACnames[opt$sampleRNAname]]
-cds.rna = cds.rna[,colData(cds.rna)$sampleName == opt$sampleRNAname]
-cds.a.b = cds.a.b[, colData(cds.a.b)$Sample == samplesATACnames[opt$sampleRNAname]]
+if (!(opt$sampleRNAname == "All_Cells")){
+  cds.a.g = cds.a.g[, colData(cds.a.g)$Sample == samplesATACnames[opt$sampleRNAname]]
+  cds.rna = cds.rna[,colData(cds.rna)$sampleName == opt$sampleRNAname]
+  cds.a.b = cds.a.b[, colData(cds.a.b)$Sample == samplesATACnames[opt$sampleRNAname]]
+}
+
+
 cds.atac.g = cds.a.g
 cds.atac.b = cds.a.b
 cds.r = cds.rna
@@ -110,7 +126,7 @@ VariableFeatures(se.atac) <- names(which(Matrix::rowSums(se.atac) > 10))
 se.atac <- RunLSI(se.atac, n = 50, scale.max = NULL)
 se.atac <- RunUMAP(se.atac, reduction = "lsi", dims = 2:50)
 
-png(paste0("DimPlotATAC", opt$sampleRNAname, ".png" ), width = 5*PPIval, height = 4.5*PPIval, res=PPIval)
+png(paste0("DimPlotATAC", opt$sampleRNAname, "_", atacProcNote, ".png" ), width = 5*PPIval, height = 4.5*PPIval, res=PPIval)
 DimPlot(se.atac, reduction = "umap", group.by = "tech")
 dev.off()
 
@@ -139,7 +155,7 @@ se.rna <- FindClusters(se.rna, resolution = 0.5)
 se.rna <- RunUMAP(se.rna, dims = 1:10)
 
 
-png(paste0("DimPlot_RNA", opt$sampleRNAname, ".png"), width = 5.5 * PPIval, height = 3.5 * PPIval, res=PPIval)
+png(paste0("DimPlot_RNA", opt$sampleRNAname, "_", atacProcNote, ".png"), width = 5.5 * PPIval, height = 3.5 * PPIval, res=PPIval)
 DimPlot(se.rna, reduction = "umap", group.by = "highLevelCellType")
 dev.off()
 
@@ -149,8 +165,33 @@ dev.off()
 p1 <- DimPlot(se.atac, group.by = "tech") + ggtitle("scATAC-seq")
 p2 <- DimPlot(se.rna, group.by = "tech") + ggtitle("scRNA-seq")
 CombinePlots(plots = list(p1, p2))
-ggsave(filename = paste0("seurat_UMAPs_RNA_ATAC", opt$sampleRNAname, ".png"),
+ggsave(filename = paste0("seurat_UMAPs_RNA_ATAC", opt$sampleRNAname, "_", atacProcNote, ".png"),
 		 width = 8, height = 3, units="in", dpi=PPIval)
+
+
+
+# useSubsample = FALSE
+
+# # useSubsample = TRUE
+# if (useSubsample){
+#   downsampleATAC = se.atac[,sample(colnames(se.atac), size=15000, replace=F)]
+#   downsampleRNA =  se.rna[,sample(colnames(se.rna), size=20000, replace=F)]
+
+
+#   # transfer labels 
+#   transfer.anchors <- FindTransferAnchors(
+#   reference = downsampleRNA, 
+#   query = downsampleATAC, 
+#   features = VariableFeatures(object = downsampleRNA), 
+#   reference.assay = "RNA", 
+#   query.assay = "ACTIVITY", 
+#   reduction = "cca")
+
+# }
+
+
+
+
 
 
 
@@ -177,7 +218,7 @@ se.atac <- AddMetaData(se.atac, metadata = CellType_preds)
 p1 <- DimPlot(se.atac, group.by = "predicted.id") + ggtitle("scATAC-seq")
 p2 <- DimPlot(se.rna, group.by = "highLevelCellType") + ggtitle("scRNA-seq")
 CombinePlots(plots = list(p1, p2))
-ggsave(filename = paste0("seurat_UMAPs_RNA_ATAC_CTAnnotations", opt$sampleRNAname, ".png"),
+ggsave(filename = paste0("seurat_UMAPs_RNA_ATAC_CTAnnotations", opt$sampleRNAname, "_", atacProcNote, ".png"),
 			 width = 10, height = 3, units="in", dpi=PPIval)
 
 ##########################
@@ -206,7 +247,7 @@ coembed$cellType <- ifelse(!is.na(coembed$highLevelCellType), coembed$highLevelC
 p1 <- DimPlot(coembed, group.by = "tech")
 p2 <- DimPlot(coembed, group.by = "cellType")
 CombinePlots(list(p1, p2))
-ggsave(filename = paste0("coembed_ATAC_RNA_Annotated", opt$sampleRNAname, ".png"),
+ggsave(filename = paste0("coembed_ATAC_RNA_Annotated", opt$sampleRNAname, "_", atacProcNote, ".png"),
 		 width = 12, height = 5, units="in", dpi=PPIval)
 
 ###################
@@ -222,6 +263,42 @@ cdat = data.frame(colData(cds.a.b)) %>%
   left_join(atac.anno.preds, by = "cell")
 
 colData(cds.a.b)$predicted.id = cdat$predicted.id
+colData(cds.a.g)$predicted.id = cdat$predicted.id
+
+
+################################################################
+atacSeuratUMAPcoords = se.atac[["umap"]]@cell.embeddings
+# Add this to the cds
+reducedDims(cds.a.g)$UMAP = atacSeuratUMAPcoords 
+
+
+
+# }
+plotUMAP_MonocleModded <- function(dataCDS, processingNote, catToColor,
+                    show_labels=TRUE, textSize=10, outputPath = "./plots/"){ #, xVal, yVal){
+    png(paste0(outputPath, processingNote, "_UMAP_", catToColor, "colored.png"),
+             width=1400, height=1000, res=200)
+    myPlot <- (plot_cells(dataCDS, reduction_method="UMAP",    # x=xVal, y=yVal,
+        color_cells_by=catToColor, label_cell_groups=show_labels,
+          cell_stroke=.1 , group_label_size=textSize        
+                )) 
+    myPlot = (myPlot + theme(text=element_text(size=textSize)) +facet_wrap(~predicted.id))
+    print(myPlot)
+    dev.off()   
+
+}
+
+plotUMAP_MonocleModded(cds.a.g, paste0("ATAC_With_Transfer_", opt$sampleRNAname, "_", atacProcNote),
+                  "predicted.id", outputPath="./", show_labels=FALSE)
+
+# Save the CDS for later
+rdsPath = "/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_15_Greg_ATAC_Code_nobackup/rdsOutput/"
+# Save this
+fileName = paste0(opt$sampleRNAname, "_", atacProcNote, "gMatrixCDS_postTransfer.RDS")
+saveRDS(cds.a.g, file=paste0(rdsPath, fileName))
+
+
+################################################################
 
 # monocle3 UMAPs (W144.heart.apex only)
 set.seed(2017)
@@ -242,7 +319,7 @@ TCdat_pr = data.frame(colData(cds_pl))
 lowAbundance = c("Unknown")
 
 # by predicted ID
-png(paste0("Monocle3_bMat_UMAP_All_Heart_Annotations", opt$sampleRNAname, ".png"),
+png(paste0("Monocle3_bMat_UMAP_All_Heart_Annotations", opt$sampleRNAname, "_", atacProcNote, ".png"),
 			 width = 3*PPIval, height = 1.75*PPIval, res=PPIval)
 filter(TCdat_pr, !(predicted.id %in% lowAbundance)) %>% 
 ggplot(aes(x = UMAP_1, y = UMAP_2, color = predicted.id)) +
@@ -276,7 +353,7 @@ TCdat_rna2 = data.frame(colData(cds_pl2))
 lowAbundance2 = c("Unknown")
 
 # by monocle cluster
-png(paste0("Monocle3_sciRNA_UMAP_All_Heart_Annotations", opt$sampleRNAname, ".png"),
+png(paste0("Monocle3_sciRNA_UMAP_All_Heart_Annotations", opt$sampleRNAname, "_", atacProcNote, ".png"),
 			 width = 3*PPIval, height = 1.75*PPIval, res=PPIval)
 filter(TCdat_rna2, !(highLevelCellType %in% lowAbundance2)) %>% 
 ggplot( aes(x = UMAP_1, y = UMAP_2, color = highLevelCellType)) +

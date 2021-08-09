@@ -36,9 +36,16 @@ options(DelayedArray.block.size=1000e7)
 #                "W144.heart.apex.s1", 
 #                "W145.heart.apex.s1", "W145.heart.LV.s1",
 #               "W146.heart.apex.s1", "W146.heart.LV.s1")
-samples = c("allHeartATAC", "W144.heart.apex.s1", "W135.heart.LV.s1")
+# samples = c("allHeartATAC", "W144.heart.apex.s1", "W135.heart.LV.s1")
+# samples = c("allHeartATAC", "W144.heart.apex.s1",
+#       "W146.heart.LV.s1", "W134.heart.apex.s1")
+samples = c("allHeartATAC")
 
+processingNote = "FRIP=0.3_FRIT=0.1UMI=1000"
+samples = paste0(samples, processingNote)
 useMNN = TRUE
+
+dropFirstComponent = TRUE
 
 # create summary table for samples 
 df = data.frame(sample = character(), n_filteredCells = numeric(), n_filteredFeatures = numeric(),
@@ -54,7 +61,10 @@ for(s in samples){
   cds_f <- detect_genes(cds_f)
   cds_f = cds_f[rowData(cds_f)$num_cells_expressed > p.cutoff,]
 
-  colData(cds_f)$sampleName = s
+  if (!("sampleName" %in% colnames(colData(cds_f)))){
+    colData(cds_f)$sampleName = s
+  }
+  
 
   # reduce dimensions
   set.seed(2017) # ensures reproducibility of previous random number generation
@@ -63,15 +73,21 @@ for(s in samples){
   cds_f = preprocess_cds(cds_f, method = "LSI", num_dimensions=50)
   #cds_f = align_cds(cds_f, preprocess_method = "LSI", residual_model_formula_str = ~log(umi))
   print("UMAP Reduction Now")
-  reducedDim(cds_f) <- reducedDim(cds_f)[,2:50] # removes 1st LSI component
+  if (dropFirstComponent){
+    reducedDim(cds_f) <- reducedDim(cds_f)[,2:50] # removes 1st LSI component
+    processingNote = paste0("DropFirstComponent_", processingNote)
+    } else{
+      processingNote = paste0("KeepComponents_", processingNote)
+    }
+  
   # Now try MNN this time
   # DFR
   if (useMNN){
-    processingNote = "MNN_offLSI_DroppedFirstComponentBeforeMNN"
+    processingNote = paste0(processingNote, "MNN_offLSI_")
     cds_f = align_cds(cds_f, preprocess_method = "LSI", residual_model_formula_str = ~log(umi))
     cds_f = reduce_dimension(cds_f, reduction_method = 'UMAP', preprocess_method = "Aligned")
   } else{
-    processingNote = "noMNN"
+    processingNote = paste0(processingNote, "noMNN")
     cds_f = reduce_dimension(cds_f, reduction_method = 'UMAP', preprocess_method = "LSI")
   }
   
@@ -86,20 +102,34 @@ for(s in samples){
   colData(cds_f)$cluster <- cds_f@clusters$UMAP$clusters
   TCdat_pr = data.frame(colData(cds_f))
   
-  png(paste0("monocle3_UMAP", processingNote, "_", s, ".png"), width = 600, height = 400, res=200)
-    print(ggplot(TCdat_pr, aes(x = UMAP_1, y = UMAP_2, color = cluster)) +
-            geom_point_rast(data = TCdat_pr, size = 0.75, stroke = 0) +
-            theme(legend.position = "none", text = element_text(size = 12),  
-                legend.key.width = unit(0.5,"line"), legend.key.height = unit(0.5,"line")) + 
-            labs(#title = s, 
-              x = "Component 1", 
-              y = "Component 2") +
-            guides(guides(colour = guide_legend(override.aes = list(size=1.5)))) +
-            monocle3:::monocle_theme_opts())
-  dev.off()
+  # png(paste0("monocle3_UMAP", processingNote, "_", s, ".png"), width = 600, height = 400, res=200)
+  #   print(ggplot(TCdat_pr, aes(x = UMAP_1, y = UMAP_2, color = cluster)) +
+  #           geom_point_rast(data = TCdat_pr, size = 0.75, stroke = 0) +
+  #           theme(legend.position = "none", text = element_text(size = 12),  
+  #               legend.key.width = unit(0.5,"line"), legend.key.height = unit(0.5,"line")) + 
+  #           labs(#title = s, 
+  #             x = "Component 1", 
+  #             y = "Component 2") +
+  #           guides(guides(colour = guide_legend(override.aes = list(size=1.5)))) +
+  #           monocle3:::monocle_theme_opts())
+  # dev.off()
 
-  plotUMAP_Monocle(cds_f, paste0(processingNote, "_", s), "cluster", outputPath="./")
-  plotUMAP_Monocle(cds_f, paste0(processingNote, "_", s), "sampleName", outputPath = "./", show_labels=FALSE)
+  # Shuffle order
+  cds_f = cds_f[sample(1:nrow(cds_f)), sample(1:ncol(cds_f))]
+
+  outPath = paste0("./", s, "/")
+  dir.create(outPath)
+
+  plotUMAP_Monocle(cds_f, paste0(processingNote, "_", s), "cluster", outputPath=outPath)
+  plotUMAP_Monocle(cds_f, paste0(processingNote, "_", s), "sampleName", outputPath = outPath, show_labels=FALSE)
+  plotUMAP_Monocle(cds_f, paste0(processingNote, "_", s), "umi", outputPath = outPath, show_labels=FALSE)
+  plotUMAP_Monocle(cds_f, paste0(processingNote, "_", s), "FRIP", outputPath = outPath, show_labels=FALSE)
+  plotUMAP_Monocle(cds_f, paste0(processingNote, "_", s), "FRIT", outputPath = outPath, show_labels=FALSE)
+
+  colData(cds_f)$log10UMI = log10(colData(cds_f)$umi)
+  plotUMAP_Monocle(cds_f, paste0(processingNote, "_", s), "log10UMI", outputPath = outPath, show_labels=FALSE)
+  colData(cds_f)$firstLSI = reducedDim(cds_f)[,1]
+  plotUMAP_Monocle(cds_f, paste0(processingNote, "_", s), "firstLSI", outputPath = outPath, show_labels=FALSE)
 
   ## aggregate sample data for sumamry table
   tissue = s

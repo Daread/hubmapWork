@@ -31,6 +31,10 @@ samples = c("W134.heart.apex.s1",
                "W145.heart.apex.s1", "W145.heart.LV.s1",
               "W146.heart.apex.s1", "W146.heart.LV.s1")
 
+# Add a processing note?
+processingNote = "FRIP=0.3_FRIT=0.1UMI=1000"
+samples = paste0(samples, processingNote)
+
 # Read in the CDS list, combine into a single one
 sampleCDSlist = vector(mode="list", length = length(samples))
 
@@ -49,6 +53,6 @@ cds_p = combine_cds(sampleCDSlist)
 cds_p = detect_genes(cds_p)
 
 # Write
-save(cds_p, file = paste0(out_dir, "cds_p_allHeartATAC"))
+save(cds_p, file = paste0(out_dir, "cds_p_allHeartATAC", processingNote))
 
 

@@ -24,7 +24,8 @@ suppressPackageStartupMessages({
 
 # set genome
 addArchRGenome("hg19")
-addArchRThreads(threads = 32) 
+# addArchRThreads(threads = 32) 
+addArchRThreads(threads = 16) 
 
 # load filtered ArchR project
 prj = loadArchRProject(path = paste0(basepath, "archr/Heart_filtered"),
@@ -98,6 +99,38 @@ cds.rna = new_cell_data_set(expression_data = cm,
                             cell_metadata = cd, 
                             gene_metadata = rd)
 
+# Added 7-29-21: Filter by checking names in a cds filtered by greg/riza's method
+filterByGregCDS = TRUE
+filterCDSName = "/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_15_Greg_ATAC_Code_nobackup/cds_objects/"
+processingNote = "FRIP=0.2_FRIT=0.05UMI=1000"
+# processingNote = "FRIP=0.3_FRIT=0.1UMI=1000"
+filterByDL = TRUE
+DLcutoff = .5
+
+
+if (filterByGregCDS){
+  library(tidyr)
+  # cds_p holds data
+  load(paste0(filterCDSName, "cds_p_allHeartATAC", processingNote))
+  sampleNameDF = separate(data=as.data.frame(colData(cds_p)), col = "sampleName", 
+            into = c("sampleName", "procNote"), sep="FRIP", remove=TRUE)
+  colData(cds_p)$sampleName = sampleNameDF$sampleName 
+  sampleNameDF = NULL
+
+  # Filter by doublet likelihood here?
+  if (filterByDL){
+    cds_p = cds_p[,colData(cds_p)$doublet_likelihood < DLcutoff]
+    processingNote = paste0(processingNote, "DL=", as.character(DLcutoff))
+  }
+  namesToSave = paste0(colData(cds_p)$sampleName,"#", (colData(cds_p)$cell))
+
+  cds_b = cds_b[,(rownames(colData(cds_b)) %in% namesToSave) ]
+  cds_g = cds_g[,(rownames(colData(cds_g)) %in% namesToSave) ]
+} else{
+  processingNote = ""
+}
+
+
 ############################
 # Modification from Greg: Use all samples, not W144
 ############################
@@ -114,8 +147,9 @@ cds.atac.g = cds_g
 cds.rna = cds.rna
 
 # save these cds objects for future use (saves time)
-saveRDS(cds.atac.b, file="HM10_all_heart_apex_ATAC_cds_b.RDS")
-saveRDS(cds.atac.g, file="HM10_all_heart_apex_ATAC_cds_g.RDS")
+saveRDS(cds.atac.b, file=paste0("HM10_all_heart", processingNote, "_ATAC_cds_b.RDS"))
+saveRDS(cds.atac.g, file=paste0("HM10_all_heart", processingNote, "_ATAC_cds_g.RDS"))
+
 saveRDS(cds.rna, file="HM10_all_heart_apex_RNA_cds.RDS")
 
 ########################################################

@@ -103,7 +103,6 @@ meta = as.data.frame(colData(cds.a.b))
 se.atac <- AddMetaData(se.atac, metadata = meta)
 se.atac$tech <- "atac"
 
-
 ##########################
 # convert RNA cds to seurat object
 # cds.rna = cds.r
@@ -204,6 +203,25 @@ getMonocleUMAPfromCDS<- function(inputCDS, processingNote, sampleName, assayName
 
 
 
+
+# }
+plotUMAP_MonocleModded <- function(dataCDS, processingNote, catToColor,
+                    show_labels=TRUE, textSize=10, outputPath = "./plots/"){ #, xVal, yVal){
+    png(paste0(outputPath, processingNote, "_UMAP_", catToColor, "colored.png"),
+             width=1400, height=1000, res=200)
+    myPlot <- (plot_cells(dataCDS, reduction_method="UMAP",    # x=xVal, y=yVal,
+        color_cells_by=catToColor, label_cell_groups=show_labels,
+          cell_stroke=.1 , group_label_size=textSize        
+                )) 
+    myPlot = (myPlot + theme(text=element_text(size=textSize)) +facet_wrap(~tech))
+    print(myPlot)
+    dev.off()   
+
+}
+
+
+
+
 # DFR: New code from here on, versus NB6.5
 #    
 DefaultAssay(se.atac) <- "ACTIVITY" # Originally did this with the code for pre-processing ATAC fo the solo UMAP
@@ -211,8 +229,10 @@ processingNote = "CompareUMAPs"
 
 seObjList = list(se.atac, se.rna)
 names(seObjList) = c("ATAC", "RNA")
-# seObjList = list(se.atac)
-# names(seObjList) = c("ATAC")
+
+
+
+
 
 # Try a co-embedding one of two ways: First, try MNN
 rnaCDS_genesInATAC = cds.rna[rowData(cds.rna)$gene_short_name %in% rowData(cds.a.g)$gene_short_name,]
@@ -226,43 +246,8 @@ atacAndRNA_cds_genesIntersected = combine_cds(list(rnaCDS_genesInATAC, atacCDS_g
 
 
 
-
-mnnCoembedATAC_and_RNA <- function(inputCDS, processingNote, inputSample, 
-                              mnnResidStr = NULL){
-  set.seed(7)
-  # Need to re-estimate size factors and so on
-  inputCDS = estimate_size_factors(inputCDS)
-  inputCDS = preprocess_cds(inputCDS)
-  inputCDS = align_cds(inputCDS, alignment_group="tech", residual_model_formula_str=mnnResidStr)
-  # UMAP it
-  inputCDS = reduce_dimension(inputCDS)
-  # Plot
-  plotUMAP_Monocle(inputCDS, paste0(processingNote, "_MNN_Coembed_", inputSample), "tech",
-                  show_labels =FALSE, outputPath = "./")
-  return(inputCDS)
-}
-
-# First, try MNN based co-embedding
-mnnRes = mnnCoembedATAC_and_RNA(atacAndRNA_cds_genesIntersected, processingNote, opt$sampleRNAname)
-
-# Shuffle the order
-mnnRes = mnnRes[sample(1:nrow(mnnRes)), sample(1:ncol(mnnRes))]
-
-# Make a few more plots off this
-generalHeartMarkers = c("GSN", "LDB2", "KCNAB1", "TTN", "RBPJ", "THEMIS", "MYH11")
-plotUMAP_Monocle_genes(mnnRes, paste0(processingNote, "_MNN_Coembed_", opt$sampleRNAname),
-           generalHeartMarkers, "GeneralMarkers",outputPath = "./")
-
-# Plot lots of QC plots
-columnsToColor = c("tech", "log10_umi", "NucleosomeRatio", "PromoterRatio", "ReadsInTSS", "TSSEnrichment",
-        "highLevelCellType")
-for (eachCol in columnsToColor){
-  plotUMAP_Monocle(mnnRes, paste0(processingNote, "_MNN_Coembed_", opt$sampleRNAname),
-           eachCol, outputPath = "./", show_labels=FALSE)
-}
-
-##################################
-# Second, I'll try running parametric UMAP and embedding ATAC data based on an embedding defined for RNA data
+#########################################################################################################################
+# Try running parametric UMAP and embedding ATAC data based on an embedding defined for RNA data
 atacAndRNA_cds_genesIntersected = estimate_size_factors(atacAndRNA_cds_genesIntersected)
 atacAndRNA_cds_genesIntersected = preprocess_cds(atacAndRNA_cds_genesIntersected)
 
@@ -282,34 +267,167 @@ plotCombinedUMAP <- function(rnaUMAPres, atacUMAPres, processingNote, sampleName
   atacDF = as.data.frame(atacUMAPres)
   colnames(atacDF) = c("UMAP1", "UMAP2")
   atacDF$tech = "ATAC"
-
   # Get from RNA
   rnaDF = as.data.frame(rnaUMAPres[["embedding"]])
   colnames(rnaDF) = c("UMAP1", "UMAP2")
   rnaDF$tech = "RNA"
-
   # Combine
   comboDF = rbind(atacDF, rnaDF)
-
-  # browser()
 
   # Plot
   png(paste0("./", processingNote, "_UMAP_Parametric_Coembed_", sampleName, ".png"),
           width=1000, height=1000, res=200)
   myPlot = ggplot(comboDF, aes_string(x="UMAP1", y="UMAP2", color="tech")) + 
-          ggtitle(paste0("Parametric embed atac from RNA, ", sampleName)) + 
-          geom_point()
+          ggtitle(paste0("Parametric embed atac from RNA, ", sampleName)) + geom_point()
   print(myPlot)
-
   dev.off()
-
   return(comboDF )
+}
+
+# Combine a plot of these
+parametricCoembedRes = plotCombinedUMAP(rnaUMAPres, atacUMAPres, processingNote, opt$sampleRNAname)
+
+# 7-26-21: Added. 
+# Use the recorded model to 
+#.  1: Embed all cells (ATAC and RNA)
+#   2: Use "knn" from the 'class' package to transfer labels from the RNA data onto the ATAC data.
+#   3: Put this data back into the CDS and proceed onward to co-embedding based on MNN and simultaneous UMAP embedding
+library('class')
+
+allCellsEmbed = umap_transform(reducedDims(atacAndRNA_cds_genesIntersected)$PCA, rnaUMAPres)
+
+allCellsEmbed = as.data.frame(allCellsEmbed)
+colnames(allCellsEmbed) = c("UMAP1", "UMAP2")
+# Label
+allCellsEmbed$highLevelCellType = colData(atacAndRNA_cds_genesIntersected)$highLevelCellType
+allCellsEmbed$tech = colData(atacAndRNA_cds_genesIntersected)$tech
+
+# KNN transfer:
+trainCells = allCellsEmbed[allCellsEmbed$tech == "RNA",]
+testCells  = allCellsEmbed[allCellsEmbed$tech == "ATAC",]
+
+# KNN for ALL cells.
+knnRes = class::knn(trainCells[,c("UMAP1", "UMAP2")], allCellsEmbed[,c("UMAP1", "UMAP2")], #testCells[,c("UMAP1", "UMAP2")],
+                    trainCells$highLevelCellType,  k = 7)
+
+# Plot this on the UMAP
+reducedDims(atacAndRNA_cds_genesIntersected)$UMAP = as.matrix(allCellsEmbed[,c("UMAP1", "UMAP2")])
+colData(atacAndRNA_cds_genesIntersected)$knnCellTypeCall = knnRes 
+
+# Plot
+plotUMAP_Monocle(atacAndRNA_cds_genesIntersected, paste0(processingNote, "_ParametricCoembedded"), 
+                  "knnCellTypeCall", show_labels=FALSE,
+              outputPath="./")
+
+
+
+
+#########################################################################################################################
+
+
+
+
+
+
+
+
+# Code for MNN coembed combining ATAC+RNA
+##############################################################################################################
+mnnCoembedATAC_and_RNA <- function(inputCDS, processingNote, inputSample, 
+                              mnnResidStr = NULL){
+  set.seed(7)
+  # Need to re-estimate size factors and so on
+  inputCDS = estimate_size_factors(inputCDS)
+  inputCDS = preprocess_cds(inputCDS)
+  inputCDS = align_cds(inputCDS, alignment_group="tech", residual_model_formula_str=mnnResidStr)
+  # UMAP it
+  inputCDS = reduce_dimension(inputCDS)
+  # Plot
+  plotUMAP_Monocle(inputCDS, paste0(processingNote, "_MNN_Coembed_", inputSample), "tech",
+                  show_labels =FALSE, outputPath = "./")
+  return(inputCDS)
+}
+
+# First, try MNN based co-embedding
+mnnRes = mnnCoembedATAC_and_RNA(atacAndRNA_cds_genesIntersected, processingNote, opt$sampleRNAname)
+# Shuffle the order
+mnnRes = mnnRes[sample(1:nrow(mnnRes)), sample(1:ncol(mnnRes))]
+
+# Make a few more plots off this
+generalHeartMarkers = c("GSN", "LDB2", "KCNAB1", "TTN", "RBPJ", "THEMIS", "MYH11")
+plotUMAP_Monocle_genes(mnnRes, paste0(processingNote, "_MNN_Coembed_", opt$sampleRNAname),
+           generalHeartMarkers, "GeneralMarkers",outputPath = "./")
+
+# Plot lots of QC plots
+columnsToColor = c("knnCellTypeCall", "tech", "log10_umi", "NucleosomeRatio",
+         "PromoterRatio", "ReadsInTSS", "TSSEnrichment", "highLevelCellType")
+for (eachCol in columnsToColor){
+  plotUMAP_Monocle(mnnRes, paste0(processingNote, "_MNN_Coembed_", opt$sampleRNAname),
+           eachCol, outputPath = "./", show_labels=FALSE)
+}
+##################################################################################################################
+
+
+
+
+
+# }
+plotUMAP_MonocleModded <- function(dataCDS, processingNote, catToColor,
+                    show_labels=TRUE, textSize=10, outputPath = "./plots/"){ #, xVal, yVal){
+    png(paste0(outputPath, processingNote, "_UMAP_", catToColor, "colored.png"),
+             width=1400, height=1000, res=200)
+    myPlot <- (plot_cells(dataCDS, reduction_method="UMAP",    # x=xVal, y=yVal,
+        color_cells_by=catToColor, label_cell_groups=show_labels,
+          cell_stroke=.1 , group_label_size=textSize        
+                )) 
+    myPlot = (myPlot + theme(text=element_text(size=textSize)) +facet_wrap(~tech))
+    print(myPlot)
+    dev.off()   
+
 }
 
 
 
-# Combine a plot of these
-parametricCoembedRes = plotCombinedUMAP(rnaUMAPres, atacUMAPres, processingNote, opt$sampleRNAname)
+# Plot lots of QC plots
+columnsToColor = c("knnCellTypeCall")
+for (eachCol in columnsToColor){
+  plotUMAP_MonocleModded(mnnRes, paste0(processingNote, "_MNN_Coembed_FACET", opt$sampleRNAname),
+           eachCol, outputPath = "./", show_labels=FALSE)
+}
+
+# Plot
+plotUMAP_MonocleModded(atacAndRNA_cds_genesIntersected, paste0(processingNote, "_ParametricCoembedded"), 
+                  "knnCellTypeCall", show_labels=FALSE,
+              outputPath="./")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

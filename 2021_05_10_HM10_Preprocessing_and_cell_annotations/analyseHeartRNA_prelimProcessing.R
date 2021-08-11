@@ -186,6 +186,20 @@ propDF = plotGroupedProportions(cellCDS, paste0(processingNote, markerFileToUse)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Write an output of the cells as they've been processed. Make a full CDS and one
 #    with just the endothelial + vascular smooth muscle cells
 processingNoteWithK = paste0(processingNote, "K=", as.character(kVal))
@@ -195,6 +209,20 @@ saveRDS(cellCDS, paste0("./rdsOutput/allCells_", processingNoteWithK, ".rds"))
 endothOrVSMclusts = c("4", "7", "8", "6", "13")
 endothCDS = cellCDS[,colData(cellCDS)$partition_label %in% endothOrVSMclusts]
 saveRDS(endothCDS, paste0("./rdsOutput/endothelium_", processingNoteWithK, ".rds"))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -3,13 +3,15 @@ library(ggplot2)
 library(dplyr)
 
 library("optparse")
+library(stringr)
 
 print("Libraries loaded, starting now")
 
 # Get the passed parameters
 option_list = list(
   make_option(c("-m", "--modelNotes"), type="character", 
-  			default="_fix_Anatomical_Site_rand_Donor_HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40addAllTypes_MMresult", 
+  			# default="_fix_Anatomical_Site_rand_Donor_HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40addAllTypes_MMresult", 
+  			default="_fix_Anatomical_Site,Log10Age_rand_Donor_HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40addAllTypes_MMresult",
               help="Processing note from model fitting", metavar="character"),
   make_option(c("-c", "--cellType"), type="character", 
   			default="Endocardium", 
@@ -49,6 +51,12 @@ for (eachCoef in fixedCoefsToGet){
 			fitResults[["model_summary"]][[eachInd]]$coefficients[eachCoef,"Pr(>|z|)"])
 		thisDF[eachInd,"negLog10Pval"] = -log10(thisDF[eachInd,"pval"])
 		thisDF[eachInd, "Donor_Stddev"] = attr(fitResults[["model_summary"]][[eachInd]]$varcor[["Donor"]], "stddev")
+
+		# 8-9-21 addition
+		thisDF[eachInd, "overDispersion"] = as.numeric(
+			str_match_all(fitResults[["model_summary"]][[eachInd]]$family, "(?<=\\().+?(?=\\))")[[1]][1,1])
+		thisDF[eachInd, "fracCellsExpr"] = fitResults[["fracCellsExpr"]][[eachInd]]
+			
 	}
 
 	# Also get the adjust p values by benjamini hochberg
@@ -96,6 +104,19 @@ for (eachCoef in fixedCoefsToGet){
 	print(myPlot)
 	dev.off()
 }
+
+# Histogram of overdispersion estimates
+# Clip to be in the 0-2 range
+overdisperseMax = 2.0
+dfHere$overDispersion = ifelse(dfHere$overDispersion > overdisperseMax, overdisperseMax, dfHere$overDispersion )
+
+png(paste0(outputDir, cellType, "_NB_Overdispersion.png"))
+myPlot = ggplot(dfHere, 
+	aes_string("overDispersion")) + geom_histogram() + 
+	xlab("Overdispersion from NB Fitting") +
+	ggtitle(paste0("Gene overdispersion in ", cellType))
+print(myPlot)
+dev.off()
 
 
 print("All Done")

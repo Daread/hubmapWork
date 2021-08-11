@@ -32,7 +32,7 @@ samples = c("W134.heart.apex.s1",
               "W146.heart.apex.s1", "W146.heart.LV.s1")
 
 # Add a processing note?
-processingNote = "FRIP=0.3_FRIT=0.1UMI=1000"
+processingNote = "FRIP=0.2_FRIT=0.05UMI=1000"
 samples = paste0(samples, processingNote)
 
 # Read in the CDS list, combine into a single one
@@ -54,5 +54,18 @@ cds_p = detect_genes(cds_p)
 
 # Write
 save(cds_p, file = paste0(out_dir, "cds_p_allHeartATAC", processingNote))
+
+origCDS = cds_p
+
+# Write with different doublet likelihood cutoffs
+for (eachDLcutoff in c(.7, .6, .5)){
+  print(paste0("Cutoff of ", as.character(eachDLcutoff)))
+  cds_p = origCDS[,colData(origCDS)$doublet_likelihood < eachDLcutoff]
+  # Write
+  save(cds_p, file = paste0(out_dir, "cds_p_allHeartATAC", processingNote,
+                             "DL=", as.character(eachDLcutoff)))
+  print(str(cds_p))
+}
+
 
 

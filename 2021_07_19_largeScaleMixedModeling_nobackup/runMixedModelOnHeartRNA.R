@@ -1,4 +1,24 @@
 
+hardAssignDonorAges <- function(inputCDS){
+  colData(inputCDS)$Age = 0
+  colData(inputCDS)$Age =ifelse(colData(inputCDS)$Donor == "W134", 43, colData(inputCDS)$Age)
+  colData(inputCDS)$Age =ifelse(colData(inputCDS)$Donor == "W135", 60, colData(inputCDS)$Age)
+  colData(inputCDS)$Age =ifelse(colData(inputCDS)$Donor == "W136", 43, colData(inputCDS)$Age)
+  colData(inputCDS)$Age =ifelse(colData(inputCDS)$Donor == "W137", 49, colData(inputCDS)$Age)
+  colData(inputCDS)$Age =ifelse(colData(inputCDS)$Donor == "W139", 45, colData(inputCDS)$Age)
+  colData(inputCDS)$Age =ifelse(colData(inputCDS)$Donor == "W142", 55, colData(inputCDS)$Age)
+  colData(inputCDS)$Age =ifelse(colData(inputCDS)$Donor == "W144", 53, colData(inputCDS)$Age)
+  colData(inputCDS)$Age =ifelse(colData(inputCDS)$Donor == "W145", 51, colData(inputCDS)$Age)
+  colData(inputCDS)$Age =ifelse(colData(inputCDS)$Donor == "W146", 25, colData(inputCDS)$Age)
+
+  colData(inputCDS)$Log10Age = log10(colData(inputCDS)$Age)
+
+  return(inputCDS)
+}
+
+
+
+
 ###########################################################################################
 # Load relevant packages
 source("/net/trapnell/vol1/home/readdf/trapLabDir/sharedProjectCode/utility/singleCellUtilFuncs.R")
@@ -34,11 +54,13 @@ option_list = list(
   make_option(c("-p", "--processingNote"), type="character", 
   			default="HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40addAllTypes", 
               help="Processing note from upstream CDS", metavar="character"),
-    make_option(c("-c", "--cellType"), type="character", default="Cardiomyocyte", 
+    make_option(c("-c", "--cellType"), type="character", default="Endocardium", 
               help="Cell Type to subset for testing", metavar="character"),
     make_option(c("-r", "--randomEffects"), type="character", default="Donor",  # Syntax would be "Donor,Batch" if including multiple
               help="Comma-separated string of variables to model with random effects", metavar="character"),
-    make_option(c("-f", "--fixedEffects"), type="character", default="Anatomical_Site", # Syntax would be "Anatomical_Site,Age" if including multiple
+    make_option(c("-f", "--fixedEffects"), type="character",
+               # default="Anatomical_Site", # Syntax would be "Anatomical_Site,Age" if including multiple
+              default="Anatomical_Site,Log10Age",
               help="Comma-separated string of variables to model with fixed effects", metavar="character"),
     make_option(c("-g", "--groupColumn"), type="character", default="highLevelCellType", 
               help="column in colData that cellType uses to select", metavar="character"),
@@ -51,6 +73,9 @@ opt = parse_args(opt_parser)
 fixedEffectVec = strsplit(opt$fixedEffects, ",")[[1]]
 randomEffectVec = strsplit(opt$randomEffects, ",")[[1]]
 
+print("Fixed effects are:")
+print(fixedEffectVec)
+
 # Get the Model formula from these vectors
 modelFormula = getMixedModelFormula(fixedEffectVec, randomEffectVec)
 
@@ -62,6 +87,9 @@ rdsPath = "../2021_05_10_HM10_Preprocessing_and_cell_annotations/rdsOutput/"
 oldProcNote = opt$processingNote
 allCellCDS = readRDS(paste0(rdsPath, "allCells_", oldProcNote, ".rds"))
 print("Read in CDS")
+
+#Added 7-28-21
+allCellCDS = hardAssignDonorAges(allCellCDS)
 
 # Filter down to the cell type being tested here
 testCDS = allCellCDS[,colData(allCellCDS)[[opt$groupColumn]] == opt$cellType]
@@ -77,11 +105,11 @@ testCDS = estimate_size_factors(testCDS)
 # Relevel so Apex is always the lowest anatomical site (and can readily be compared to the Left_ventricle in a clear coefficient)
 colData(testCDS)$Anatomical_Site = relevel(as.factor(colData(testCDS)$Anatomical_Site), ref="Apex")
 
-# # Make this a mini run to test
-# ############################################################## Testing only 7-19-21
+# # # Make this a mini run to test
+# # ############################################################## Testing only 7-19-21
 # processingNote = paste0(processingNote, "miniTest")
 # testCDS = testCDS[1:20,]
-# ###################################################################################
+# # ###################################################################################
 
 source("/net/trapnell/vol1/home/readdf/trapLabDir/sharedProjectCode/DE_Code/mixedModelFittingMonocle3Style.R")
 # Now test for these genes
@@ -95,9 +123,29 @@ testResDF = testResDF[, !(names(testResDF) %in% c("model", "status"))]
 dir.create(paste0("./rdsOutput/mixedModels/"))
 outPath = paste0("./rdsOutput/mixedModels/", processingNote, "_MMresult")
 
+
+
+
+
 saveRDS(testResDF, outPath)
 
 print("All Done")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

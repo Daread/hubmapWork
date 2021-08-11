@@ -30,7 +30,7 @@ option_list = list(
     make_option(c("-u", "--useSubset"), type="character", default="Subset", 
               help="Subset or All", metavar="character"),
 
-    make_option(c("-a", "--ATACprocNote"), type="character", default="FRIP=0.2_FRIT=0.05UMI=1000", 
+    make_option(c("-a", "--ATACprocNote"), type="character", default="FRIP=0.2_FRIT=0.05UMI=1000DL=0.5", 
               help="How ATAC Cells were filtered", metavar="character")
 )
 opt_parser = OptionParser(option_list=option_list)
@@ -76,8 +76,9 @@ filterCDSName = "/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_0
 processingNote = opt$ATACprocNote
 
 
+oldProcNote = "FRIP=0.2_FRIT=0.05UMI=1000"
 # cds_p holds data
-load(paste0(filterCDSName, "cds_p_allHeartATAC", processingNote))
+load(paste0(filterCDSName, "cds_p_allHeartATAC", oldProcNote))
 
 qcInOrigFiltering = c("FRIP", "FRIT", "umi", "doublet_score", "doublet", "doublet_likelihood")
 # 
@@ -98,6 +99,7 @@ if (opt$sampleRNAname != "All_Cells"){
 dfTransferredColdata$cell = rownames(dfTransferredColdata)
 
 library(plyr)
+
 
 # mergedDF = merge(dfTransferredColdata, dfOrigFilteredColdata, by="cell")
 mergedDF = join(dfTransferredColdata, dfOrigFilteredColdata, by="cell")
@@ -181,19 +183,19 @@ plotUMAP_Monocle_genes(annotatedCDS, paste0("ATAC_With_Transfer_", opt$sampleRNA
                       plotSetTotals=TRUE, outputPath="./")
 
 
-kVal=15
+kVal=10
 annotatedCDS = cluster_cells(annotatedCDS, k=kVal)
 
 colData(annotatedCDS)$cluster_label = clusters(annotatedCDS)
-colData(annotatedCDS)$cluster_label = as.numeric(colData(annotatedCDS)$cluster_label)
+colData(annotatedCDS)$cluster_label = as.character(colData(annotatedCDS)$cluster_label)
 
 plotUMAP_Monocle(annotatedCDS, paste0("ATAC_With_Transfer_", opt$sampleRNAname, "_", opt$ATACprocNote, "_k=", kVal), 
             "cluster_label", outputPath="./", show_labels=TRUE)
 
 
 # Single big plot showing sample source
-plotUMAP_MonocleModded(annotatedCDS, paste0("ATAC_With_Transfer_", opt$sampleRNAname, "_", opt$ATACprocNote),
-                  eachCol, outputPath="./", show_labels=FALSE)
+# plotUMAP_MonocleModded(annotatedCDS, paste0("ATAC_With_Transfer_", opt$sampleRNAname, "_", opt$ATACprocNote),
+#                   eachCol, outputPath="./", show_labels=FALSE)
 
 
 plotUMAP_Monocle(annotatedCDS, paste0("ATAC_With_Transfer_No_Facet_", opt$sampleRNAname, "_", opt$ATACprocNote, "_k=", kVal), 

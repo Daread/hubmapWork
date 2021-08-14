@@ -12,7 +12,8 @@ library("optparse")
 # Get the passed parameters
 option_list = list(
   make_option(c("-c", "--ciceroFile"), type="character", 
-  			default="Cicero_Defaults_cds_p_W144.heart.apex.s1_ciceroConnections.RDS", 
+  			# default="Cicero_Defaults_cds_p_W144.heart.apex.s1_ciceroConnections.RDS", 
+        default="Cicero_Defaults_cds_p_allHeartATACFRIP=0.2_FRIT=0.05UMI=1000DL=0.5_ciceroConnections.RDS", 
               help="Name of cds to read in and process", metavar="character"),
 
   make_option(c("-p", "--ciceroPath"), type="character", 
@@ -20,11 +21,12 @@ option_list = list(
               help="Path to cds to process", metavar="character"),
 
   make_option(c("-f", "--ciceroCDS"), type="character", 
-        default="Cicero_Defaults_cds_p_W144.heart.apex.s1_ciceroCDS.RDS", 
+        default="Cicero_Defaults_cds_p_allHeartATACFRIP=0.2_FRIT=0.05UMI=1000DL=0.5_ciceroCDS.RDS", 
               help="Path to cds to process", metavar="character"),  
 
   make_option(c("-i", "--ciceroInputCDS"), type="character", 
-        default="Cicero_Defaults_cds_p_W144.heart.apex.s1_ciceroInput_CDS.RDS", 
+        # default="Cicero_Defaults_cds_p_W144.heart.apex.s1_ciceroInput_CDS.RDS", 
+        default="Cicero_Defaults_cds_p_allHeartATACFRIP=0.2_FRIT=0.05UMI=1000DL=0.5_ciceroInput_CDS.RDS", 
               help="CDS before binning", metavar="character"),  
  # "_ciceroInput_CDS.RDS" 
 
@@ -107,6 +109,57 @@ thisPlot = ggplot(ciceroTSS_DF[ciceroTSS_DF$coaccess > .01,], aes(coaccess)) +
         geom_histogram()
 print(thisPlot)
 dev.off()
+
+# Get an idea of how many connections my TSS-intersecting-peaks have at different cutoffs
+
+library(dplyr)
+
+cutoffsToTry = c(.05, .1, .2, .25)
+
+for (eachCut in cutoffsToTry){
+  miniDF = ciceroTSS_DF[ciceroTSS_DF$coaccess > eachCut,]
+  countDF = miniDF %>% count(Peak1)
+
+  # Histogram
+  png(paste0("./plots/", opt$ciceroFile, "_coaccessCountDistributionAt", as.character(eachCut), ".png"), 
+        width=1000, height=1000, res = 200)
+  myPlot = ggplot(countDF[countDF$n < 30,], aes_string(x="n")) + 
+          geom_histogram()
+  print(myPlot)
+  dev.off()
+
+}
+
+
+
+# See a cdf of the cocessibilities
+png(paste0("./plots/", opt$ciceroFile, "_TSS_coaccessCDS.png"), 
+        width=1000, height=1000, res = 200)
+  myPlot = ggplot(ciceroTSS_DF, aes_string(x="coaccess")) + 
+          stat_ecdf()
+print(myPlot)
+dev.off()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

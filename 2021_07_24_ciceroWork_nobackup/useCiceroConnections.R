@@ -13,7 +13,8 @@ library("optparse")
 option_list = list(
   make_option(c("-c", "--cdsName"), type="character", 
   			# default="cds_p_allHeartATAC", 
-        default="cds_p_W144.heart.apex.s1", 
+        # default="cds_p_W144.heart.apex.s1", 
+        default="cds_p_allHeartATACFRIP=0.2_FRIT=0.05UMI=1000DL=0.5",
               help="Name of cds to read in and process", metavar="character"),
 
   make_option(c("-p", "--cdsPath"), type="character", 

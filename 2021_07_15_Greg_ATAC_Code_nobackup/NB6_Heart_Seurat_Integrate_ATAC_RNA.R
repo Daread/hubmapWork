@@ -23,7 +23,9 @@ suppressPackageStartupMessages({
 })
 
 # set genome
-addArchRGenome("hg19")
+# addArchRGenome("hg19")
+addArchRGenome("hg38")
+
 # addArchRThreads(threads = 32) 
 addArchRThreads(threads = 16) 
 
@@ -136,6 +138,10 @@ if (filterByGregCDS){
 ############################
 # get restricted cells and features (smaller file size)
 # cds.atac.b <- cds_b[, colData(cds_b)$Sample == "W144.heart.apex.s1"]
+
+#
+processingNote = paste0("fixedHg38_", processingNote)
+
 
 cds.atac.b = cds_b
 cds.atac.b <- detect_genes(cds.atac.b)

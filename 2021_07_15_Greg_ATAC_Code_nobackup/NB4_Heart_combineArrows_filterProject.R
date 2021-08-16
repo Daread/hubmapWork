@@ -16,7 +16,8 @@ suppressPackageStartupMessages({
 })
 
 # set genome
-addArchRGenome("hg19")
+# addArchRGenome("hg19")
+addArchRGenome("hg38")
 
 addArchRThreads(threads = 32) 
 

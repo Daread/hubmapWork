@@ -283,15 +283,20 @@ getPromoterDistalSeq <- function(promoterDistalDF, opt){
     print(paste0("Working on ", eachCol))
     writeBedFromCol(promoterDistalDF, tempFile, eachCol)
     # Get sequence
-    system(paste0("bedtools getfasta -fi ", opt$genomeFile, " -bed ", tempFile, 
+    system(paste0("bedtools getfasta -s -fi ", opt$genomeFile, " -bed ", tempFile, 
         " -tab > ", seqFile ))
 
     # Now read in the table
     peaksWithSeq = read.table(seqFile, sep='\t', header=FALSE,  col.names=c(eachCol, "seq"))
+
     # Fix formatting to match the original DF/peak format
     peaksWithSeq[[eachCol]] = paste0("chr", peaksWithSeq[[eachCol]])
     peaksWithSeq[[eachCol]] = gsub("-", "_", peaksWithSeq[[eachCol]])
     peaksWithSeq[[eachCol]] = gsub(":", "_", peaksWithSeq[[eachCol]])
+    # Strandedness option adds a (+) or (-) to the end
+    peaksWithSeq[[eachCol]] = gsub("\\(\\+\\)", "", peaksWithSeq[[eachCol]])
+    peaksWithSeq[[eachCol]] = gsub("\\(_\\)", "", peaksWithSeq[[eachCol]])
+
 
     # Intersect in
     seqMergedDF = left_join(promoterDistalDF, peaksWithSeq[!(duplicated(peaksWithSeq[[eachCol]])),], by=eachCol)
@@ -307,6 +312,21 @@ getPromoterDistalSeq <- function(promoterDistalDF, opt){
 # Part 2: Get sequence for all of these sites
 promoterDistalDFWithSeqs = getPromoterDistalSeq(promoterDistalDF, opt)
 
+addTrainTestDesignation <- function(promoterDistalDFWithSeqs){
+  promoterDistalDFWithSeqs$Model_Set = "Undefined"
+  promoterDistalDFWithSeqs$Model_Set = ifelse(promoterDistalDFWithSeqs$chr %in% c("6", "16"), # 2334 genes
+              "Test", promoterDistalDFWithSeqs$Model_Set)
+  promoterDistalDFWithSeqs$Model_Set = ifelse(promoterDistalDFWithSeqs$chr %in% c("5", "15"), # 1958 genes
+              "Validation", promoterDistalDFWithSeqs$Model_Set)
+  promoterDistalDFWithSeqs$Model_Set = ifelse(promoterDistalDFWithSeqs$chr %in% 
+                c("1", "2", "3", "4", "7", "8", "9", "10", "11", "12", "13", "14", "17", "18", "19", "20", "21", "22", "X"),
+              "Train", promoterDistalDFWithSeqs$Model_Set)
+
+  return(promoterDistalDFWithSeqs)
+}
+
+# Add notes on if train/validation/test
+promoterDistalDFWithSeqs = addTrainTestDesignation(promoterDistalDFWithSeqs)
 
 # Save the output
 dfName = paste0("Gene_Prom_Plus_Distal_WithSequence_Sites_Max", opt$maxNdistalSites, "_Upstream", opt$promoterUpstream,
@@ -316,7 +336,8 @@ dfName = paste0("Gene_Prom_Plus_Distal_WithSequence_Sites_Max", opt$maxNdistalSi
 # Save this DF
 saveRDS(promoterDistalDFWithSeqs, file=paste0("./rdsOutputs/", dfName, ".RDS"))
 
-
+# Save as a csv for easier swapping over into python for CNN work
+write.csv(promoterDistalDFWithSeqs, paste0("./rdsOutputs/", dfName, ".csv"))
 
 
 
@@ -358,6 +379,14 @@ makeFastaFromSites <- function(promoterDistalDFWithSeqs, opt, dfName){
 
 makeFastaFromSites(promoterDistalDFWithSeqs, opt, dfName)
 
+
+
+# # 8-16-21: Spot check and see how many genes are on each chromosome in this dataset
+# for (eachChr in as.character(levels(as.factor(promoterDistalDFWithSeqs$chr)))){
+#   print(paste0("CHR: ", eachChr))
+#   print (nrow(promoterDistalDFWithSeqs[promoterDistalDFWithSeqs$chr == eachChr,]))
+
+# }
 
 
 

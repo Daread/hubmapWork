@@ -142,13 +142,41 @@ trainY = combinedTrain[yCols]
 # trainCNNmodel = getCNNmodel(trainX, trainY, args)
 
 
-# from tensorflow import keras
-
 import keras
 from keras.models import Model 
 import keras.layers as kl
 import tensorflow as tf
 from keras.utils import plot_model
+
+
+
+# Take in a pandas column cast to a list, hodling 2d numpy arrays.
+#   Run formatting and return a tensorflow tensor, appropriate for feeding into the model
+def oneHotListToTensor(inputList):
+	# Manipulate into a numpy array with the right dimensions
+	formattedInput = np.dstack(inputList)
+	formattedInput = np.rollaxis(formattedInput, -1)
+	formattedInput = np.expand_dims(formattedInput, axis=3)
+	# Now format to a tensor
+	inputTensor = tf.convert_to_tensor(formattedInput)
+	inputTensor = tf.cast(inputTensor, tf.float32)
+	return(inputTensor)
+
+
+def getDistalInputList(inputX, args):
+	# Set up an empty list
+	distalList = [None] * args.maxNdistalSites
+	# Names of the columns
+	distalNames = ["Distal_" + str(x + 1) for x in range(args.maxNdistalSites)]
+	# Get the inputs
+	for eachInd, eachName in enumerate(distalNames):
+		distalList[eachInd] = oneHotListToTensor(inputX[eachName].tolist())
+	return(distalList)
+
+
+
+
+
 
 
 inputX = trainX
@@ -158,30 +186,19 @@ inputY = trainY
 
 
 promoterBlocks = int((args.promUpstream + args.promDownstream) / 100.0)
-
 # Get a promoter model
 firstConvFilt = 21
 padSize = int((firstConvFilt - 1) / 2.0)
-
-
 ############################################################
 promoterPadding = kl.ZeroPadding2D(padding=(0,padSize))
 promoterFilters = kl.Conv2D(80, kernel_size=(4,21), activation="relu")
 promMaxPoolOne = kl.MaxPooling2D(pool_size=(1,100))
 filtersFromPromPoolOne = kl.Conv2D(80, kernel_size=(1,promoterBlocks), activation="relu")
-
 # Inputs
-promInput = (inputX["PromoterPos"].tolist())
-
-formattedInput = np.dstack(promInput)
-formattedInput = np.rollaxis(formattedInput, -1)
-formattedInput = np.expand_dims(formattedInput, axis=3)
-
-inputTensor = tf.convert_to_tensor(formattedInput)
-inputTensor = tf.cast(inputTensor, tf.float32)
-
+promoterInputTensor = oneHotListToTensor(inputX["PromoterPos"].tolist())
 # Assemble the layers
-promKerasInput = kl.Input(shape=(formattedInput.shape[1], formattedInput.shape[2], formattedInput.shape[3],) )
+promKerasInput = kl.Input(shape=(promoterInputTensor.shape[1], promoterInputTensor.shape[2],
+								 promoterInputTensor.shape[3],) )
 paddedInput = promoterPadding(promKerasInput)
 promoterConvPart = promoterFilters(paddedInput)
 promoterConvPart = promMaxPoolOne(promoterConvPart)
@@ -191,8 +208,9 @@ promoterConvPart = kl.Flatten()(promoterConvPart)
 
 # See if this is running a promoter + distal site model. If so, set up the distal site layters
 if (args.featureSet == "Promoter_and_Distal"):
+	# Get the inputs, organized into a list
+	distalTensorInputList = getDistalInputList(inputX, args)  # [None] * len(siteNames)
 	distalBlocks = int((args.peakSize) / 100.0)
-	#
 	# Layers I'll use
 	distalPadding = kl.ZeroPadding2D(padding=(0,padSize))
 	distalFilters = kl.Conv2D(80, kernel_size=(4,21), activation="relu")
@@ -204,14 +222,10 @@ if (args.featureSet == "Promoter_and_Distal"):
 	distalNetworkList = [None] * len(siteNames)
 	# Get formatted input
 	for eachInd, eachName in enumerate(siteNames):
-		siteInput = (inputX[eachName].tolist())
-		formattedInput = np.dstack(siteInput)
-		formattedInput = np.rollaxis(formattedInput, -1)
-		formattedInput = np.expand_dims(formattedInput, axis=3)
-		inputTensor = tf.convert_to_tensor(formattedInput)
-		inputTensor = tf.cast(inputTensor, tf.float32)
 		# Assemble layers for this
-		distalInputList[eachInd] = kl.Input(shape=(formattedInput.shape[1], formattedInput.shape[2], formattedInput.shape[3],) )
+		distalInputList[eachInd] = kl.Input(shape=(distalTensorInputList[eachInd].shape[1], 
+												distalTensorInputList[eachInd].shape[2],
+											 distalTensorInputList[eachInd].shape[3],) )
 		distalNetworkList[eachInd] = distalPadding(distalInputList[eachInd])
 		distalNetworkList[eachInd] = distalFilters(distalNetworkList[eachInd])
 		distalNetworkList[eachInd] = distalMaxPoolOne(distalNetworkList[eachInd])
@@ -219,15 +233,11 @@ if (args.featureSet == "Promoter_and_Distal"):
 		distalNetworkList[eachInd] = kl.Flatten()(distalNetworkList[eachInd])
 	# Now add all these distal site intermediates together
 	pooledDistal = kl.Add()(distalNetworkList)
-	# # If working with distal sites, concatenate 
-	# flatDistal = kl.Flatten()(pooledDistal)
-	# flattenedConv = kl.Concatenate()(axis=1)([promoterConvPart, flatDistal])
 	flattenedConv = kl.merge.concatenate([promoterConvPart, pooledDistal])
 else:
 	flattenedConv = promoterConvPart
-
+# Into dense layers
 denseOutput = kl.Dense(100, activation="relu")(flattenedConv)
-
 finalOutput = kl.Dense(1, activation="linear")(denseOutput)
 
 if (args.featureSet == "Promoter_and_Distal"):
@@ -240,13 +250,15 @@ print(fullModel.summary())
 
 
 
-
 if (args.featureSet == "Promoter_and_Distal"):
 	plot_model(fullModel, to_file="./plots/promAndDistalArchitectureTest.png")
 else:
 	plot_model(fullModel, to_file="./plots/promOnlyModelTest.png")
 
 
+
+
+# Run fitting
 
 
 

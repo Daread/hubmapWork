@@ -8,6 +8,9 @@ library(ggplot2)
 # Note: Need bedtools loaded for this! bedtools/2.29.2
 library(cicero)
 
+# Add this to stop R from formatting into scientific notation, which causes errors in bedtools (which expects explciit genomic coordinates)
+options(scipen=999)
+
 library("optparse")
 # Get the passed parameters
 option_list = list(
@@ -62,6 +65,8 @@ option_list = list(
 opt_parser = OptionParser(option_list=option_list)
 opt = parse_args(opt_parser)
 
+opt$variableParams = paste0(opt$promoterUpstream, "_", opt$promoterDownstream, "_",
+                           opt$coaccessCutoff, "_", opt$maxNdistalSites, "_", opt$peakSize )
 
 
 getPromoterDF <- function(gzTSSfile, opt){
@@ -95,11 +100,13 @@ getCiceroPeaksAsBed <- function(ciceroDF){
   return(ciceroPeaksAsBed)
 }
 
-getCiceroPromoterIntersections <- function(opt){
+getCiceroPromoterIntersections <- function(opt, outFileTSS){
   # Sort the promoter and cicero peak bed files
   sortedATAC = paste0("./fileOutputs/ATAC_Peaks_", opt$ciceroFile, "_sorted.bed")
-  system(paste0("bedtools sort -i ", outFileATAC_sites, " > ", sortedATAC))
-  sortedTSS = paste0("./fileOutputs/promoterRegions.bed")
+  if (!(file.exists(sortedATAC))){
+    system(paste0("bedtools sort -i ", outFileATAC_sites, " > ", sortedATAC))
+  }
+  sortedTSS = paste0("./fileOutputs/promoterRegions", opt$variableParams, ".bed")
   system(paste0("bedtools sort -i ", outFileTSS, " > ", sortedTSS))
 
   # Intersect
@@ -123,11 +130,16 @@ getCiceroPromoterIntersections <- function(opt){
 # Read the human gene_bodies.bed file into a dataframe
 promoterDF = getPromoterDF(opt$geneAnnotationsForTSS, opt)
 
+# 8-25-21 testing
+# options(scipen=999)
+
 # Write this output
 outFileTSS = paste0("./fileOutputs/Promoters_Up", as.character(opt$promoterUpstream),
               "Down", as.character(opt$promoterDownstream), ".bed")
-write.table(promoterDF, file=outFileTSS, 
+if (!(file.exists(outFileTSS))){
+  write.table(promoterDF, file=outFileTSS, 
     quote=FALSE, sep='\t', col.names=FALSE, row.names=FALSE)
+}
 
 # Get the cicero connection file to use here
 ciceroDF = readRDS(paste0(opt$ciceroPath, opt$ciceroFile))
@@ -135,11 +147,14 @@ ciceroPeaksAsBed = getCiceroPeaksAsBed(ciceroDF)
 
 # Output this
 outFileATAC_sites = paste0("./fileOutputs/ATAC_Peaks_", opt$ciceroFile, ".bed")
-write.table(ciceroPeaksAsBed, file=outFileATAC_sites, 
+if (!(file.exists(outFileATAC_sites))){
+  write.table(ciceroPeaksAsBed, file=outFileATAC_sites, 
     quote=FALSE, sep='\t', col.names=FALSE, row.names=FALSE)
+}
+
 
 # Get the intersection
-ciceroPromoterIntersection =  getCiceroPromoterIntersections(opt)
+ciceroPromoterIntersection =  getCiceroPromoterIntersections(opt, outFileTSS)
 
 
 
@@ -194,14 +209,14 @@ for (rowNum in 1:nrow(promoterDistalDF)){ # V8 gives the ensemble ID for a gene
 
 # Plot a histogram of how many sites per promoter
 png(paste0("./plots/promoterRegionLinkedSitesHist", opt$maxNdistalSites, "maxSites", 
-          opt$promoterUpstream, "upstream", opt$promoterDownstream, "down", opt$coaccessCutoff, "coacCut", ".png" ),
+          opt$promoterUpstream, "upstream", opt$promoterDownstream, "down", opt$coaccessCutoff, "coacCut", opt$peakSize, "peaks", ".png" ),
         width=1000, height=1000, res =200)
 myPlot = ggplot(promoterDistalDF, aes(x=linkedSites)) + geom_histogram()
 print(myPlot)
 dev.off()
 
 dfName = paste0("Gene_Prom_Plus_Distal_Sites_Max", opt$maxNdistalSites, "_Upstream", opt$promoterUpstream,
-                "_Downstream", opt$promoterDownstream, "_cicCuf", opt$coaccessCutoff, ".RDS")
+                "_Downstream", opt$promoterDownstream, "_cicCuf", opt$coaccessCutoff, opt$peakSize, "peaks",  ".RDS")
 
 # Save this DF
 saveRDS(promoterDistalDF, file=paste0("./rdsOutputs/", dfName))
@@ -277,8 +292,8 @@ getPromoterDistalSeq <- function(promoterDistalDF, opt){
   #    1) write a bed file out of the coordiantes
   #    2) Get the fasta from this using bedtools
   #    3) Read it back in and set up a new DF
-  tempFile = "./fileOutputs/tempBed.bed"
-  seqFile = "./fileOutputs/tempSeq.fa"
+  tempFile = paste0( "./fileOutputs/tempBed", opt$variableParams, ".bed")
+  seqFile = paste0("./fileOutputs/tempSeq", opt$variableParams, ".fa")
   for (eachCol in colToProcess){
     print(paste0("Working on ", eachCol))
     writeBedFromCol(promoterDistalDF, tempFile, eachCol)

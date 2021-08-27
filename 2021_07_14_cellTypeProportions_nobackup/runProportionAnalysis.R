@@ -104,7 +104,8 @@ processingNote = paste0(opt$name, "_by_", opt$colToUse)
 
 # With arguments, read in data
 rdsPath = "../2021_05_10_HM10_Preprocessing_and_cell_annotations/rdsOutput/"
-oldProcNote = "HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40"
+# oldProcNote = "HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40"
+oldProcNote = "HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40addAllTypes"
 allCellCDS = readRDS(paste0(rdsPath, "allCells_", oldProcNote, ".rds"))
 
 # Assign the subtypes
@@ -172,6 +173,135 @@ dev.off()
 # Just make a plot to show the UMAP
 plotUMAP_Monocle(allCellCDS, processingNote, "highLevelCellType", textSize=4,
 				show_labels=TRUE, outputPath=outputPath)
+
+
+
+
+# 8-17-21: Get a dataframe with proportions of each cell type for each sample, labeling donor and site.
+#.         Then use this to look at inter-site vs inter-donor variation, as well as 
+
+library(data.table)
+
+cellTypePropDF = transpose(unmeltedPropDF)
+rownames(cellTypePropDF) = colnames(unmeltedPropDF)
+colnames(cellTypePropDF) = rownames(unmeltedPropDF)
+
+cellTypePropDF$sampleName = rownames(cellTypePropDF)
+
+meltedPropDF = reshape::melt(cellTypePropDF, id="sampleName")
+colnames(meltedPropDF) = c("sampleName", "Cell_Type", "Proportion")
+
+
+library(tidyr)
+meltedPropDF = tidyr::separate(meltedPropDF, col="sampleName", into=c("Donor", "Anatomical_Site"), 
+				sep="[.]", remove=FALSE, extra="merge")
+
+
+# Now, time to get 
+varianceComparisonDF = data.frame("Mean_Value" = double(),
+								"Comparison" = character(),
+								  "Cell_Type" = character())
+
+cellTypes = c("Adipocytes", "B_Cell", "Cardiomyocyte", "Endocardium", "Fibroblast", 
+              "Lymphatic_Endothelium", "Macrophage", "Mast_Cell", "Neuronal", "T_Cell",
+                "Vascular_Endothelium", "VSM_and_Pericyte")
+
+
+
+getInterDonorSetSite <- function(subsetDF, siteToUse){
+	thisDF = subsetDF[subsetDF$Anatomical_Site == siteToUse,]
+	# Loop over all combinations
+	comboMeanVec = numeric()
+
+	for (eachInd in 1:(nrow(thisDF) - 1)){
+		for (eachComp in (eachInd + 1):nrow(thisDF)){
+			thisAbsDiff = abs(thisDF[eachInd, "Proportion"] - thisDF[eachComp, "Proportion"] )
+
+			comboMeanVec = c(comboMeanVec, thisAbsDiff)
+		}
+	}
+	return ( mean(comboMeanVec))
+}
+
+
+getIntraDonorDiff <- function(subsetDF, siteOne, siteTwo){
+	thisDF = subsetDF[subsetDF$Anatomical_Site %in% c(siteOne, siteTwo),]
+
+	interSiteVec = numeric()
+	# Get all the intra donor combos
+	for (eachDonor in levels(as.factor(subsetDF$Donor))){
+		miniDF = thisDF[thisDF$Donor == eachDonor,]
+		# If only one, skip
+		if (nrow(miniDF) == 1){
+			next 
+		}
+		# Otherwise, get the comparison
+		interSiteDiff = abs(miniDF[1, "Proportion"] - miniDF[2, "Proportion"])
+		interSiteVec = c(interSiteVec, interSiteDiff)
+	}
+
+	return(mean(interSiteVec))
+}
+
+
+
+for (eachCellType in cellTypes){
+	subsetDF = meltedPropDF[meltedPropDF$Cell_Type == eachCellType,]
+	interLV = getInterDonorSetSite(subsetDF, "Left.Vent")
+	interApex = getInterDonorSetSite(subsetDF, "Apex")
+
+	interSiteIntraDonor = getIntraDonorDiff(subsetDF, "Left.Vent", "Apex")
+
+	cellTypeDF = data.frame("Mean_Value" = c(interLV, interApex, interSiteIntraDonor))
+	cellTypeDF$Comparison = c("Inter_Donor_LV", "Inter_Donor_Apex", "Inter_Site_Within_Donor")
+	cellTypeDF$Cell_Type = eachCellType
+	varianceComparisonDF = rbind(varianceComparisonDF, cellTypeDF)
+
+}
+
+# Make a plot
+
+
+png(paste0(outputPath, "Compare_InterSite_vs_InterDonor_Differences", ".png"),
+				width=2000, height=2000, res=200)
+thisPlot = ggplot(varianceComparisonDF, aes_string(x="Cell_Type", y="Mean_Value", color="Comparison")) +
+				geom_point()+ 
+     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+print(thisPlot)
+dev.off()
+
+
+
+# Calculate the t test for LV vs apex proportions
+tTestDF = data.frame("Cell_Type" = cellTypes)
+rownames(tTestDF) = tTestDF$Cell_Type
+
+for (eachCellType in cellTypes){
+	subsetDF = meltedPropDF[meltedPropDF$Cell_Type == eachCellType,]
+	subsetDF = subsetDF[subsetDF$Anatomical_Site %in% c("Left.Vent", "Apex"),]
+
+	# Get the t test
+	xVec = subsetDF[subsetDF$Anatomical_Site == "Left.Vent",]$Proportion
+	yVec = subsetDF[subsetDF$Anatomical_Site == "Apex",]$Proportion
+	tRes = t.test(xVec, yVec)
+
+	tTestDF[eachCellType, "P_Value_LV_vs_Apex"] = tRes$p.value
+
+}
+
+# Save this
+
+write.csv(tTestDF, paste0(outputPath, "tTestsForProportions.csv"))
+
+
+
+
+
+
+
+
+
+
 
 
 

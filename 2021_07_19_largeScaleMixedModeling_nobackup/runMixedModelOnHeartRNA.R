@@ -17,6 +17,21 @@ hardAssignDonorAges <- function(inputCDS){
 }
 
 
+hardAssignDonorSexes <- function(inputCDS){
+  colData(inputCDS)$Sex = "Not_Set"
+  colData(inputCDS)$Sex =ifelse(colData(inputCDS)$Donor == "W134", "F", colData(inputCDS)$Sex)
+  colData(inputCDS)$Sex =ifelse(colData(inputCDS)$Donor == "W135", "M", colData(inputCDS)$Sex)
+  colData(inputCDS)$Sex =ifelse(colData(inputCDS)$Donor == "W136", "M", colData(inputCDS)$Sex)
+  colData(inputCDS)$Sex =ifelse(colData(inputCDS)$Donor == "W137", "F", colData(inputCDS)$Sex)
+  colData(inputCDS)$Sex =ifelse(colData(inputCDS)$Donor == "W139", "M", colData(inputCDS)$Sex)
+  colData(inputCDS)$Sex =ifelse(colData(inputCDS)$Donor == "W142", "F", colData(inputCDS)$Sex)
+  colData(inputCDS)$Sex =ifelse(colData(inputCDS)$Donor == "W144", "M", colData(inputCDS)$Sex)
+  colData(inputCDS)$Sex =ifelse(colData(inputCDS)$Donor == "W145", "M", colData(inputCDS)$Sex)
+  colData(inputCDS)$Sex =ifelse(colData(inputCDS)$Donor == "W146", "F", colData(inputCDS)$Sex)
+
+  return(inputCDS)
+}
+
 
 
 ###########################################################################################
@@ -60,7 +75,7 @@ option_list = list(
               help="Comma-separated string of variables to model with random effects", metavar="character"),
     make_option(c("-f", "--fixedEffects"), type="character",
                # default="Anatomical_Site", # Syntax would be "Anatomical_Site,Age" if including multiple
-              default="Anatomical_Site,Log10Age",
+              default="Anatomical_Site,Log10Age,Sex",
               help="Comma-separated string of variables to model with fixed effects", metavar="character"),
     make_option(c("-g", "--groupColumn"), type="character", default="highLevelCellType", 
               help="column in colData that cellType uses to select", metavar="character"),
@@ -91,6 +106,9 @@ print("Read in CDS")
 #Added 7-28-21
 allCellCDS = hardAssignDonorAges(allCellCDS)
 
+# Added 8-16-21
+allCellCDS = hardAssignDonorSexes(allCellCDS)
+
 # Filter down to the cell type being tested here
 testCDS = allCellCDS[,colData(allCellCDS)[[opt$groupColumn]] == opt$cellType]
 # Added 7-20-21: Try to reduce memory footprint. Hitting issues with batch submissions
@@ -103,21 +121,26 @@ testCDS = filterByCellsExpressed(testCDS, opt$minGeneExprPercent)
 testCDS = estimate_size_factors(testCDS)
 
 # Relevel so Apex is always the lowest anatomical site (and can readily be compared to the Left_ventricle in a clear coefficient)
-colData(testCDS)$Anatomical_Site = relevel(as.factor(colData(testCDS)$Anatomical_Site), ref="Apex")
+colData(testCDS)$Anatomical_Site = relevel(as.factor(colData(testCDS)$Anatomical_Site), ref="Left_Vent")
+# 8-27-21: Changed from "Aepx" to "Left_Vent" as baseline. Makes for easier LV vs. RV interpretation
 
-# # # Make this a mini run to test
-# # ############################################################## Testing only 7-19-21
+# # # # Make this a mini run to test
+# # # ############################################################## Testing only 7-19-21
 # processingNote = paste0(processingNote, "miniTest")
 # testCDS = testCDS[1:20,]
-# # ###################################################################################
+# # # ###################################################################################
 
+source("/net/trapnell/vol1/home/readdf/trapLabDir/sharedProjectCode/DE_Code/utils-MM.R")
+source("/net/trapnell/vol1/home/readdf/trapLabDir/sharedProjectCode/DE_Code/expr_models-MM.R")
 source("/net/trapnell/vol1/home/readdf/trapLabDir/sharedProjectCode/DE_Code/mixedModelFittingMonocle3Style.R")
+
 # Now test for these genes
 print("Fitting Models Now")
-mixedTestRes = fit_mixed_models(testCDS, modelFormula, c(fixedEffectVec, randomEffectVec))
+mixedTestRes = fit_mixed_models(testCDS, modelFormula, #c(fixedEffectVec, randomEffectVec),
+                            expression_family="mixed-negbinomial", clean_model=T)
 
 testResDF = as.data.frame(mixedTestRes)
-testResDF = testResDF[, !(names(testResDF) %in% c("model", "status"))]
+testResDF = testResDF[, !(names(testResDF) %in% c("model"))]
 
 # Save the output
 dir.create(paste0("./rdsOutput/mixedModels/"))

@@ -4,9 +4,9 @@ import argparse
 import pandas as pd
 import math
 import pdb
+import Bio.Seq as bioseq
 
-
-def oneHotFromSeq(inputStr, seqLength):
+def oneHotFromSeq(inputStr, seqLength): #, seqOrient="+"):
 	 # See if this is empty
 	# If so, return a zero'd vector
 	# pdb.set_trace()
@@ -14,17 +14,21 @@ def oneHotFromSeq(inputStr, seqLength):
 		return (np.zeros((4, seqLength)))
 	# Set up a numpy array for this
 	oneHotVec = np.zeros((4,len(inputStr)))
+	# If needed, get the reverse complement of the string (if the gene is in the reverse orientation)
+	# if (seqOrient == "-"):
+	# 	# Flip
+	# 	inputStr = bioseq.reverse_complement(inputStr.upper())
 	# 
 	# Loop and fill in
 	for eachInd, eachChar in enumerate(inputStr):
 		# A
-		if (eachChar == "A"):
+		if ((eachChar == "A") or (eachChar == "a")):
 			oneHotVec[0, eachInd] = 1
-		elif(eachChar == "T"):
+		elif ((eachChar == "T") or (eachChar == "t")):
 			oneHotVec[1, eachInd] = 1
-		elif(eachChar == "G"):
+		elif ((eachChar == "G") or (eachChar == "g")):
 			oneHotVec[2, eachInd] = 1
-		elif(eachChar == "C"):
+		elif ((eachChar == "C") or (eachChar == "c")):
 			oneHotVec[3, eachInd] = 1
 		#
 	# Return
@@ -42,7 +46,7 @@ def getOneHotDF(inputDF, args):
 		# Send a peak size to fill for NAs
 		if (eachCol == "PromoterPos"):
 			inputDF[eachCol] = (
-				[oneHotFromSeq(x, (args.promUpstream + args.promDownstream)) for x in inputDF[eachCol]]
+				[oneHotFromSeq(x, (args.promUpstream + args.promDownstream)) for  x in inputDF[eachCol]]
 				)
 		else:
 			inputDF[eachCol] = (
@@ -78,11 +82,12 @@ dfName = ("Gene_Prom_Plus_Distal_WithSequence_Sites_Max" + str(args.maxNdistalSi
 
 myDF = pd.read_csv("./rdsOutputs/" + dfName + ".csv")
 
+print("Getting one hot df)")
 oneHotDF = getOneHotDF(myDF, args)
 
 
-
-myDF = pd.read_csv("./rdsOutputs/" + dfName + ".csv")
+print("Outputting now")
+# myDF = pd.read_csv("./rdsOutputs/" + dfName + ".csv")
 
 
 # Save the output:
@@ -93,11 +98,11 @@ oneHotName = ("OneHot_PromotersAndDist_Max" + str(args.maxNdistalSites)
 										"peakSize" + str(args.peakSize))
 
 
-oneHotDF.to_csv(("./fileOutputs/" + oneHotName + ".csv"))
+# oneHotDF.to_csv(("./fileOutputs/" + oneHotName + ".csv"))
 
 
-
-
+# Pickle, so that the numpy columns are read out as expected
+oneHotDF.to_pickle(("./fileOutputs/" + oneHotName + ".csv"))
 
 
 

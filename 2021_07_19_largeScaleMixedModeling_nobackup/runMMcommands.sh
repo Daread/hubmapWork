@@ -63,6 +63,7 @@ qsub -P trapnelllab -l mfree=40G -wd /net/trapnell/vol1/home/readdf/trapLabDir/h
 qsub -P trapnelllab -l mfree=40G -wd /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_19_largeScaleMixedModeling_nobackup/ /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_19_largeScaleMixedModeling_nobackup/singleMMrunSetFixed.sh Vascular_Endothelium Anatomical_Site,Age
 qsub -P trapnelllab -l mfree=40G -wd /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_19_largeScaleMixedModeling_nobackup/ /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_19_largeScaleMixedModeling_nobackup/singleMMrunSetFixed.sh Endocardium Anatomical_Site,Age
 
+
 qsub -P trapnelllab -l mfree=40G -wd /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_19_largeScaleMixedModeling_nobackup/ /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_19_largeScaleMixedModeling_nobackup/singleMMrunSetFixed.sh Cardiomyocyte Anatomical_Site,Log10Age
 qsub -P trapnelllab -l mfree=40G -wd /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_19_largeScaleMixedModeling_nobackup/ /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_19_largeScaleMixedModeling_nobackup/singleMMrunSetFixed.sh Vascular_Endothelium Anatomical_Site,Log10Age
 qsub -P trapnelllab -l mfree=40G -wd /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_19_largeScaleMixedModeling_nobackup/ /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_19_largeScaleMixedModeling_nobackup/singleMMrunSetFixed.sh Endocardium Anatomical_Site,Log10Age
@@ -99,6 +100,36 @@ Rscript plotOutputs.R -c T_Cell -m _fix_Anatomical_Site,Age_rand_Donor_HM10UMI=1
 Rscript plotOutputs.R -c Vascular_Endothelium -m _fix_Anatomical_Site,Age_rand_Donor_HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40addAllTypes_MMresult
 Rscript plotOutputs.R -c T_Cell -m _fix_Anatomical_Site,Age_rand_Donor_HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40addAllTypes_MMresult
 Rscript plotOutputs.R -c Cardiomyocyte -m _fix_Anatomical_Site,Age_rand_Donor_HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40addAllTypes_MMresult
+
+
+
+
+# 8-16-21: Adjusted to be using Jennifer's ready-to-share code (which doesn't change much apart from being good practice)
+#.   and adding in Sex as a covariate for testing.
+
+qsub -P trapnelllab -l mfree=40G -wd /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_19_largeScaleMixedModeling_nobackup/ /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_19_largeScaleMixedModeling_nobackup/singleMMrunSetFixed.sh Cardiomyocyte Anatomical_Site,Log10Age,Sex
+qsub -P trapnelllab -l mfree=40G -wd /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_19_largeScaleMixedModeling_nobackup/ /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_19_largeScaleMixedModeling_nobackup/singleMMrunSetFixed.sh Vascular_Endothelium Anatomical_Site,Log10Age,Sex
+qsub -P trapnelllab -l mfree=40G -wd /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_19_largeScaleMixedModeling_nobackup/ /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_19_largeScaleMixedModeling_nobackup/singleMMrunSetFixed.sh Endocardium Anatomical_Site,Log10Age,Sex
+qsub -P trapnelllab -l mfree=80G -wd /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_19_largeScaleMixedModeling_nobackup/ /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_19_largeScaleMixedModeling_nobackup/singleMMrunSetFixed.sh Fibroblast Anatomical_Site,Log10Age,Sex
+qsub -P trapnelllab -l mfree=80G -wd /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_19_largeScaleMixedModeling_nobackup/ /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_19_largeScaleMixedModeling_nobackup/singleMMrunSetFixed.sh Macrophage Anatomical_Site,Log10Age,Sex
+qsub -P trapnelllab -l mfree=40G -wd /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_19_largeScaleMixedModeling_nobackup/ /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_19_largeScaleMixedModeling_nobackup/singleMMrunSetFixed.sh T_Cell Anatomical_Site,Log10Age,Sex
+qsub -P trapnelllab -l mfree=40G -wd /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_19_largeScaleMixedModeling_nobackup/ /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_19_largeScaleMixedModeling_nobackup/singleMMrunSetFixed.sh Adipocytes Anatomical_Site,Log10Age,Sex
+qsub -P trapnelllab -l mfree=40G -wd /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_19_largeScaleMixedModeling_nobackup/ /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_19_largeScaleMixedModeling_nobackup/singleMMrunSetFixed.sh B_Cell Anatomical_Site,Log10Age,Sex
+qsub -P trapnelllab -l mfree=40G -wd /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_19_largeScaleMixedModeling_nobackup/ /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_19_largeScaleMixedModeling_nobackup/singleMMrunSetFixed.sh Mast_Cell Anatomical_Site,Log10Age,Sex
+qsub -P trapnelllab -l mfree=40G -wd /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_19_largeScaleMixedModeling_nobackup/ /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_19_largeScaleMixedModeling_nobackup/singleMMrunSetFixed.sh Neuronal Anatomical_Site,Log10Age,Sex
+qsub -P trapnelllab -l mfree=40G -wd /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_19_largeScaleMixedModeling_nobackup/ /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_19_largeScaleMixedModeling_nobackup/singleMMrunSetFixed.sh VSM_and_Pericyte Anatomical_Site,Log10Age,Sex
+qsub -P trapnelllab -l mfree=40G -wd /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_19_largeScaleMixedModeling_nobackup/ /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_19_largeScaleMixedModeling_nobackup/singleMMrunSetFixed.sh Lymphatic_Endothelium Anatomical_Site,Log10Age,Sex
+
+
+
+# 8-17-21: Make some plots
+Rscript plotOutputs.R -c Vascular_Endothelium -m _fix_Anatomical_Site,Log10Age,Sex_rand_Donor_HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40addAllTypes_MMresult
+Rscript plotOutputs.R -c Cardiomyocyte -m _fix_Anatomical_Site,Log10Age,Sex_rand_Donor_HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40addAllTypes_MMresult
+
+Rscript plotOutputs.R -c Macrophage -m _fix_Anatomical_Site,Log10Age,Sex_rand_Donor_HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40addAllTypes_MMresult
+Rscript plotOutputs.R -c T_Cell -m _fix_Anatomical_Site,Log10Age,Sex_rand_Donor_HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40addAllTypes_MMresult
+Rscript plotOutputs.R -c VSM_and_Pericyte -m _fix_Anatomical_Site,Log10Age,Sex_rand_Donor_HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40addAllTypes_MMresult
+Rscript plotOutputs.R -c Endocardium -m _fix_Anatomical_Site,Log10Age,Sex_rand_Donor_HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40addAllTypes_MMresult
 
 
 

@@ -1,7 +1,6 @@
 
 library(tidyr)
 library(ggplot2)
-
 library(glmnet)
 
 library("optparse")
@@ -10,8 +9,9 @@ option_list = list(
   make_option(c("-p", "--pValFIMOcutoff"), type="numeric", 
   			default=1e-6, 
               help="Max FIMO p value to retain match", metavar="character"),
+
   make_option(c("-f", "--featureSelection"), type="character", 
-        default="Binary_Combined_Motif_Counts", 
+        default="Binary_Combined_Motif_Counts", # "Binary_Combined_Motif_Counts", "Binary_PromOnly_Motif_Counts"
               help="Option of which features to use for input", metavar="character"),
 
   make_option(c("-t", "--predictionTask"), type="character", 
@@ -55,6 +55,10 @@ getInputDF <- function(opt){
             "Gene_Prom_Plus_Distal_WithSequence_Sites_Max", opt$maxNdistalSites, "_Upstream", opt$promoterUpstream,
                 "_Downstream", opt$promoterDownstream, "_cicCuf", opt$coaccessCutoff,
                     "peakSize", opt$peakSize, "/" )
+  # dirName = paste0("../2021_07_26_setup_ATAC_to_expr_data_nobackup/fileOutputs/backupAllOldIntermediatesBeforeFixRaceConditionBug/", 
+  #           "Gene_Prom_Plus_Distal_WithSequence_Sites_Max", opt$maxNdistalSites, "_Upstream", opt$promoterUpstream,
+  #               "_Downstream", opt$promoterDownstream, "_cicCuf", opt$coaccessCutoff,
+  #                   "peakSize", opt$peakSize, "/" )
 
   # Get previous output
   dfName = paste0("Gene_Prom_Plus_Distal_WithSequence_Sites_Max", opt$maxNdistalSites, "_Upstream", opt$promoterUpstream,
@@ -72,7 +76,6 @@ getRNAdf <- function(opt, cellTypes){
   rnaDF = readRDS(paste0(rnaDir, "Pseudobulked_RNA_countsPerMillionNotDeduplicated.RDS"))
 
   print(paste0(cellTypes, opt$predictionTask))
-
   returnDF = rnaDF[,c("id", "gene_short_name", 
     paste0(cellTypes, opt$predictionTask))]
 
@@ -108,67 +111,117 @@ getCombinedDF <- function(inputFeatures, rnaData, opt, cellTypes){
 
 getSubsetOfCombined <- function(combinedDF, opt, setToUse){
   combinedSubset = combinedDF[combinedDF$Model_Set == setToUse,]
-  combinedSubset = combinedTrain[, !(colnames(combinedTrain) %in% c("Model_Set", "GeneID", "gene_short_name"))]
+  combinedSubset = combinedSubset[, !(colnames(combinedSubset) %in% c("Model_Set", "GeneID", "gene_short_name"))]
 
+  return(combinedSubset)
+}
+
+getAccuracy <-function(fitCV_Model, inputX, inputY){
+  # Get the prediction
+  predictedVal = predict(fitCV_Model, newx=as.matrix(inputX), s = "lambda.min")
+  # Get the r_squared
+  rSquared = (cor(predictedVal, inputY) ^ 2)
+  return(rSquared)
 }
 
 
 combinedDF = getCombinedDF(inputFeatures, rnaData, opt, cellTypes)
-
 combinedTrain = getSubsetOfCombined(combinedDF, opt, "Train")
 
 
-# completeTrain = combinedTrain[complete.cases(combinedTrain),]
-
 trainX = combinedTrain[, !(colnames(combinedTrain) %in% c(paste0(cellTypes, opt$predictionTask)))]
-
 trainY = combinedTrain[, (colnames(combinedTrain) %in% c(paste0(cellTypes, opt$predictionTask)))]
 
+combinedVal = getSubsetOfCombined(combinedDF, opt, "Validation")
+valX = combinedVal[, !(colnames(combinedVal) %in% c(paste0(cellTypes, opt$predictionTask)))]
+valY = combinedVal[, (colnames(combinedVal) %in% c(paste0(cellTypes, opt$predictionTask)))]
 
 
-thisCellType = "Fibroblast"
+# thisCellType = "Fibroblast"
 thisAlpha = .5
+alphaToUse = c(0.0, .25, .5, .75, 1.0)
 
+fitAccuracyDF = data.frame("Cell_Type" = character(),
+                            "Alpha" = double(),
+                            "CV_R_squared" = double(),
+                            "Train_R_Squared" = double(),
+                            "Val_R_Squared" = double())
 
-fitAccuracyDF = data.frame("Cell_Type" = cellTypes)
-rownames(fitAccuracyDF) = fitAccuracyDF$Cell_Type
+# rownames(fitAccuracyDF) = fitAccuracyDF$Cell_Type
 
+# cellTypes = c("Fibroblast", "Cardiomyocyte")
+
+set.seed(7)
 for (thisCellType in cellTypes){
   print(paste0("Working on ", thisCellType))
   miniY = trainY[[paste0(thisCellType, opt$predictionTask)]]
   trainFit = glmnet(as.matrix(trainX), miniY)
 
-  # png(paste0(outDirName, "glmnet_alpha", as.character(thisAlpha), "_",
-  #       opt$predictionTask, "_from_", opt$featureSelection, "_" , thisCellType, "fitting.png" ),
-  #       height=1000, width=1000, res=200)
+  for (thisAlpha in alphaToUse){
+    print(paste0("Working on alpha = ", thisAlpha))
+    trainCVfit = cv.glmnet(as.matrix(trainX), miniY)
+    minLambda = trainCVfit$lambda.min 
 
-  # fitPlot = plot(trainFit)
-  # print(fitPlot)
-  # dev.off()
+    thisDF = data.frame("dev.ratio" = trainCVfit$glmnet.fit$dev.ratio,
+                        "lambda" = trainCVfit$glmnet.fit$lambda)
+    thisDF = thisDF[thisDF$lambda == minLambda,]
+    CVrSquared_bestLambda = thisDF[1, "dev.ratio"]
 
-  trainCVfit = cv.glmnet(as.matrix(trainX), miniY)
-  minLambda = trainCVfit$lambda.min 
+    valRsquared = getAccuracy(trainCVfit, valX, valY[[paste0(thisCellType, opt$predictionTask]])
+    trainRsquared = getAccuracy(trainCVfit, trainX, miniY)
+    newRow = data.frame(thisCellType, thisAlpha, CVrSquared_bestLambda, trainRsquared, valRsquared)
+    names(newRow) = c("Cell_Type", "Alpha", "CV_R_squared", "Train_R_Squared", "Val_R_Squared")
+    fitAccuracyDF = rbind(fitAccuracyDF, newRow)
+    # fitAccuracyDF[thisCellType, "CV_R_squared"] = rSquared_bestLambda
+    
+  }
 
-  thisDF = data.frame("dev.ratio" = trainCVfit$glmnet.fit$dev.ratio,
-                      "lambda" = trainCVfit$glmnet.fit$lambda)
-
-  thisDF = thisDF[thisDF$lambda == minLambda,]
-  rSquared_bestLambda = thisDF[1, "dev.ratio"]
-
-  fitAccuracyDF[thisCellType, "CV_R_squared"] = rSquared_bestLambda
 }
 
 
 
+fitAccuracyDF$Alpha = as.character(fitAccuracyDF$Alpha)
 
-png(paste0(outDirName, "FitAccuracy", "glmnet_alpha", as.character(thisAlpha), "_",
-      opt$predictionTask, "_from_", opt$featureSelection, "_" , thisCellType, "fitting.png" ),
+
+png(paste0(outDirName, "FitAccuracy", "glmnet_varyAlpha_",
+      opt$predictionTask, "_from_", opt$featureSelection, "fitting.png" ),
       height=1000, width=1000, res=200)
 
-fitPlot = ggplot(fitAccuracyDF, aes_string(x="Cell_Type", y=""))
-    + geom_point() + ggtitle(paste0("Fit Accuracies by CV in glmnet"))
+fitPlot = (ggplot(fitAccuracyDF, aes_string(x="Cell_Type", y="CV_R_squared", color="Alpha")) +
+     # geom_point() + 
+     ggtitle(paste0("Fit Accuracies by CV in glmnet")) + 
+     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+     geom_jitter())
 print(fitPlot)
 dev.off()
+
+
+png(paste0(outDirName, "FitAccuracy_OnValidation_", "glmnet_varyAlpha_",
+      opt$predictionTask, "_from_", opt$featureSelection, "fitting.png" ),
+      height=1000, width=1000, res=200)
+fitPlot = (ggplot(fitAccuracyDF, aes_string(x="Cell_Type", y="Val_R_Squared", color="Alpha")) +
+     # geom_point() + 
+     ggtitle(paste0("Fit Accuracies by CV in glmnet")) + 
+     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+     geom_jitter())
+print(fitPlot)
+dev.off()
+
+
+
+png(paste0(outDirName, "FitAccuracy_OnTrainSet_", "glmnet_varyAlpha_",
+      opt$predictionTask, "_from_", opt$featureSelection, "fitting.png" ),
+      height=1000, width=1000, res=200)
+fitPlot = (ggplot(fitAccuracyDF, aes_string(x="Cell_Type", y="Train_R_Squared", color="Alpha")) +
+     # geom_point() + 
+     ggtitle(paste0("Fit Accuracies by CV in glmnet")) + 
+     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+     geom_jitter())
+print(fitPlot)
+dev.off()
+
+
+
 
 
 

@@ -40,7 +40,8 @@ option_list = list(
               help="Path to genome fasta to use", metavar="character"),
 
   make_option(c("-t", "--geneAnnotationsForTSS"), type="character", 
-        default="/net/bbi/vol1/data/genomes_stage/human/human_atac/gene_bodies.bed.gz",
+        # default="/net/bbi/vol1/data/genomes_stage/human/human_atac/gene_bodies.bed.gz", # This one from the ATAC dir isn't matching many RNA entries
+        default="/net/bbi/vol1/data/genomes_stage/human/human_rna/latest.genes.bed",
               help="Path to genome fasta to use", metavar="character"),
 
   make_option(c("-u", "--promoterUpstream"), type="numeric", 
@@ -83,6 +84,26 @@ getPromoterDF <- function(gzTSSfile, opt){
   # Format into a DF that can be written as a bed file
   tssBed = data.frame("chr" = promotersDF$V1, "start" = promotersDF$start, "end" = promotersDF$end, "geneName" = promotersDF$V4,
                     "V5"=promotersDF$V5, "orientation"=promotersDF$V6)
+  return(tssBed)
+}
+
+getPromoterDFnotGZ <- function(inputTSSfile, opt){
+  promotersDF = as.data.frame(read.table((inputTSSfile), sep='\t', header=FALSE))
+
+  # Get the upstream and downstream regions
+  promotersDF$start = ifelse(promotersDF$V6 == "+", 
+                      ((promotersDF$V2 - opt$promoterUpstream)), 
+                      ((promotersDF$V3 - opt$promoterDownstream)))
+  promotersDF$end = ifelse(promotersDF$V6 == "+", 
+                      (promotersDF$V2 + opt$promoterDownstream), 
+                      (promotersDF$V3 + opt$promoterUpstream))
+
+  # Format into a DF that can be written as a bed file
+  tssBed = data.frame("chr" = promotersDF$V1, "start" = promotersDF$start, "end" = promotersDF$end, "geneName" = promotersDF$V4,
+                    "V5"=promotersDF$V5, "orientation"=promotersDF$V6)
+  chromToKeep = c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16",
+                "17", "18", "19", "20", "21", "22", "X", "Y")
+  tssBed = tssBed[tssBed$chr %in% chromToKeep,]
 
   return(tssBed)
 }
@@ -100,24 +121,30 @@ getCiceroPeaksAsBed <- function(ciceroDF){
   return(ciceroPeaksAsBed)
 }
 
-getCiceroPromoterIntersections <- function(opt, outFileTSS){
+getCiceroPromoterIntersections <- function(opt, outFileTSS, outFileATAC_sites){
   # Sort the promoter and cicero peak bed files
-  sortedATAC = paste0("./fileOutputs/ATAC_Peaks_", opt$ciceroFile, "_sorted.bed")
+  sortedATAC = paste0("./fileOutputs/ATAC_Peaks_", opt$variableParams, opt$ciceroFile, "_sorted.bed")
   if (!(file.exists(sortedATAC))){
     system(paste0("bedtools sort -i ", outFileATAC_sites, " > ", sortedATAC))
   }
   sortedTSS = paste0("./fileOutputs/promoterRegions", opt$variableParams, ".bed")
-  system(paste0("bedtools sort -i ", outFileTSS, " > ", sortedTSS))
+  if (!(file.exists(sortedTSS))){
+    system(paste0("bedtools sort -i ", outFileTSS, " > ", sortedTSS))
+  }
+  
 
   # Intersect
-  intersectBed = paste0("./fileOutputs/TSS_Intersected_Peaks_", opt$ciceroFile, ".bed")
-  system(paste0("bedtools intersect -b ", sortedTSS, " -a ", sortedATAC, " -wa -wb > ", intersectBed))
+  intersectBed = paste0("./fileOutputs/TSS", opt$variableParams, "_Intersected_Peaks_", opt$ciceroFile, ".bed")
+  if (!(file.exists(intersectBed))){
+    system(paste0("bedtools intersect -b ", sortedTSS, " -a ", sortedATAC, " -wa -wb > ", intersectBed))
+  }
 
   # Get the intersected sites
   intersectedDF = as.data.frame(read.table(intersectBed))
   intersectedDF$formattedPeak = paste0("chr", intersectedDF$V5, "_", intersectedDF$V2, "_", intersectedDF$V3)
+  # browser()
 
-  intersectedDF$promoterCoord = paste0("chr", intersectedDF$V9, "_", intersectedDF$V6, "_", intersectedDF$V7)
+  intersectedDF$promoterCoord = paste0("chr", intersectedDF$V5, "_", intersectedDF$V6, "_", intersectedDF$V7)
 
   # Rename the GeneID
   colnames(intersectedDF) = c("PeakChr", "PeakStart", "PeakEnd", "Type", "PromoterChr", "PromoterStart", 
@@ -126,16 +153,16 @@ getCiceroPromoterIntersections <- function(opt, outFileTSS){
   return(intersectedDF)
 }
 
-
 # Read the human gene_bodies.bed file into a dataframe
-promoterDF = getPromoterDF(opt$geneAnnotationsForTSS, opt)
+# promoterDF = getPromoterDF(opt$geneAnnotationsForTSS, opt) # for the atac one, in gz form
+promoterDF = getPromoterDFnotGZ(opt$geneAnnotationsForTSS, opt) # for RNA-based gene annotations
+# Only keep promoters that are 
 
-# 8-25-21 testing
-# options(scipen=999)
+
 
 # Write this output
 outFileTSS = paste0("./fileOutputs/Promoters_Up", as.character(opt$promoterUpstream),
-              "Down", as.character(opt$promoterDownstream), ".bed")
+              "Down", as.character(opt$promoterDownstream), "_", opt$variableParams, ".bed")
 if (!(file.exists(outFileTSS))){
   write.table(promoterDF, file=outFileTSS, 
     quote=FALSE, sep='\t', col.names=FALSE, row.names=FALSE)
@@ -146,15 +173,16 @@ ciceroDF = readRDS(paste0(opt$ciceroPath, opt$ciceroFile))
 ciceroPeaksAsBed = getCiceroPeaksAsBed(ciceroDF)
 
 # Output this
-outFileATAC_sites = paste0("./fileOutputs/ATAC_Peaks_", opt$ciceroFile, ".bed")
+outFileATAC_sites = paste0("./fileOutputs/ATAC_Peaks_", opt$ciceroFile, opt$variableParams, ".bed")
 if (!(file.exists(outFileATAC_sites))){
   write.table(ciceroPeaksAsBed, file=outFileATAC_sites, 
     quote=FALSE, sep='\t', col.names=FALSE, row.names=FALSE)
 }
 
 
-# Get the intersection
-ciceroPromoterIntersection =  getCiceroPromoterIntersections(opt, outFileTSS)
+# Get the intersection.
+# This holds peaks that intersected with a promoter
+ciceroPromoterIntersection =  getCiceroPromoterIntersections(opt, outFileTSS, outFileATAC_sites)
 
 
 
@@ -166,13 +194,24 @@ ciceroTSS_DF$Peak2 = as.character(ciceroTSS_DF$Peak2)
 ciceroTSS_DF = ciceroTSS_DF[ciceroTSS_DF$coaccess > opt$coaccessCutoff,]  
 
 # Set up a dataframe to hold the output coordinates of promoters + linked sites
-promoterDistalDF = data.frame("GeneID" = ciceroPromoterIntersection$GeneID,
-                              "chr" = ciceroPromoterIntersection$PromoterChr,
-                              "PromoterPos" = ciceroPromoterIntersection$promoterCoord,
-                              "orientation" = ciceroPromoterIntersection$orientation,
+# promoterDistalDF = data.frame("GeneID" = ciceroPromoterIntersection$GeneID,
+#                               "chr" = ciceroPromoterIntersection$PromoterChr,
+#                               "PromoterPos" = ciceroPromoterIntersection$promoterCoord,
+#                               "orientation" = ciceroPromoterIntersection$orientation,
+#                               "linkedSites" = 0)
+
+promoterDistalDF = data.frame("GeneID" = promoterDF$geneName,
+                              "chr" = promoterDF$chr,
+                              "PromoterPos" = paste0("chr", promoterDF$chr, "_", as.character(promoterDF$start), 
+                                                    "_", as.character(promoterDF$end)) ,
+                              "orientation" = promoterDF$orientation,
                               "linkedSites" = 0)
+# Note if a gene's promoter even had a peak assigned
+promoterDistalDF$AnyPeakInProm = ifelse(promoterDistalDF$GeneID %in% ciceroPromoterIntersection$GeneID,
+                                       1, 0)
+
 # Get rid of any redundant entries
-promoterDistalDF = promoterDistalDF[!duplicated(promoterDistalDF),]
+# promoterDistalDF = promoterDistalDF[!duplicated(promoterDistalDF),]
 
 # Add columns for as many distal sites as can be linked, at most.
 for (eachCol in 1:opt$maxNdistalSites){
@@ -190,6 +229,8 @@ for (rowNum in 1:nrow(promoterDistalDF)){ # V8 gives the ensemble ID for a gene
   peaksInProm = ciceroPromoterIntersection[ciceroPromoterIntersection$GeneID == thisGene,]
   peaksInProm = peaksInProm$formattedPeak
   subsetCiceroDF = ciceroTSS_DF[ciceroTSS_DF$Peak1 %in% peaksInProm, ]
+  # Make sure to drop links between peaks that are both intersecting with the promoter
+  subsetCiceroDF = subsetCiceroDF[!(subsetCiceroDF$Peak2 %in% peaksInProm),]
 
   # If there are linked sites, order and get 
   if (nrow(subsetCiceroDF) != 0){
@@ -203,8 +244,7 @@ for (rowNum in 1:nrow(promoterDistalDF)){ # V8 gives the ensemble ID for a gene
     }
     # Note how many this is
     promoterDistalDF[rowNum, "linkedSites"] = sitesToGet
-  }
-
+  } 
 }
 
 # Plot a histogram of how many sites per promoter
@@ -214,6 +254,7 @@ png(paste0("./plots/promoterRegionLinkedSitesHist", opt$maxNdistalSites, "maxSit
 myPlot = ggplot(promoterDistalDF, aes(x=linkedSites)) + geom_histogram()
 print(myPlot)
 dev.off()
+
 
 dfName = paste0("Gene_Prom_Plus_Distal_Sites_Max", opt$maxNdistalSites, "_Upstream", opt$promoterUpstream,
                 "_Downstream", opt$promoterDownstream, "_cicCuf", opt$coaccessCutoff, opt$peakSize, "peaks",  ".RDS")
@@ -275,7 +316,6 @@ writeBedFromCol <- function(promoterDistalDF, tempFile, colToWrite){
   # Make this into a bed file
   write.table(coordDF, file=tempFile, 
     quote=FALSE, sep='\t', col.names=FALSE, row.names=FALSE)
-  # Done
 }
 
 library(dplyr)
@@ -300,7 +340,6 @@ getPromoterDistalSeq <- function(promoterDistalDF, opt){
     # Get sequence
     system(paste0("bedtools getfasta -s -fi ", opt$genomeFile, " -bed ", tempFile, 
         " -tab > ", seqFile ))
-
     # Now read in the table
     peaksWithSeq = read.table(seqFile, sep='\t', header=FALSE,  col.names=c(eachCol, "seq"))
 
@@ -312,14 +351,12 @@ getPromoterDistalSeq <- function(promoterDistalDF, opt){
     peaksWithSeq[[eachCol]] = gsub("\\(\\+\\)", "", peaksWithSeq[[eachCol]])
     peaksWithSeq[[eachCol]] = gsub("\\(_\\)", "", peaksWithSeq[[eachCol]])
 
-
     # Intersect in
     seqMergedDF = left_join(promoterDistalDF, peaksWithSeq[!(duplicated(peaksWithSeq[[eachCol]])),], by=eachCol)
 
     # Replace coordinates with the sequence
     returnDF[[eachCol]] = seqMergedDF$seq
-  }
-  
+  }  
   return(returnDF)
 }
 
@@ -395,13 +432,6 @@ makeFastaFromSites <- function(promoterDistalDFWithSeqs, opt, dfName){
 makeFastaFromSites(promoterDistalDFWithSeqs, opt, dfName)
 
 
-
-# # 8-16-21: Spot check and see how many genes are on each chromosome in this dataset
-# for (eachChr in as.character(levels(as.factor(promoterDistalDFWithSeqs$chr)))){
-#   print(paste0("CHR: ", eachChr))
-#   print (nrow(promoterDistalDFWithSeqs[promoterDistalDFWithSeqs$chr == eachChr,]))
-
-# }
 
 
 

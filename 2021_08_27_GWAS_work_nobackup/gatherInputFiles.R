@@ -45,10 +45,12 @@ option_list = list(
               help="Path to genome fasta to use", metavar="character"),
 
   make_option(c("-u", "--promoterUpstream"), type="numeric", 
-        default=1000,
+        # default=1000,
+        default=0,
               help="Bases upstream of TSS to use for input features", metavar="numeric"),
   make_option(c("-d", "--promoterDownstream"), type="numeric", 
-        default=200,
+        # default=200,
+        default=0,
               help="Bases downstream of TSS to use for input features", metavar="numeric"),
 
   make_option(c("-k", "--coaccessCutoff"), type="numeric", 
@@ -159,7 +161,8 @@ promoterDF = getPromoterDFnotGZ(opt$geneAnnotationsForTSS, opt) # for RNA-based 
 
 
 # Write this output
-outFileTSS = paste0("./fileOutputs/GeneBodies.bed")
+# outFileTSS = paste0("./fileOutputs/GeneBodies.bed")
+outFileTSS = paste0("./fileOutputs/GeneBodies", opt$variableParams, ".bed")
 if (!(file.exists(outFileTSS))){
   write.table(promoterDF, file=outFileTSS, 
     quote=FALSE, sep='\t', col.names=FALSE, row.names=FALSE)
@@ -191,12 +194,6 @@ ciceroTSS_DF$Peak2 = as.character(ciceroTSS_DF$Peak2)
 ciceroTSS_DF = ciceroTSS_DF[ciceroTSS_DF$coaccess > opt$coaccessCutoff,]  
 
 # Set up a dataframe to hold the output coordinates of promoters + linked sites
-# promoterDistalDF = data.frame("GeneID" = ciceroPromoterIntersection$GeneID,
-#                               "chr" = ciceroPromoterIntersection$PromoterChr,
-#                               "PromoterPos" = ciceroPromoterIntersection$promoterCoord,
-#                               "orientation" = ciceroPromoterIntersection$orientation,
-#                               "linkedSites" = 0)
-
 promoterDistalDF = data.frame("GeneID" = promoterDF$geneName,
                               "chr" = promoterDF$chr,
                               "PromoterPos" = paste0("chr", promoterDF$chr, "_", as.character(promoterDF$start), 
@@ -211,16 +208,19 @@ promoterDistalDF$AnyPeakInProm = ifelse(promoterDistalDF$GeneID %in% ciceroPromo
 # promoterDistalDF = promoterDistalDF[!duplicated(promoterDistalDF),]
 
 # Add columns for as many distal sites as can be linked, at most.
-for (eachCol in 1:opt$maxNdistalSites){
-  promoterDistalDF[paste0("Distal_", as.character(eachCol))] = "None"
+if (opt$maxNdistalSites > 0){
+  for (eachCol in 1:opt$maxNdistalSites){
+    promoterDistalDF[paste0("Distal_", as.character(eachCol))] = "None"
+  }
 }
+
 
 # Get rid of NA's
 ciceroTSS_DF = na.omit(ciceroTSS_DF)
 
 # Now we need to go through and, for every TSS, get the subset of 
 for (rowNum in 1:nrow(promoterDistalDF)){ # V8 gives the ensemble ID for a gene
-
+  # browser()
   # Get the subset df
   thisGene = promoterDistalDF[rowNum, "GeneID"]
   peaksInProm = ciceroPromoterIntersection[ciceroPromoterIntersection$GeneID == thisGene,]
@@ -230,9 +230,11 @@ for (rowNum in 1:nrow(promoterDistalDF)){ # V8 gives the ensemble ID for a gene
   subsetCiceroDF = subsetCiceroDF[!(subsetCiceroDF$Peak2 %in% peaksInProm),]
 
   # If there are linked sites, order and get 
-  if (nrow(subsetCiceroDF) != 0){
-    # Sort
+  if ((nrow(subsetCiceroDF) != 0) & (opt$maxNdistalSites != 0)){
+  	# If there are duplicated distal sites (ones that were linked by multiple sites within the gene itself), remove
+    # Sort and remove duplicates
     subsetCiceroDF = subsetCiceroDF[order(-subsetCiceroDF$coaccess),]
+    subsetCiceroDF = subsetCiceroDF[!(duplicated(subsetCiceroDF$Peak2)),]
     # Get up to 5
     sitesToGet = min(opt$maxNdistalSites, nrow(subsetCiceroDF))
     for (eachCoaccessInd in 1:sitesToGet){
@@ -261,7 +263,7 @@ dfName = paste0("Gene_Prom_Plus_Distal_Sites_Max", opt$maxNdistalSites, "_Upstre
 updatedPromDistalDF = promoterDistalDF
 
 # Check if need to resize distal peaks before getting sequence
-if (opt$peakSize != -1){
+if ((opt$peakSize != -1) & (opt$maxNdistalSites != 0)){
   # Get the columns of distal coordiantes
   colToProcess = c()
   for (eachCol in 1:opt$maxNdistalSites){
@@ -326,9 +328,12 @@ library(reshape2)
 
 writeBedFromDF <- function(promoterDistalDF, outputFile, opt){
   colToProcess = c("PromoterPos")
-  for (eachCol in 1:opt$maxNdistalSites){
-    colToProcess = c(colToProcess, paste0("Distal_", as.character(eachCol)))
+  if (opt$maxNdistalSites != 0){
+    for (eachCol in 1:opt$maxNdistalSites){
+      colToProcess = c(colToProcess, paste0("Distal_", as.character(eachCol)))
+   }
   }
+  
 
   coordDF = promoterDistalDF[,c(colToProcess, "GeneID", "orientation")]
   # Melt into format with one entry per site, instead of one row per gene+all its sites

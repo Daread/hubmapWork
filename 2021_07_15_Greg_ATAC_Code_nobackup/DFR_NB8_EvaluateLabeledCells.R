@@ -172,6 +172,9 @@ plotUMAP_Monocle_genes(annotatedCDS, paste0("ATAC_With_Transfer_", opt$sampleRNA
                     c("MYH11"), "VSM_Pericyte_Marks", plotSetTotals=TRUE,  outputPath="./")
 
 plotUMAP_Monocle_genes(annotatedCDS, paste0("ATAC_With_Transfer_", opt$sampleRNAname, "_", opt$ATACprocNote),
+                    c("THEMIS", "CD34", "CD247", "SKAP1", "CD3D", "CD3E"), "T_Cell", plotSetTotals=TRUE,  outputPath="./")
+
+plotUMAP_Monocle_genes(annotatedCDS, paste0("ATAC_With_Transfer_", opt$sampleRNAname, "_", opt$ATACprocNote),
                     c("DCN", "PDGFRA"), "FibroblastMarksLitvin", outputPath="./")
 plotUMAP_Monocle_genes(annotatedCDS, paste0("ATAC_With_Transfer_", opt$sampleRNAname, "_", opt$ATACprocNote),
                     c("RGS5", "ABCC9", "KCNJ8", "TAGLN", "MYH11", "ACTA2"), plotSetTotals=TRUE,  "VSM_Peri_MarksLitvin", outputPath="./")
@@ -181,6 +184,9 @@ plotUMAP_Monocle_genes(annotatedCDS, paste0("ATAC_With_Transfer_", opt$sampleRNA
 plotUMAP_Monocle_genes(annotatedCDS, paste0("ATAC_With_Transfer_", opt$sampleRNAname, "_", opt$ATACprocNote),
                     c("SEMA3G", "EFNB2", "DLL4", "NR2F2", "ACKR1", "RGCC", "CA4" ), "Vasc_Endothelial_Marks",
                       plotSetTotals=TRUE, outputPath="./")
+
+plotUMAP_Monocle_genes(annotatedCDS, paste0("ATAC_With_Transfer_", opt$sampleRNAname, "_", opt$ATACprocNote),
+                    c("MYH11"), "VSM_Pericyte_Marks", plotSetTotals=TRUE,  outputPath="./")
 
 
 kVal=10

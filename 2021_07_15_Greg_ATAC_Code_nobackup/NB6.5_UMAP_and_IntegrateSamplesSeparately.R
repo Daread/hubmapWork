@@ -297,6 +297,11 @@ rdsPath = "/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_15_G
 fileName = paste0(opt$sampleRNAname, "_", atacProcNote, "gMatrixCDS_postTransfer.RDS")
 saveRDS(cds.a.g, file=paste0(rdsPath, fileName))
 
+# 9-17-21: DFR add: Also save the b matrix. Might be interesting to look at tweaking this UMAP embedding
+fileNameBmat = paste0(opt$sampleRNAname, "_", atacProcNote, "bMatrixCDS_postTransfer.RDS")
+saveRDS(cds.a.b, file=paste0(rdsPath, fileNameBmat))
+
+
 
 ################################################################
 

@@ -24,7 +24,8 @@ option_list = list(
               help="Sample to integrate", metavar="character"),
     make_option(c("-u", "--useSubset"), type="character", default="Subset", 
               help="Subset or All", metavar="character"),
-    make_option(c("-a", "--atacProc"), type="character", default="FRIP=0.2_FRIT=0.05UMI=1000", 
+    make_option(c("-a", "--atacProc"), type="character", default="FRIP=0.2_FRIT=0.05UMI=1000DL=0.5", 
+          #default="FRIP=0.2_FRIT=0.05UMI=1000", 
               help="Subset or All", metavar="character")
 )
 opt_parser = OptionParser(option_list=option_list)
@@ -124,7 +125,8 @@ se.atac <- ScaleData(se.atac)
 DefaultAssay(se.atac) <- "ATAC"
 VariableFeatures(se.atac) <- names(which(Matrix::rowSums(se.atac) > 10))
 se.atac <- RunLSI(se.atac, n = 50, scale.max = NULL)
-se.atac <- RunUMAP(se.atac, reduction = "lsi", dims = 2:50)
+# se.atac <- RunUMAP(se.atac, reduction = "lsi", dims = 2:50)
+se.atac <- RunUMAP(se.atac, reduction = "lsi", dims = 1:50) # DFR: Changing this 10-25-21
 
 png(paste0("DimPlotATAC", opt$sampleRNAname, "_", atacProcNote, ".png" ), width = 5*PPIval, height = 4.5*PPIval, res=PPIval)
 DimPlot(se.atac, reduction = "umap", group.by = "tech")
@@ -235,6 +237,13 @@ imputation <- TransferData(anchorset = transfer.anchors, refdata = refdata, weig
 # this line adds the imputed data matrix to the pbmc.atac object
 se.atac[["RNA"]] <- imputation
 coembed <- merge(x = se.rna, y = se.atac)
+
+# Added 10-25-21:
+# Save the resulting objects for use later
+rdsPath = "/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_15_Greg_ATAC_Code_nobackup/rdsOutput/"
+saveRDS(se.rna, file=paste0(rdsPath, "se.rna_", atacProcNote, ".rds"))
+saveRDS(se.atac, file=paste0(rdsPath, "se.atac_", atacProcNote, ".rds"))
+saveRDS(transfer.anchors, file=paste0(rdsPath, "anchors_", atacProcNote, ".rds"))
 
 # Finally, we run PCA and UMAP on this combined object, to visualize the co-embedding of both
 # datasets

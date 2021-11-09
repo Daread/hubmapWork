@@ -18,16 +18,20 @@ library(uwot)
 source("/net/trapnell/vol1/home/readdf/trapLabDir/sharedProjectCode/utility/singleCellUtilFuncs.R")
 
 library("optparse")
+library("harmony")
 # Get the passed parameters
 
 option_list = list(
   make_option(c("-p", "--processingNote"), type="character", 
         default="HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40addAllTypes", 
               help="Processing note from upstream CDS", metavar="character"),
-    make_option(c("-s", "--sampleRNAname"), type="character",  default="W144.Apex",  # default="W142.Left.Vent",  # "All_Cells"
+    make_option(c("-s", "--sampleRNAname"), type="character",  default= "W144.Apex", # "W144.Apex",  # default="W142.Left.Vent",  # "All_Cells"
               help="Sample to integrate", metavar="character"),
     make_option(c("-u", "--useSubset"), type="character", default="Subset", 
               help="Subset or All", metavar="character"),
+
+    make_option(c("-g", "--geneActiv"), type="character", default="ArchR",  # "ArchR", "Cicero"
+              help="ArchR or Cicero activity scores for genes", metavar="character"),
 
     make_option(c("-a", "--ATACprocNote"), type="character", default="FRIP=0.2_FRIT=0.05UMI=1000DL=0.5", 
               help="How ATAC Cells were filtered", metavar="character")
@@ -56,7 +60,42 @@ names(samplesATACnames) = c("W134.Apex",
 PPIval = 300
 
 # Get the ATAC cds
-atacProcNote =  opt$ATACprocNote # "FRIP=0.2_FRIT=0.05UMI=1000"
+
+
+hardAssignAnatomicalSites <- function(inputCDS){
+  colData(inputCDS)$Anatomical_Site = "Not_Specified"
+  colData(inputCDS)$Anatomical_Site = ifelse(grepl("Apex", colData(inputCDS)$sample),
+                    "Apex", colData(inputCDS)$Anatomical_Site)
+  colData(inputCDS)$Anatomical_Site = ifelse(grepl("Septum", colData(inputCDS)$sample),
+                    "Septum", colData(inputCDS)$Anatomical_Site)
+  colData(inputCDS)$Anatomical_Site = ifelse(grepl("Left.Vent", colData(inputCDS)$sample),
+                    "Left_Vent", colData(inputCDS)$Anatomical_Site)
+  colData(inputCDS)$Anatomical_Site = ifelse(grepl("Right.Vent", colData(inputCDS)$sample),
+                    "Right_Vent", colData(inputCDS)$Anatomical_Site)
+  return(inputCDS)
+}
+
+hardAssignDonors <- function(inputCDS){
+  colData(inputCDS)$Donor = "Not_Specified"
+  colData(inputCDS)$Donor = ifelse(grepl("W134", colData(inputCDS)$sample),
+                    "W134", colData(inputCDS)$Donor)
+  colData(inputCDS)$Donor = ifelse(grepl("W135", colData(inputCDS)$sample),
+                    "W135", colData(inputCDS)$Donor)
+  colData(inputCDS)$Donor = ifelse(grepl("W136", colData(inputCDS)$sample),
+                    "W136", colData(inputCDS)$Donor)
+  colData(inputCDS)$Donor = ifelse(grepl("W139", colData(inputCDS)$sample),
+                    "W139", colData(inputCDS)$Donor)
+  colData(inputCDS)$Donor = ifelse(grepl("W142", colData(inputCDS)$sample),
+                    "W142", colData(inputCDS)$Donor)
+  colData(inputCDS)$Donor = ifelse(grepl("W144", colData(inputCDS)$sample),
+                    "W144", colData(inputCDS)$Donor)
+  colData(inputCDS)$Donor = ifelse(grepl("W145", colData(inputCDS)$sample),
+                    "W145", colData(inputCDS)$Donor)
+  colData(inputCDS)$Donor = ifelse(grepl("W146", colData(inputCDS)$sample),
+                    "W146", colData(inputCDS)$Donor)
+  return(inputCDS)
+}
+
 
 
 ##
@@ -78,9 +117,15 @@ cds.rna = new_cell_data_set(expression_data = cm,
 cds.r = cds.rna
 
 # Get the saved CDS for g matrix
-rdsPath = "/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_15_Greg_ATAC_Code_nobackup/archr/results/NB9/"
-fileName = paste0("cds.g_with_peakMetadata", atacProcNote, ".rds")
-
+if (opt$geneActiv == "ArchR"){
+  rdsPath = "/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_15_Greg_ATAC_Code_nobackup/archr/results/NB9/"
+  fileName = paste0("cds.g_with_peakMetadata", opt$ATACprocNote, ".rds")
+  opt$ATACprocNote = paste0(opt$ATACprocNote, "_ArchRActiv")
+} else {
+  rdsPath = "/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_15_Greg_ATAC_Code_nobackup/archr/results/NB9/All_Cells/ciceroActivityCDS_with_peakMetadata"
+  fileName = paste0(opt$ATACprocNote, "_All_Cells.rds")
+  opt$ATACprocNote = paste0(opt$ATACprocNote, "_CiceroActiv")
+}
 # Read in the data
 cds.a.g = readRDS(paste0(rdsPath, fileName))
 
@@ -123,12 +168,38 @@ plotUMAP_MonocleModded <- function(dataCDS, processingNote, catToColor,
 }
 
 
+# }
+plotUMAP_MonocleModded_predicted <- function(dataCDS, processingNote, catToColor,
+                    show_labels=TRUE, textSize=10, outputPath = "./plots/"){ #, xVal, yVal){
+    png(paste0(outputPath, processingNote, "_UMAP_", catToColor, "colored.png"),
+             width=1400, height=1000, res=200)
+    myPlot <- (plot_cells(dataCDS, reduction_method="UMAP",    # x=xVal, y=yVal,
+        color_cells_by=catToColor, label_cell_groups=show_labels,
+          cell_stroke=.1 , group_label_size=textSize        
+                )) 
+    myPlot = (myPlot + theme(text=element_text(size=textSize)) +facet_wrap(~predicted.id))
+    print(myPlot)
+    dev.off()   
+
+}
+
+
+# If using the cicero CDS, need to add in gene_short_names
+if (opt$geneActiv == "Cicero"){
+  shortNameVec = rowData(cds.rna)$gene_short_name
+  names(shortNameVec) = rowData(cds.rna)$id
+  rowData(cds.a.g)$gene_short_name = shortNameVec[rowData(cds.a.g)$GeneName]
+}
+
+
 # Try a co-embedding one of two ways: First, try MNN
 rnaCDS_genesInATAC = cds.rna[rowData(cds.rna)$gene_short_name %in% rowData(cds.a.g)$gene_short_name,]
 colData(rnaCDS_genesInATAC)$tech = "RNA"
 atacCDS_genesInRNA = cds.a.g[rowData(cds.a.g)$gene_short_name %in% rowData(cds.rna)$gene_short_name,]
 colData(atacCDS_genesInRNA)$tech = "ATAC"
 # Combine
+colData(cds.rna)$tech = "RNA"
+colData(cds.a.g)$tech = "ATAC"
 
 ###########################################################################################
 # Plot expression distributions
@@ -181,21 +252,178 @@ getPercentileViolinPlot <-function(observedCounts, eachSample, outDir, percentil
 }
 
 
-percentilesToPlot =  c(.2, .3, .4, .5, .6, .7, .8, .9, .99, .995, .999, .9995)
+getCDS_hist <- function(metadataToPlot, eachSample, outDir, processingNote, colToPlot){
+  # Make a hist of the preferred colData field
 
-getPercentileViolinPlot(exprs(rnaCDS_genesInATAC), "RNA Data", out_dir, percentilesToPlot, 
-           paste0( "RNA_Based_", opt$ATACprocNote) )
-getPercentileViolinPlot(exprs(atacCDS_genesInRNA), "ATAC Data", out_dir, percentilesToPlot, 
-           paste0( "ATAC_Activity_Based_", opt$ATACprocNote) )
+  png(paste0(outDir, "histogram_for_", colToPlot, "_", as.character(eachSample), processingNote, ".png"),
+        width=1000, height=1000, res=200)
+  myPlot = ggplot(as.data.frame(metadataToPlot), aes_string(x=colToPlot)) +
+              geom_histogram() + 
+                ggtitle(paste0("Histogram for ", colToPlot, " ", eachSample))
+  print(myPlot)
+  dev.off()
+}
 
-getPercentileVsMeanPlot(exprs(rnaCDS_genesInATAC), "RNA Data", out_dir, percentilesToPlot, 
-           paste0( "RNA_Based_", opt$ATACprocNote) )
-getPercentileVsMeanPlot(exprs(atacCDS_genesInRNA), "ATAC Data", out_dir, percentilesToPlot, 
-           paste0( "ATAC_Activity_Based_", opt$ATACprocNote) )
+
+
+
+# Get an idea of UMI distributions for each of these
+colData(atacCDS_genesInRNA)$activSum = colSums(exprs(atacCDS_genesInRNA))
+colData(atacCDS_genesInRNA)$log10_activSum = log10(colData(atacCDS_genesInRNA)$activSum)
+
+# Get the sums by gene
+rowData(rnaCDS_genesInATAC)$log10_geneSum = log10(rowSums(exprs(rnaCDS_genesInATAC)))
+rowData(atacCDS_genesInRNA)$log10_geneSum = log10(rowSums(exprs(atacCDS_genesInRNA)))
+
+
+
+# percentilesToPlot =  c(.2, .3, .4, .5, .6, .7, .8, .9, .99, .995, .999, .9995)
+
+# getPercentileViolinPlot(exprs(rnaCDS_genesInATAC), "RNA Data", out_dir, percentilesToPlot, 
+#            paste0( "RNA_Based_", opt$ATACprocNote) )
+# getPercentileViolinPlot(exprs(atacCDS_genesInRNA), "ATAC Data", out_dir, percentilesToPlot, 
+#            paste0( "ATAC_Activity_Based_", opt$ATACprocNote) )
+
+# getPercentileVsMeanPlot(exprs(rnaCDS_genesInATAC), "RNA Data", out_dir, percentilesToPlot, 
+#            paste0( "RNA_Based_", opt$ATACprocNote) )
+# getPercentileVsMeanPlot(exprs(atacCDS_genesInRNA), "ATAC Data", out_dir, percentilesToPlot, 
+#            paste0( "ATAC_Activity_Based_", opt$ATACprocNote) )
+
+# getCDS_hist(colData(rnaCDS_genesInATAC), "RNA Data", out_dir, 
+#            paste0( "RNA_Based_", opt$ATACprocNote), "log10_umi" )
+# getCDS_hist(colData(atacCDS_genesInRNA), "Cicero Activitiy Data", out_dir, 
+#            paste0( "CiceroActiv_Based_", opt$ATACprocNote), "log10_activSum" )
+
+# getCDS_hist(rowData(rnaCDS_genesInATAC), "RNA Data", out_dir, 
+#            paste0( "RNA_Based_", opt$ATACprocNote), "log10_geneSum" )
+# getCDS_hist(rowData(atacCDS_genesInRNA), "Cicero Activitiy Data", out_dir, 
+#            paste0( "CiceroActiv_Based_", opt$ATACprocNote), "log10_geneSum" )
+
+
+
 
 
 #################################################################################################
 
+generateUMAP_and_qc <- function(inputCDS, outDirName, colsToColor, cdsNote, opt, pcToUse=50, kVal=20){
+  plotLabel = paste0(cdsNote, as.character(pcToUse), opt$sampleRNAname, opt$ATACprocNote, "ATAC_Alone")
+  inputCDS = estimate_size_factors(inputCDS)
+  inputCDS = preprocess_cds(inputCDS, method='PCA', num_dim=pcToUse)
+  inputCDS = align_cds(inputCDS, preprocess_method='PCA', alignment_group="sampleName",
+                                  residual_model_formula_str =  ~log10umi + FRIP + doublet_likelihood)
+  inputCDS = reduce_dimension(inputCDS, preprocess_method='Aligned',
+                            reduction_method="UMAP")
+
+  # Plot the outputs
+  for (eachCol in colsToColor){
+    plotUMAP_Monocle(inputCDS, plotLabel,
+                     eachCol, show_labels=FALSE,
+                            outputPath = outDirName)
+  }
+  plotUMAP_MonocleModded_predicted(inputCDS, paste0(plotLabel, "_faceted"),
+                     "sampleName", show_labels=FALSE,
+                            outputPath = outDirName)
+  plotUMAP_Monocle_genes(inputCDS, plotLabel,
+                      c("GSN", "LDB2", "KCNAB1", "RBPJ", "TTN", "THEMIS", "FHL2"), 
+                      "genMarkers", 
+                            outputPath = outDirName)
+
+  # 11-1-21 Add clustering and take a look
+  inputCDS = cluster_cells(inputCDS, k=kVal)
+  colData(inputCDS)$cluster_label = as.character(clusters(inputCDS))
+      # Plot
+    plotUMAP_Monocle(inputCDS, paste0(plotLabel, "k=", as.character(kVal)),
+             "cluster_label", outputPath=outDirName)
+  # Find markers within these clusters
+  myTestResClust = runDEtestingToID_markers(inputCDS, plotLabel, "cluster_label",
+                  howManyGenesToTest = 50, outputPath=outDirName)
+
+  return(myTestResClust)
+}
+
+
+seuratFromCDS <- function(inputCDS){
+  countData = assay(inputCDS)
+  metaDF = as.data.frame(colData(inputCDS))
+  seuratObj = CreateSeuratObject(counts=countData, project="RNA_Data", assay="RNA",
+                meta.data = metaDF)
+  return(seuratObj)
+}
+
+
+
+getVariableGenes <- function(inputCDS){
+  inputSO = seuratFromCDS(inputCDS)
+  inputSO = NormalizeData(inputSO )
+  inputSO <- FindVariableFeatures(inputSO, selection.method = "vst", nfeatures = 2000)
+  return(VariableFeatures(object = inputSO))
+}
+
+
+#################################################################################################
+
+# Get some UMAPs out of just ATAC data alone, colored a few different ways
+
+atacAloneOutput = paste0(out_dir, "varyATAC_alone/")
+dir.create(atacAloneOutput)
+
+set.seed(7)
+
+colData(cds.a.g)$activSum = colSums(exprs(cds.a.g))
+colData(cds.a.g)$log10_activSum = log10(colData(cds.a.g)$activSum)
+
+colData(cds.a.g)$sample = colData(cds.a.g)$sampleName
+cds.a.g = hardAssignDonors(cds.a.g)
+
+pcsHere = 10
+cdsAndDEtest = generateUMAP_and_qc(cds.a.g, atacAloneOutput, 
+            c("log10_activSum", "Donor", "sampleName", "predicted.id", "FRIP", "doublet_likelihood", "TSSEnrichment"),
+                      "fullActivity", opt, pcToUse=pcsHere)
+
+# Save the test result
+DEtestResFile = paste0(atacAloneOutput, "fullActivity", as.character(pcsHere), opt$sampleRNAname, opt$ATACprocNote, "DE_Testing.csv")
+write.csv(cdsAndDEtest$marker_test_res[order(cdsAndDEtest$marker_test_res$cell_group),], DEtestResFile)
+
+
+# generateUMAP_and_qc(cds.a.g, atacAloneOutput, c("log10_activSum", "sampleName", "predicted.id", "FRIP", "doublet_likelihood", "TSSEnrichment"),
+#                       "fullActivity", opt, pcToUse=50)
+# generateUMAP_and_qc(cds.a.g, atacAloneOutput, c("log10_activSum", "sampleName", "predicted.id", "FRIP", "doublet_likelihood", "TSSEnrichment"),
+#                       "fullActivity", opt, pcToUse=35)
+# generateUMAP_and_qc(cds.a.g, atacAloneOutput, c("log10_activSum", "sampleName", "predicted.id", "FRIP", "doublet_likelihood", "TSSEnrichment"),
+#                       "fullActivity", opt, pcToUse=20)
+
+
+# generateUMAP_and_qc(atacCDS_genesInRNA, atacAloneOutput, c("log10_activSum", "sampleName", "predicted.id", "FRIP", "doublet_likelihood", "TSSEnrichment"),
+#                       "genesAlsoInRNA", opt, pcToUse=50)
+# generateUMAP_and_qc(atacCDS_genesInRNA, atacAloneOutput, c("log10_activSum", "sampleName", "predicted.id", "FRIP", "doublet_likelihood", "TSSEnrichment"),
+#                       "genesAlsoInRNA", opt, pcToUse=10)
+
+# Get the highly variable genes from the RNA or ATAC cds's, and try using only those as input to the PCA/UMAP process
+varFromRNA = getVariableGenes(cds.rna)
+varSubset = atacCDS_genesInRNA[rownames(atacCDS_genesInRNA) %in% varFromRNA,]
+# generateUMAP_and_qc(varSubset, atacAloneOutput, c("log10_activSum", "sampleName", "predicted.id", "FRIP", "doublet_likelihood", "TSSEnrichment"),
+#                       "variableInRNA", opt, pcToUse=50)
+# generateUMAP_and_qc(varSubset, atacAloneOutput, c("log10_activSum", "sampleName", "predicted.id", "FRIP", "doublet_likelihood", "TSSEnrichment"),
+#                       "variableInRNA", opt, pcToUse=10)
+
+varFromATAC = getVariableGenes(cds.a.g)
+varSubset = cds.a.g[rownames(cds.a.g) %in% varFromATAC,]
+# generateUMAP_and_qc(varSubset, atacAloneOutput, c("log10_activSum", "sampleName", "predicted.id", "FRIP", "doublet_likelihood", "TSSEnrichment"),
+#                       "variableInATAC", opt, pcToUse=50)
+# generateUMAP_and_qc(varSubset, atacAloneOutput, c("log10_activSum", "sampleName", "predicted.id", "FRIP", "doublet_likelihood", "TSSEnrichment"),
+#                       "variableInATAC", opt, pcToUse=10)
+
+# # Try one using ATAC activity data only
+# atacCDS_genesInRNA = estimate_size_factors(atacCDS_genesInRNA)
+# atacCDS_genesInRNA = preprocess_cds(atacCDS_genesInRNA, method='PCA')
+# atacCDS_genesInRNA = align_cds(atacCDS_genesInRNA, preprocess_method='PCA', alignment_group="sampleName",
+#                                 residual_model_formula_str =  ~log10umi + FRIP + doublet_likelihood)
+# atacCDS_genesInRNA = reduce_dimension(atacCDS_genesInRNA, preprocess_method='Aligned',
+#                           reduction_method="UMAP")
+
+# plotUMAP_MonocleModded(atacCDS_genesInRNA, paste0(opt$sampleRNAname, opt$ATACprocNote, "ATAC_Alone"),
+#                      "log10_activSum", show_labels=FALSE,
+#                             outputPath = out_dir)
 
 
 
@@ -207,6 +435,13 @@ getPercentileVsMeanPlot(exprs(atacCDS_genesInRNA), "ATAC Data", out_dir, percent
 
 
 
+
+
+
+
+
+
+#################################################################################################
 
 # Combine the data and take a look at the UMAPs that result under different alignment/correction strategies
 colData(rnaCDS_genesInATAC)$umi = colData(rnaCDS_genesInATAC)$n.umi
@@ -216,7 +451,7 @@ colData(atacAndRNA_cds)$log10umi = log10(colData(atacAndRNA_cds)$umi)
 
 # # Try the approach of aligning/covariate correcting 
 atacAndRNA_cds = estimate_size_factors(atacAndRNA_cds)
-atacAndRNA_cds = preprocess_cds(atacAndRNA_cds, method="PCA")
+atacAndRNA_cds = preprocess_cds(atacAndRNA_cds, method="PCA", num_dim=10)
 
 
 rnaCoPCA = atacAndRNA_cds[,colData(atacAndRNA_cds)$tech == "RNA"]
@@ -245,7 +480,7 @@ combinedAfterCorr = align_cds(combinedAfterCorr, preprocess_method="PCA", alignm
 combinedAfterCorr = reduce_dimension(combinedAfterCorr, preprocess_method="Aligned",
                             reduction_method="UMAP")
 
-plotUMAP_MonocleModded(combinedAfterCorr, paste0(opt$sampleRNAname,"iterativeMNN_and_Covariate"),
+plotUMAP_MonocleModded(combinedAfterCorr, paste0(opt$sampleRNAname, opt$ATACprocNote, "iterativeMNN_and_Covariate"),
                        "highLevelCellType", show_labels=FALSE,
                             outputPath = out_dir)
 
@@ -254,7 +489,7 @@ plotUMAP_MonocleModded(combinedAfterCorr, paste0(opt$sampleRNAname,"iterativeMNN
 combinedAfterCorr = reduce_dimension(combinedAfterCorr, preprocess_method="PCA",
                             reduction_method="UMAP")
 
-plotUMAP_MonocleModded(combinedAfterCorr, paste0(opt$sampleRNAname,"iterativeMNN_and_Covariate_butNotByTech"),
+plotUMAP_MonocleModded(combinedAfterCorr, paste0(opt$sampleRNAname, opt$ATACprocNote, "iterativeMNN_and_Covariate_butNotByTech"),
                      "highLevelCellType", show_labels=FALSE,
                             outputPath = out_dir)
 
@@ -264,9 +499,23 @@ atacAndRNA_cds = align_cds(atacAndRNA_cds, preprocess_method="PCA", alignment_gr
 atacAndRNA_cds = reduce_dimension(atacAndRNA_cds, preprocess_method="Aligned",
                             reduction_method="UMAP")
 
-plotUMAP_MonocleModded(atacAndRNA_cds, paste0(opt$sampleRNAname, "only_align_by_Tech"),
+plotUMAP_MonocleModded(atacAndRNA_cds, paste0(opt$sampleRNAname, opt$ATACprocNote,  "only_align_by_Tech"),
                              "highLevelCellType", show_labels=FALSE,
                             outputPath = out_dir)
+
+
+# Try using harmony between PC and UMAP levels of reduction and see if that works better?
+harmonyPCs = harmony::HarmonyMatrix(reducedDims(atacAndRNA_cds)$PCA, 
+                    as.data.frame(colData(atacAndRNA_cds)), "tech", do_pca = FALSE, verbose=TRUE)
+harmonyCDS = atacAndRNA_cds
+reducedDims(harmonyCDS)$PCA = harmonyPCs
+harmonyCDS = reduce_dimension(harmonyCDS, preprocess_method="PCA", reduction_method="UMAP")
+
+
+plotUMAP_MonocleModded(atacAndRNA_cds, paste0(opt$sampleRNAname, opt$ATACprocNote,  "harmonyAlign"),
+                             "highLevelCellType", show_labels=FALSE,
+                            outputPath = out_dir)
+
 
 
 ####
@@ -274,15 +523,136 @@ plotUMAP_MonocleModded(atacAndRNA_cds, paste0(opt$sampleRNAname, "only_align_by_
 
 
 
+runDimRedRNA_seurat <- function(inputSO){
+  # inputSO = NormalizeData(inputSO, normalization.method = "LogNormalize", scale.factor = 10000 )
+  inputSO = NormalizeData(inputSO )
+  inputSO <- FindVariableFeatures(inputSO, selection.method = "vst", nfeatures = 2000)
+  all.genes <- rownames(inputSO)
+  inputSO <- ScaleData(inputSO, features = all.genes)
+  # reduce dimensions
+  inputSO <- RunPCA(inputSO, features = VariableFeatures(object = inputSO), ncomponents=10)
+  # Cluster cells
+  inputSO <- FindNeighbors(inputSO, dims = 1:10)
+  inputSO <- FindClusters(inputSO, resolution = 0.5)
+  inputSO <- RunUMAP(inputSO, dims = 1:10)
+
+  return(inputSO)
+}
+
+# runCoembed <- function(inputRNA, inputATAC){
+
+
+# }
+
+
+runSeuratStrategy <- function(inputRNAcds, inputATACcds, inputProcNote, out_dir,
+                     strategyLabel, impute="impute", activityType="ArchR"){
+  if (activityType == "Cicero"){
+    rownames(inputRNAcds) = rowData(inputRNAcds)$id
+  }
+  
+  # Make a seurat object out of the cds
+  seuratRNA =  seuratFromCDS(inputRNAcds)
+  # Name the RNA rows after gene short names
+
+  seuratATAC = seuratFromCDS(inputATACcds)
+
+  # Reduce and process
+  seuratRNA = runDimRedRNA_seurat(seuratRNA)
+  seuratATAC = runDimRedRNA_seurat(seuratATAC)
+
+  ###########################
+  # display projections of ATAC and RNA datasets
+  p1 <- DimPlot(seuratATAC, group.by = "tech") + ggtitle(paste0("Gene activity ", inputProcNote))
+  p2 <- DimPlot(seuratRNA, group.by = "tech") + ggtitle("scRNA-seq")
+  png(paste0(out_dir, "seurat_UMAPs_RNA_ATAC", opt$sampleRNAname, "_", inputProcNote, strategyLabel, ".png"), 
+          width=1600, height=600, res=200)
+  myPlot = CombinePlots(plots = list(p1, p2))
+  print(myPlot)
+  dev.off()
+
+  ##########################
+  # transfer labels 
+  transfer.anchors <- FindTransferAnchors(
+    reference = seuratRNA, 
+    query = seuratATAC, 
+    features = VariableFeatures(object = seuratRNA), 
+    reference.assay = "RNA", 
+    query.assay = "RNA", 
+    reduction = "cca")
+
+  CellType_preds <- TransferData(
+    anchorset = transfer.anchors, 
+    refdata = seuratRNA$highLevelCellType,
+    weight.reduction = seuratATAC[["pca"]])
+
+  seuratATAC <- AddMetaData(seuratATAC, metadata = CellType_preds)
+
+  ###########################
+  # display projections of ATAC and RNA datasets (With transferred cell type annotations)
+  p1 <- DimPlot(seuratATAC, group.by = "predicted.id") + ggtitle(paste0("Gene activity ", inputProcNote))
+  p2 <- DimPlot(seuratRNA, group.by = "highLevelCellType") + ggtitle("scRNA-seq")
+  png(paste0(out_dir, "seurat_UMAPs_RNA_ATAC_CTAnnotations", opt$sampleRNAname, "_", inputProcNote,strategyLabel, ".png"), 
+          width=2000, height=600, res=200)
+  myPlot = CombinePlots(plots = list(p1, p2))
+  print(myPlot)
+  dev.off()
+
+  ##########################
+
+  genes.use <- VariableFeatures(seuratRNA)
+  refdata <- GetAssayData(seuratRNA, assay = "RNA", slot = "data")[genes.use, ]
+  imputation <- TransferData(anchorset = transfer.anchors, refdata = refdata, weight.reduction = seuratATAC[["pca"]])
+
+  # this line adds the imputed data matrix to the pbmc.atac object
+  if (impute == "impute"){
+    seuratATAC[["RNA"]] <- imputation
+  }
+  coembed <- merge(x = seuratRNA, y = seuratATAC)
+
+  # Finally, we run PCA and UMAP on this combined object, to visualize the co-embedding of both
+  # datasets
+  # coembed <- ScaleData(coembed, features = genes.use, do.scale = FALSE)
+  # coembed <- RunPCA(coembed, features = genes.use, verbose = FALSE)
+  # coembed <- RunUMAP(coembed, dims = 1:30)
+  # coembed$cellType <- ifelse(!is.na(coembed$highLevelCellType), coembed$highLevelCellType, coembed$predicted.id)
+
+  # Variation: Find with the same way I do UMAPs for the indidivudal RNA and ATAC datasets
+  coembed = NormalizeData(coembed )
+  coembed <- FindVariableFeatures(coembed, selection.method = "vst", nfeatures = 2000)
+  all.genes <- rownames(coembed)
+  coembed <- ScaleData(coembed, features = all.genes)
+  # reduce dimensions
+  coembed <- RunPCA(coembed, features = VariableFeatures(object = coembed))
+  coembed <- RunUMAP(coembed, dims = 1:10)
+  coembed$cellType <- ifelse(!is.na(coembed$highLevelCellType), coembed$highLevelCellType, coembed$predicted.id)
+
+  # plot
+  p1 <- DimPlot(coembed, group.by = "tech")
+  p2 <- DimPlot(coembed, group.by = "cellType")
+  png(paste0(out_dir, "coembed_ATAC_RNA_Annotated_", impute,  opt$sampleRNAname, "_", inputProcNote, strategyLabel, ".png"), 
+          width=2400, height=1000, res=200)
+  myPlots = CombinePlots(list(p1, p2))
+  print(myPlots)
+  dev.off()
+  # ggsave(filename = ,
+  #      width = 12, height = 5, units="in", dpi=PPIval)
+}
 
 
 
+runSeuratStrategy( cds.rna, cds.a.g, opt$ATACprocNote, out_dir,
+                "fullGenes", impute="impute", activityType=opt$geneActiv)
 
 
 
+runSeuratStrategy( rnaCDS_genesInATAC, atacCDS_genesInRNA, opt$ATACprocNote,
+                  out_dir, "matchingGenes", impute="impute", activityType=opt$geneActiv)
+runSeuratStrategy( rnaCDS_genesInATAC, atacCDS_genesInRNA,opt$ATACprocNote, 
+                 out_dir, "matchingGenes", impute="no_impute", activityType=opt$geneActiv)
 
-
-
+runSeuratStrategy( cds.rna, cds.a.g, opt$ATACprocNote, out_dir,
+                "fullGenes", impute="no_impute", activityType=opt$geneActiv)
 
 
 

@@ -27,7 +27,7 @@ option_list = list(
   make_option(c("-p", "--processingNote"), type="character", 
   			default="HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40addAllTypes", 
               help="Processing note from upstream CDS", metavar="character"),
-    make_option(c("-s", "--sampleRNAname"), type="character",  default="All_Cells",  # default="W142.Left.Vent", 
+    make_option(c("-s", "--sampleRNAname"), type="character",  default= "All_Cells", #  "All_Cells",  # default="W142.Left.Vent",  "W144.Apex"
               help="Sample to integrate", metavar="character"),
     make_option(c("-u", "--useSubset"), type="character", default="Subset", 
               help="Subset or All", metavar="character"),
@@ -38,11 +38,20 @@ option_list = list(
     make_option(c("-c", "--fripMin"), type="numeric", default=0.2, 
               help="Min FRIP value to permit", metavar="numeric"),
 
-    make_option(c("-o", "--lowDimOne"), type="numeric", default=1, 
-              help="Coordinate to start in LSI", metavar="numeric"),
+    make_option(c("-w", "--cdsToSave"), type="character", default="Peak_CDS",   # Peak_CDS
+              help="Features of cds to save", metavar="character"),
 
-    make_option(c("-t", "--lowDimTwo"), type="numeric", default=50, 
-              help="Highest coord in LSI", metavar="numeric"),
+    make_option(c("-k", "--kVal"), type="numeric", default=20, 
+              help="K value for clustering", metavar="character"),
+
+    # make_option(c("-o", "--lowDimOne"), type="numeric", default=1, 
+    #           help="Coordinate to start in LSI", metavar="numeric"),
+
+    # make_option(c("-t", "--lowDimTwo"), type="numeric", default=50, 
+    #           help="Highest coord in LSI", metavar="numeric"),
+
+    make_option(c("-z", "--pcToUse"), type="numeric", default=50, 
+              help="Principel components/LSI coords to use", metavar="numeric"),
 
     make_option(c("-f", "--featureSet"), type="character", default="peakMat", # "peakMat" for greg/riza matrix, "bMat" for archr bins
                                                                               # "gMat" for archr activity scores
@@ -74,8 +83,29 @@ names(samplesATACnames) = c("W134.Apex",
 
 PPIval = 300
 
-# Get the ATAC cds
-atacProcNote =  opt$ATACprocNote # "FRIP=0.2_FRIT=0.05UMI=1000"
+
+hardAssignATAC_clusters <- function(inputCDS, processingNote, kValUsed){
+
+  # 8-6-21: Using k = 15 I made a prelim assignment
+  if ((processingNote == "FRIP=0.2_FRIT=0.05UMI=1000DL=0.5_useMNN_Peak_CDS_50") & (kValUsed == 20)){
+    colData(inputCDS)$Assigned_Cell_Type = "Unassigned"
+
+    colData(inputCDS)$Assigned_Cell_Type = ifelse(colData(inputCDS)$cluster_label %in% c(22), 
+                    "Endocardium", colData(inputCDS)$Assigned_Cell_Type)
+    colData(inputCDS)$Assigned_Cell_Type = ifelse(colData(inputCDS)$cluster_label %in% c(6, 23), 
+                    "Macrophage", colData(inputCDS)$Assigned_Cell_Type)
+    colData(inputCDS)$Assigned_Cell_Type = ifelse(colData(inputCDS)$cluster_label %in% c(17,25), 
+                    "Perivascular", colData(inputCDS)$Assigned_Cell_Type)
+    colData(inputCDS)$Assigned_Cell_Type = ifelse(colData(inputCDS)$cluster_label %in% c(16,2,11), 
+                    "Fibroblast", colData(inputCDS)$Assigned_Cell_Type)
+    colData(inputCDS)$Assigned_Cell_Type = ifelse(colData(inputCDS)$cluster_label %in% c(24,14,10,8,9,19,12), 
+                    "Vascular_Endothelium", colData(inputCDS)$Assigned_Cell_Type)
+    colData(inputCDS)$Assigned_Cell_Type = ifelse(colData(inputCDS)$cluster_label %in% c(1,15,21,4,13,20,7,3,5,18), 
+                    "Cardiomyocyte", colData(inputCDS)$Assigned_Cell_Type)
+  }
+
+  return(inputCDS)
+}
 
 
 # }
@@ -106,22 +136,45 @@ bMatFile = paste0("All_Cells", "_", opt$ATACprocNote, "bMatrixCDS_postTransfer.R
 cds.a.b = readRDS(paste0(rdsPath, bMatFile))
 
 # Get data from Greg's filtering process
-
 # Added 7-29-21: Filter by checking names in a cds filtered by greg/riza's method
 filterCDSName = "/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_15_Greg_ATAC_Code_nobackup/cds_objects/"
-
 processingNote = opt$ATACprocNote
-
 
 oldProcNote = "FRIP=0.2_FRIT=0.05UMI=1000"
 # cds_p holds data
 load(paste0(filterCDSName, "cds_p_allHeartATAC", oldProcNote))
 
+
+# Added 10-26-21: Get the CDS with gene activity scores calculated by cicero links
+ciceroActivPath = paste0("/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_24_ciceroWork_nobackup/fileOutputs/", 
+                       "CiceroActivityCDS_", "Cicero_Defaults_cds_p_allHeartATAC", opt$ATACprocNote, "_ciceroConnections.RDS")
+ciceroActivCDS = readRDS(ciceroActivPath)
+
+##################################################################################### cicero activity cds formatting
+# Reformat sampleName
+colDataDF = separate(data=as.data.frame(colData(ciceroActivCDS)), col = "sampleName", 
+                        into = c("sampleName", "Processing"), sep="FRIP", remove=TRUE)
+# colData(ciceroActivCDS)$sampleName = colDataDF$sampleName
+ciceroActivCDS$sampleName = colDataDF$sampleName
+
+# Reformat the colnames of the activity matrix to match the bin/arrowActivity cds's
+colDataDF$rowname = rownames(colDataDF)
+colDataDF = separate(data=colDataDF, col = "rowname", 
+                        into = c("Part1", "Part2", "Part3"), sep="_", remove=TRUE)
+rownames(colDataDF) = paste0(colDataDF$Part1, "_", colDataDF$Part2, "_", colDataDF$Part3)
+
+
+rownames(colData(ciceroActivCDS)) = paste0(colData(ciceroActivCDS)$sampleName, "#", rownames((colDataDF)))
+
+colnames(ciceroActivCDS) = rownames(colData(ciceroActivCDS))
+
+#####################################################################################
+
+################################################################################# cds_p formatting
 # Get the sampleName reformated
 colDataDF = separate(data=as.data.frame(colData(cds_p)), col = "sampleName", 
                         into = c("sampleName", "Processing"), sep="FRIP", remove=TRUE)
 cds_p$sampleName = colDataDF$sampleName
-
 # Reformat the colnames of cds_p (original/peak matrix) to match the others
 colDataDF$rowname = rownames(colDataDF)
 colDataDF = separate(data=colDataDF, col = "rowname", 
@@ -131,18 +184,25 @@ rownames(colDataDF) = paste0(colDataDF$Part1, "_", colDataDF$Part2, "_", colData
 
 rownames(colData(cds_p)) = paste0(colData(cds_p)$sampleName, "#", rownames((colDataDF)))
 colnames(cds_p) = rownames(colData(cds_p))
+#####################################################################################
+
+
+
+
 
 # Now get the portion of cds_p we want, in order
+ciceroActivCDS = ciceroActivCDS[,colnames(cds.a.g)]
+
 cds_p = cds_p[,colnames(cds.a.g)]
 colData(cds.a.g)$sampleName = colData(cds_p)$sampleName
 colData(cds.a.b)$sampleName = colData(cds_p)$sampleName
 # Get data from 
 
-cdsList = list(cds_p, cds.a.g, cds.a.b)
-names(cdsList) = c("Peak_CDS", "Activity_CDS", "Bin_CDS")
+cdsList = list(cds_p, cds.a.g, cds.a.b, ciceroActivCDS)
+names(cdsList) = c("Peak_CDS", "Activity_CDS", "Bin_CDS", "CiceroActiv_CDS")
 
-preprocessMethods = c("LSI", "PCA", "LSI")
-names(preprocessMethods) = c("Peak_CDS", "Activity_CDS", "Bin_CDS")
+preprocessMethods = c("LSI", "PCA", "LSI", "PCA")
+names(preprocessMethods) = c("Peak_CDS", "Activity_CDS", "Bin_CDS", "CiceroActiv_CDS")
 
 
 # opt$sampleRNAname = "W144.heart.apex.s1"
@@ -160,11 +220,14 @@ for (eachCDSname in names(cdsList)){
   colData(thisCDS)$umi = colData(cds_p)$umi
   colData(thisCDS)$log10umi = log10(colData(cds_p)$umi)
   colData(thisCDS)$doublet_likelihood = colData(cds_p)$doublet_likelihood
+  colData(thisCDS)$predicted.id = colData(cdsList[["Activity_CDS"]])$predicted.id
 
   # Subset?
   if (!(opt$sampleRNAname == "All_Cells")){
-    thisCDS = thisCDS[,colData(thisCDS)$sampleName == opt$sampleRNAname]
-    miniCDS_g = cds.a.g[,colData(cds.a.g)$sampleName == opt$sampleRNAname]
+    # thisCDS = thisCDS[,colData(thisCDS)$sampleName == opt$sampleRNAname]
+    # miniCDS_g = cds.a.g[,colData(cds.a.g)$sampleName == opt$sampleRNAname]
+    thisCDS = thisCDS[,colData(thisCDS)$sampleName == samplesATACnames[opt$sampleRNAname]]
+    miniCDS_g = cds.a.g[,colData(cds.a.g)$sampleName == samplesATACnames[opt$sampleRNAname]]
   } else {
     miniCDS_g = cds.a.g
   }
@@ -178,7 +241,7 @@ for (eachCDSname in names(cdsList)){
   print(str(colData(thisCDS)))
 
   thisCDS = estimate_size_factors(thisCDS)
-  thisCDS = preprocess_cds(thisCDS, method=preprocessMethods[eachCDSname])
+  thisCDS = preprocess_cds(thisCDS, method=preprocessMethods[eachCDSname], num_dim=opt$pcToUse)
 
   # MNN?
   if (opt$useMNN == "useMNN"){
@@ -190,19 +253,112 @@ for (eachCDSname in names(cdsList)){
   }
   # Reduce dimension
 
+  # Cluster
+  thisCDS = cluster_cells(thisCDS, k=opt$kVal)
+  colData(thisCDS)$cluster_label = as.character(clusters(thisCDS))
+  plotUMAP_Monocle(thisCDS, paste0(eachCDSname, "comp", as.character(opt$pcToUse), "k", as.character(opt$kVal), opt$ATACprocNote), 
+  						"cluster_label", outputPath=out_dir)
+
+  # See if there's a reason to save this cds
+  if (eachCDSname == opt$cdsToSave){
+  	# Assign clusters?
+  	thisCDS = hardAssignATAC_clusters(thisCDS, paste0(opt$ATACprocNote, "_", opt$useMNN, "_", eachCDSname, "_", as.character(opt$pcToUse)),
+  								opt$kVal)
+  	# Save it
+  	outputFile = paste0(out_dir, paste0(opt$ATACprocNote, "_", opt$useMNN, "_", eachCDSname, "_", as.character(opt$pcToUse), "k_", as.character(opt$kVal)), ".rds")
+  	saveRDS(thisCDS, file=outputFile)
+  	print(outputFile)
+
+  	# Get DE testing by cell type
+  	plotLabel = paste0(opt$ATACprocNote, "_", opt$useMNN, "_", eachCDSname, "_", as.character(opt$pcToUse), "k_", as.character(opt$kVal))
+  	cdsAndDEtest = runDEtestingToID_markers(thisCDS, plotLabel, "Assigned_Cell_Type",
+                  howManyGenesToTest = 50, outputPath=out_dir)
+  	DEtestResFile = paste0(out_dir,  paste0(opt$ATACprocNote, "_", opt$useMNN, "_", eachCDSname, "_", as.character(opt$pcToUse), "k_", as.character(opt$kVal)), "_DE.csv")
+	write.csv(cdsAndDEtest$marker_test_res[order(cdsAndDEtest$marker_test_res$cell_group),], DEtestResFile)
+  }
+
+
+# "FRIP=0.2_FRIT=0.05UMI=1000DL=0.5_useMNN_peakMat_LSI1_50"
+
   # Give these over to the g matrix
+  thisProcNote = paste0("UMAP_by_", eachCDSname, "_", opt$useMNN, "FRIP_", as.character(opt$fripMin), "comp", as.character(opt$pcToUse))
+
   reducedDims(miniCDS_g)$UMAP = reducedDims(thisCDS)$UMAP
-  plotUMAP_MonocleModded(miniCDS_g, paste0("UMAP_by_", eachCDSname, "_", opt$useMNN, "FRIP_", as.character(opt$fripMin), "_faceted"), "sampleName",
+  plotUMAP_MonocleModded(miniCDS_g, paste0(thisProcNote, "_faceted"), "sampleName",
                         outputPath = out_dir, show_labels=FALSE)
 
-  plotUMAP_Monocle(miniCDS_g, paste0("UMAP_by_", eachCDSname, "_", opt$useMNN,"FRIP_", as.character(opt$fripMin)), "sampleName",
+  plotUMAP_Monocle(miniCDS_g, thisProcNote, "sampleName",
                         outputPath = out_dir, show_labels=FALSE)
 
   # Now color by some marker genes
-  plotUMAP_Monocle_genes(miniCDS_g, paste0("UMAP_by_", eachCDSname, "_", opt$useMNN,"FRIP_", as.character(opt$fripMin)), c("TTN", "RBPJ","GSN", "LDB2", "MYH11", "THEMIS" ),
+  plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("TTN", "RBPJ","GSN", "LDB2", "MYH11", "THEMIS" ),
                         "generalMarkers",
                         outputPath = out_dir)
+  # 
+  plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("PECAM1", "CD106", "CD62E", "SELE", "KDR", "ENG" ),
+                        "coleEndothMark",
+                        outputPath = out_dir)
+  plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("MYH11", "SMTN", "CALD1", "CNN1", "CNN2" ),
+                        "coleSmoothMuscMark",
+                        outputPath = out_dir)
+  plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("CD68", "CD14", "FCGR1", "MS4A7", "FCER1A", "CD163", "LY6C1", "FCN1", "MERTK" ),
+                        "coleMonoMacMark",
+                        outputPath = out_dir)
+  plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("CD3E", "CD3G", 'CD3D", "CD4", "CD8A', "CD8B", "BCL11B" ),
+                        "coleTCellMark",
+                        outputPath = out_dir)
+  plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("CD90", "THY1", "VIM", "DES" ),
+                        "coleFibroblastMark",
+                        outputPath = out_dir)
+  plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("CD90", "THY1", "VIM", "DES" ),
+                        "coleFibroblastMark",
+                        outputPath = out_dir)
 
+
+
+  plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("CD90", "THY1", "VIM", "DES" ),
+                        "coleFibroblastMark",
+                        outputPath = out_dir)
+
+  plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("PCDHGA1", "PCDHGA2" ),
+                        "protocadherins",
+                        outputPath = out_dir)
+
+  plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("F13A1", "RBM47",  "CD74", "RBPJ" ), # Skip RBPJ
+                        "macTopRNA",
+                        outputPath = out_dir)
+  plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("SKAP1", "CD247", "ARHGAP15", "RIPOR2" ), # Skip RBPJ
+                        "tcellTopRNA",
+                        outputPath = out_dir)
+  plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("VWF", "LDB2", "ANO2", "FLT1" ), # Skip RBPJ
+                        "vascEndTopRNA",
+                        outputPath = out_dir)
+  plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("DLC1", "RGS5", "NOTCH3", "EGFLAM" ), # Skip RBPJ
+                        "perivasTopRNA",
+                        outputPath = out_dir)
+  plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("NRXN1", "XKR4", "NRXN3", "CADM2" ), # Skip RBPJ
+                        "neuronTopRNA",
+                        outputPath = out_dir)
+  plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("DCN", "GSN", "MGP", "C7" ), # Skip RBPJ
+                        "fibroTopRNA",
+                        outputPath = out_dir)
+  plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("PKHD1L1", "PCDH15", "LDB2", "NPR3" ), # Skip RBPJ
+                        "endocardTopRNA",
+                        outputPath = out_dir)
+
+  plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("EMCN", "POSTN", "VWF" ), # Skip RBPJ
+                        "endocardTopRNA_2",
+                        outputPath = out_dir)
+  plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("AQP1", "ADAMTSL1", "SMOC1" ), # Skip RBPJ
+                        "endocardTopRNA_3",
+                        outputPath = out_dir)
+
+  plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("TTN", "MYBPC3", "DB3", "RBM20" ), # Skip RBPJ
+                        "cardiomyocyteTopRNA",
+                        outputPath = out_dir)
+  plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("BANK1", "PAX5", "CD79A", "RALGPS2" ), # Skip RBPJ
+                        "bCellTopRNA",
+                        outputPath = out_dir)
 }
 
 
@@ -217,6 +373,10 @@ for (eachCDSname in names(cdsList)){
 
 
 
+
+
+
+
 thisCDS = cdsList[["Activity_CDS"]]
 colData(thisCDS)$Sample = colData(thisCDS)$sampleName
 colData(thisCDS)$FRIP = colData(cds_p)$FRIP 
@@ -225,10 +385,20 @@ colData(thisCDS)$log10umi = log10(colData(cds_p)$umi)
 colData(thisCDS)$doublet_likelihood = colData(cds_p)$doublet_likelihood
 
 # Save this output
-saveRDS(thisCDS, paste0(out_dir, "cds.g_with_peakMetadata", opt$ATACprocNote, ".rds"))
+# saveRDS(thisCDS, paste0(out_dir, "cds.g_with_peakMetadata", opt$ATACprocNote, "_", opt$sampleRNAname, ".rds"))
 
 
 
+
+thisCDS = cdsList[["CiceroActiv_CDS"]]
+colData(thisCDS)$Sample = colData(thisCDS)$sampleName
+colData(thisCDS)$FRIP = colData(cds_p)$FRIP 
+colData(thisCDS)$umi = colData(cds_p)$umi
+colData(thisCDS)$log10umi = log10(colData(cds_p)$umi)
+colData(thisCDS)$doublet_likelihood = colData(cds_p)$doublet_likelihood
+
+# Save this output
+# saveRDS(thisCDS, paste0(out_dir, "ciceroActivityCDS_with_peakMetadata", opt$ATACprocNote, "_", opt$sampleRNAname, ".rds"))
 
 
 

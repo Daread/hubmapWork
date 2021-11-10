@@ -33,6 +33,9 @@ option_list = list(
     make_option(c("-g", "--geneActiv"), type="character", default="ArchR",  # "ArchR", "Cicero"
               help="ArchR or Cicero activity scores for genes", metavar="character"),
 
+    make_option(c("-n", "--numPCs"), type="numeric", default=20,  # "ArchR", "Cicero"
+              help="ArchR or Cicero activity scores for genes", metavar="character"),
+
     make_option(c("-a", "--ATACprocNote"), type="character", default="FRIP=0.2_FRIT=0.05UMI=1000DL=0.5", 
               help="How ATAC Cells were filtered", metavar="character")
 )
@@ -375,7 +378,7 @@ colData(cds.a.g)$log10_activSum = log10(colData(cds.a.g)$activSum)
 colData(cds.a.g)$sample = colData(cds.a.g)$sampleName
 cds.a.g = hardAssignDonors(cds.a.g)
 
-pcsHere = 10
+pcsHere = opt$numPCs
 cdsAndDEtest = generateUMAP_and_qc(cds.a.g, atacAloneOutput, 
             c("log10_activSum", "Donor", "sampleName", "predicted.id", "FRIP", "doublet_likelihood", "TSSEnrichment"),
                       "fullActivity", opt, pcToUse=pcsHere)
@@ -438,10 +441,12 @@ varSubset = cds.a.g[rownames(cds.a.g) %in% varFromATAC,]
 
 
 
-
+### #  opt$numPCs = 50
 
 
 #################################################################################################
+
+processingSetup = paste0("PC_", as.character(opt$numPCs), "_", opt$sampleRNAname, opt$ATACprocNote)
 
 # Combine the data and take a look at the UMAPs that result under different alignment/correction strategies
 colData(rnaCDS_genesInATAC)$umi = colData(rnaCDS_genesInATAC)$n.umi
@@ -451,8 +456,26 @@ colData(atacAndRNA_cds)$log10umi = log10(colData(atacAndRNA_cds)$umi)
 
 # # Try the approach of aligning/covariate correcting 
 atacAndRNA_cds = estimate_size_factors(atacAndRNA_cds)
-atacAndRNA_cds = preprocess_cds(atacAndRNA_cds, method="PCA", num_dim=10)
+atacAndRNA_cds = preprocess_cds(atacAndRNA_cds, method="PCA", num_dim=opt$numPCs)
 
+# Harmony-based:
+
+# Try using harmony between PC and UMAP levels of reduction and see if that works better?
+harmonyPCs = harmony::HarmonyMatrix(reducedDims(atacAndRNA_cds)$PCA, 
+                    as.data.frame(colData(atacAndRNA_cds)), c("tech", "sampleName"), do_pca = FALSE, verbose=TRUE)
+
+harmonyCDS = atacAndRNA_cds
+reducedDims(harmonyCDS)$PCA = harmonyPCs
+
+harmonyCDS = reduce_dimension(harmonyCDS, preprocess_method="PCA", reduction_method="UMAP")
+
+plotUMAP_MonocleModded(harmonyCDS, paste0(processingSetup,  "harmonyAlign"),
+                             "highLevelCellType", show_labels=FALSE,
+                            outputPath = out_dir)
+
+
+
+# Alternately, try using MNN & co to correct a co-embedding
 
 rnaCoPCA = atacAndRNA_cds[,colData(atacAndRNA_cds)$tech == "RNA"]
 rnaCDS_genesInATAC_aligned = align_cds(rnaCoPCA,
@@ -480,7 +503,7 @@ combinedAfterCorr = align_cds(combinedAfterCorr, preprocess_method="PCA", alignm
 combinedAfterCorr = reduce_dimension(combinedAfterCorr, preprocess_method="Aligned",
                             reduction_method="UMAP")
 
-plotUMAP_MonocleModded(combinedAfterCorr, paste0(opt$sampleRNAname, opt$ATACprocNote, "iterativeMNN_and_Covariate"),
+plotUMAP_MonocleModded(combinedAfterCorr, paste0(processingSetup, "iterativeMNN_and_Covariate"),
                        "highLevelCellType", show_labels=FALSE,
                             outputPath = out_dir)
 
@@ -489,7 +512,7 @@ plotUMAP_MonocleModded(combinedAfterCorr, paste0(opt$sampleRNAname, opt$ATACproc
 combinedAfterCorr = reduce_dimension(combinedAfterCorr, preprocess_method="PCA",
                             reduction_method="UMAP")
 
-plotUMAP_MonocleModded(combinedAfterCorr, paste0(opt$sampleRNAname, opt$ATACprocNote, "iterativeMNN_and_Covariate_butNotByTech"),
+plotUMAP_MonocleModded(combinedAfterCorr, paste0(processingSetup, "iterativeMNN_and_Covariate_butNotByTech"),
                      "highLevelCellType", show_labels=FALSE,
                             outputPath = out_dir)
 
@@ -499,22 +522,10 @@ atacAndRNA_cds = align_cds(atacAndRNA_cds, preprocess_method="PCA", alignment_gr
 atacAndRNA_cds = reduce_dimension(atacAndRNA_cds, preprocess_method="Aligned",
                             reduction_method="UMAP")
 
-plotUMAP_MonocleModded(atacAndRNA_cds, paste0(opt$sampleRNAname, opt$ATACprocNote,  "only_align_by_Tech"),
+plotUMAP_MonocleModded(atacAndRNA_cds, paste0(processingSetup,  "only_align_by_Tech"),
                              "highLevelCellType", show_labels=FALSE,
                             outputPath = out_dir)
 
-
-# Try using harmony between PC and UMAP levels of reduction and see if that works better?
-harmonyPCs = harmony::HarmonyMatrix(reducedDims(atacAndRNA_cds)$PCA, 
-                    as.data.frame(colData(atacAndRNA_cds)), "tech", do_pca = FALSE, verbose=TRUE)
-harmonyCDS = atacAndRNA_cds
-reducedDims(harmonyCDS)$PCA = harmonyPCs
-harmonyCDS = reduce_dimension(harmonyCDS, preprocess_method="PCA", reduction_method="UMAP")
-
-
-plotUMAP_MonocleModded(atacAndRNA_cds, paste0(opt$sampleRNAname, opt$ATACprocNote,  "harmonyAlign"),
-                             "highLevelCellType", show_labels=FALSE,
-                            outputPath = out_dir)
 
 
 

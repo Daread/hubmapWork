@@ -1,22 +1,17 @@
 
-basepath = "/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_15_Greg_ATAC_Code_nobackup/"
-dir.create(paste0(basepath, "archr/results/NB9/"))
-out_dir = paste0(basepath, "archr/results/NB9/")
-setwd(out_dir)
-set.seed(7)
-
 # load requirements
 suppressPackageStartupMessages({
   # library(ArchR)
   library(monocle3)
   library(dplyr)
   library(ggrastr)
-  library(Seurat)
+  # library(Seurat)
 })
 library(tidyr)
 library(plyr)
 library(ggplot2)
 library(Matrix)
+library("lme4")
 
 assignDonorAndSite <- function(inputCDS){
 	updatedColdata = separate(data=as.data.frame(colData(inputCDS)), col="sampleName",
@@ -89,11 +84,43 @@ source("/net/trapnell/vol1/home/readdf/trapLabDir/sharedProjectCode/utility/sing
 library("optparse")
 
 # Get the passed parameters
-option_list = list(
+# option_list = list(
 
+#     make_option(c("-w", "--cdsToSave"), type="numeric", default=NULL,   # Peak_CDS
+#               help="Features of cds to save", metavar="character"),
+
+#     make_option(c("-k", "--kVal"), type="numeric", default=20, 
+#               help="K value for clustering", metavar="character"),
+#     make_option(c("-m", "--matrixPath"), type="character", default="/net/trapnell/vol1/HuBMAP/novaseq/210111_Riza_sciATAC3_split_sample/analyze_out/", 
+#               help="Path to peak x motif matrices", metavar="character"),
+#     make_option(c("-z", "--pcToUse"), type="numeric", default=50, 
+#               help="Principel components/LSI coords to use", metavar="numeric"),
+
+#     make_option(c("-c", "--cellType"), type="character", default="Cardiomyocyte", #default="Endocardium", 
+#               help="Cell Type to subset for testing", metavar="character"),
+
+#     make_option(c("-p", "--cdsPath"), type="character", default="/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_15_Greg_ATAC_Code_nobackup/archr/results/NB9/All_Cells/", # "peakMat" for greg/riza matrix, "bMat" for archr bins
+#                                                                               # "gMat" for archr activity scores
+#               help="Path to where the ATAC cds is saved", metavar="character"),
+#     make_option(c("-g", "--groupColumn"), type="character", default="Assigned_Cell_Type", 
+#               help="column in colData that cellType uses to select", metavar="character"),
+
+#     make_option(c("-r", "--randomEffects"), type="character", default="Donor",  # Syntax would be "Donor,Batch" if including multiple
+#               help="Comma-separated string of variables to model with random effects", metavar="character"),
+#     make_option(c("-f", "--fixedEffects"), type="character",
+#                # default="Anatomical_Site", # Syntax would be "Anatomical_Site,Age" if including multiple
+#               default="Anatomical_Site,Age,Sex",
+#               help="Comma-separated string of variables to model with fixed effects", metavar="character"),
+
+#     make_option(c("-a", "--ATACprocNote"), type="character", default="FRIP=0.2_FRIT=0.05UMI=1000DL=0.5_useMNN_Peak_CDS_50k_20", 
+#               help="How ATAC Cells were filtered", metavar="character")
+# )
+
+
+# Get the passed parameters
+option_list = list(
     make_option(c("-w", "--cdsToSave"), type="numeric", default=NULL,   # Peak_CDS
               help="Features of cds to save", metavar="character"),
-
     make_option(c("-k", "--kVal"), type="numeric", default=20, 
               help="K value for clustering", metavar="character"),
     make_option(c("-m", "--matrixPath"), type="character", default="/net/trapnell/vol1/HuBMAP/novaseq/210111_Riza_sciATAC3_split_sample/analyze_out/", 
@@ -104,10 +131,12 @@ option_list = list(
     make_option(c("-c", "--cellType"), type="character", default="Cardiomyocyte", #default="Endocardium", 
               help="Cell Type to subset for testing", metavar="character"),
 
-    make_option(c("-p", "--cdsPath"), type="character", default="/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_15_Greg_ATAC_Code_nobackup/archr/results/NB9/All_Cells/", # "peakMat" for greg/riza matrix, "bMat" for archr bins
+    make_option(c("-p", "--cdsPath"), type="character",# default="/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_15_Greg_ATAC_Code_nobackup/archr/results/NB9/All_Cells/", # "peakMat" for greg/riza matrix, "bMat" for archr bins
                                                                               # "gMat" for archr activity scores
+                                  default="/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_15_Greg_ATAC_Code_nobackup/archr/results/NB11/All_Cells/",
               help="Path to where the ATAC cds is saved", metavar="character"),
-    make_option(c("-g", "--groupColumn"), type="character", default="Assigned_Cell_Type", 
+    make_option(c("-g", "--groupColumn"), type="character", default="harmonyKNN_type",     # default="Assigned_Cell_Type", 
+
               help="column in colData that cellType uses to select", metavar="character"),
 
     make_option(c("-r", "--randomEffects"), type="character", default="Donor",  # Syntax would be "Donor,Batch" if including multiple
@@ -117,9 +146,11 @@ option_list = list(
               default="Anatomical_Site,Age,Sex",
               help="Comma-separated string of variables to model with fixed effects", metavar="character"),
 
-    make_option(c("-a", "--ATACprocNote"), type="character", default="FRIP=0.2_FRIT=0.05UMI=1000DL=0.5_useMNN_Peak_CDS_50k_20", 
+    make_option(c("-a", "--ATACprocNote"), type="character", #default="FRIP=0.2_FRIT=0.05UMI=1000DL=0.5_useMNN_Peak_CDS_50k_20", 
+                    default="Harmony_Aligned_CoordsRegress_Protocadherin_PC_20_All_CellsFRIP=0.2_FRIT=0.05UMI=1000DL=0.5_k_20_peak_cds",
               help="How ATAC Cells were filtered", metavar="character")
 )
+
 opt_parser = OptionParser(option_list=option_list)
 opt = parse_args(opt_parser)
 # Parse random and fixed effects
@@ -216,11 +247,11 @@ source("/net/trapnell/vol1/home/readdf/trapLabDir/sharedProjectCode/DE_Code/expr
 source("/net/trapnell/vol1/home/readdf/trapLabDir/sharedProjectCode/DE_Code/mixedModelFittingMonocle3Style.R")
 
 
-# # # # Make this a mini run to test
+# # # # # Make this a mini run to test
 # # # ############################################################## Testing only 7-19-21
 # processingNote = paste0(processingNote, "miniTest")
 # testCDS = testCDS[1:20,]
-# # # ###################################################################################
+# # # # ###################################################################################
 
 
 # Now test for these genes

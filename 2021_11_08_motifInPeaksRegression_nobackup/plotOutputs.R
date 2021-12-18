@@ -12,11 +12,17 @@ print("Libraries loaded, starting now")
 option_list = list(
   make_option(c("-m", "--modelNotes"), type="character", 
   			# default="_fix_Anatomical_Site_rand_Donor_HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40addAllTypes_MMresult", 
-  			default="_fix_Anatomical_Site,Age,Sex_rand_Donor_FRIP=0.2_FRIT=0.05UMI=1000DL=0.5_useMNN_Peak_CDS_50k_20_MMresult",
+  			# default="_fix_Anatomical_Site,Age,Sex_rand_Donor_FRIP=0.2_FRIT=0.05UMI=1000DL=0.5_useMNN_Peak_CDS_50k_20_MMresult",
+  			default="_fix_Anatomical_Site,Age,Sex_rand_Donor_Harmony_Aligned_CoordsRegress_Protocadherin_PC_20_All_CellsFRIP=0.2_FRIT=0.05UMI=1000DL=0.5_k_20_peak_cds_MMresult",
               help="Processing note from model fitting", metavar="character"),
   make_option(c("-c", "--cellType"), type="character", 
   			# default="Endocardium", 
   			default="Vascular_Endothelium",
+              help="Cell type for which the model was fit", metavar="character"),
+
+  make_option(c("-p", "--rdsPathMod"), type="character", 
+  			# default="Endocardium", 
+  			default="",  # "./rdsOutput/mixedModels/cellTypeSpec",
               help="Cell type for which the model was fit", metavar="character")
 )
 opt_parser = OptionParser(option_list=option_list)
@@ -26,7 +32,7 @@ cellType = opt$cellType
 modelFitDescription = opt$modelNotes
 
 # Read in the fit
-rdsPath = "./rdsOutput/mixedModels/"
+rdsPath = paste0("./rdsOutput/mixedModels/", opt$rdsPathMod)
 fitResults = readRDS(paste0(rdsPath, cellType, modelFitDescription))
 
 # Get the coefficients and p-values for all the fixed effects
@@ -74,9 +80,10 @@ for (eachCoef in fixedCoefsToGet){
 }
 names(fixedEffectDFlist) = fixedCoefsToGet
 
-
-outputDir = paste0("./plots/", cellType, modelFitDescription, "/")
+dir.create(paste0("./plots/", opt$rdsPathMod))
+outputDir = paste0("./plots/", opt$rdsPathMod, cellType, modelFitDescription, "/")
 dir.create(outputDir)
+print(outputDir)
 
 qValCutoff = .1
 # Make some plots

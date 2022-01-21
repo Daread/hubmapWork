@@ -131,6 +131,9 @@ option_list = list(
     make_option(c("-c", "--cellType"), type="character", default="Cardiomyocyte", #default="Endocardium", 
               help="Cell Type to subset for testing", metavar="character"),
 
+    make_option(c("-b", "--pvalToUse"), type="numeric", default=1e-7, 
+              help="Principel components/LSI coords to use", metavar="numeric"),
+
     make_option(c("-p", "--cdsPath"), type="character",# default="/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_15_Greg_ATAC_Code_nobackup/archr/results/NB9/All_Cells/", # "peakMat" for greg/riza matrix, "bMat" for archr bins
                                                                               # "gMat" for archr activity scores
                                   default="/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_15_Greg_ATAC_Code_nobackup/archr/results/NB11/All_Cells/",
@@ -205,6 +208,22 @@ peakMotifMat = getPeakMotifMat(opt, samplesATACnames)
 # Now get the cds holding a binary peak matrix
 peakCDS = readRDS(paste0(opt$cdsPath, opt$ATACprocNote, ".rds"))
 
+
+# Write data for Jennifer to work with?
+# if (opt$cellType == "Cardiomyocyte"){
+# 	outFile = paste0("./rdsOutput/", opt$cellType, "_", opt$processingNote, "_cds.rds")
+
+# 	outputCDS = peakCDS[,colData(peakCDS)[[opt$groupColumn]] == opt$cellType]
+# 	outputCDS = assignDonorAndSite(outputCDS)
+# 	outputCDS = hardAssignDonorAges(outputCDS)
+# 	outputCDS = hardAssignDonorSexes(outputCDS)
+# 	outputCDS = estimate_size_factors(outputCDS)
+
+# 	saveRDS(outputCDS, outFile)
+
+# }
+
+
 # Now multiply the motif/peak matrix by the cell x peak matrix to get cell x motif counts
 # Get the matching peaks
 peakMotifMat = peakMotifMat[,colnames(peakMotifMat) %in% rownames(exprs(peakCDS))]
@@ -218,6 +237,18 @@ rownames(motifDF) = rownames(motifCellMat)
 motifCellCDS = new_cell_data_set(motifCellMat,
 								cell_metadata = as.data.frame(colData(peakCDS)),
 								gene_metadata = motifDF)
+
+
+motifCellCDS = assignDonorAndSite(motifCellCDS)
+
+#Added 7-28-21
+motifCellCDS = hardAssignDonorAges(motifCellCDS)
+
+# Added 8-16-21
+motifCellCDS = hardAssignDonorSexes(motifCellCDS)
+
+# Save this cds so it can be used elsewhere, like for plotting
+saveRDS(motifCellCDS, paste0("./rdsOutput/", opt$ATACprocNote, "_PeakMotifCDS.rds"))
 
 # Filter this down to 
 testCDS = motifCellCDS[,colData(motifCellCDS)[[opt$groupColumn]] == opt$cellType]

@@ -69,13 +69,13 @@ option_list = list(
   make_option(c("-p", "--processingNote"), type="character", 
   			default="HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40addAllTypes", 
               help="Processing note from upstream CDS", metavar="character"),
-    make_option(c("-c", "--cellType"), type="character", default="Endocardium", 
+    make_option(c("-c", "--cellType"), type="character", default="Adipocytes", #default="Endocardium", 
               help="Cell Type to subset for testing", metavar="character"),
     make_option(c("-r", "--randomEffects"), type="character", default="Donor",  # Syntax would be "Donor,Batch" if including multiple
               help="Comma-separated string of variables to model with random effects", metavar="character"),
     make_option(c("-f", "--fixedEffects"), type="character",
                # default="Anatomical_Site", # Syntax would be "Anatomical_Site,Age" if including multiple
-              default="Anatomical_Site,Log10Age,Sex",
+              default="Anatomical_Site,Age,Sex",
               help="Comma-separated string of variables to model with fixed effects", metavar="character"),
     make_option(c("-g", "--groupColumn"), type="character", default="highLevelCellType", 
               help="column in colData that cellType uses to select", metavar="character"),
@@ -90,6 +90,8 @@ randomEffectVec = strsplit(opt$randomEffects, ",")[[1]]
 
 print("Fixed effects are:")
 print(fixedEffectVec)
+print("Cell type:")
+print(opt$cellType)
 
 # Get the Model formula from these vectors
 modelFormula = getMixedModelFormula(fixedEffectVec, randomEffectVec)
@@ -110,12 +112,29 @@ allCellCDS = hardAssignDonorAges(allCellCDS)
 allCellCDS = hardAssignDonorSexes(allCellCDS)
 
 # Filter down to the cell type being tested here
+
+# Getting problems 
 testCDS = allCellCDS[,colData(allCellCDS)[[opt$groupColumn]] == opt$cellType]
+
+
 # Added 7-20-21: Try to reduce memory footprint. Hitting issues with batch submissions
 allCellCDS = NULL
 
 # Filter down to a minimum expression level. Try 1% of cells within this subtype
 testCDS = filterByCellsExpressed(testCDS, opt$minGeneExprPercent)
+
+# 9-16-21: 
+# To fix errors in the fitting package, need to raise the min expr level for some of the rarer cell types
+abundantCellTypes = c("Fibroblast", "Macrophage", "Cardiomyocyte", "T_Cell", "VSM_and_Pericyte", "Vascular_Endothelium")
+if (!(opt$cellType %in% abundantCellTypes)){
+  # Update to require 5% expressing cells
+  testCDS = filterByCellsExpressed(testCDS, .05)
+}
+veryRareCellTypes = c("Adipocytes")
+if ((opt$cellType %in% veryRareCellTypes)){
+  # Update to require 5% expressing cells
+  testCDS = filterByCellsExpressed(testCDS, .1)
+}
 
 # Re-estimate size factors for this subset, in case there is some odd UMI distribution behavior specific to a cell type/subset
 testCDS = estimate_size_factors(testCDS)
@@ -153,6 +172,16 @@ outPath = paste0("./rdsOutput/mixedModels/", processingNote, "_MMresult")
 saveRDS(testResDF, outPath)
 
 print("All Done")
+
+
+
+
+# for (eachRowInd in 1:nrow(testCDS)){
+#   print(eachRowInd)
+#   testFit = fit_mixed_models(testCDS[eachRowInd,], modelFormula, #c(fixedEffectVec, randomEffectVec),
+#                             expression_family="mixed-negbinomial", clean_model=T)
+# }
+
 
 
 

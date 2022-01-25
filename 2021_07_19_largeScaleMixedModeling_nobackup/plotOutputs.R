@@ -1,17 +1,18 @@
 
 library(ggplot2)
 library(dplyr)
-
 library("optparse")
 library(stringr)
 
+
 print("Libraries loaded, starting now")
+
 
 # Get the passed parameters
 option_list = list(
   make_option(c("-m", "--modelNotes"), type="character", 
   			# default="_fix_Anatomical_Site_rand_Donor_HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40addAllTypes_MMresult", 
-  			default="_fix_Anatomical_Site,Log10Age,Sex_rand_Donor_HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40addAllTypes_MMresult",
+  			default="_fix_Anatomical_Site,Age,Sex_rand_Donor_HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40addAllTypes_MMresult",
               help="Processing note from model fitting", metavar="character"),
   make_option(c("-c", "--cellType"), type="character", 
   			# default="Endocardium", 
@@ -50,6 +51,8 @@ for (eachCoef in fixedCoefsToGet){
 			fitResults[["model_summary"]][[eachInd]]$coefficients[eachCoef,"Estimate"])
 		thisDF[eachInd,"pval"] = (
 			fitResults[["model_summary"]][[eachInd]]$coefficients[eachCoef,"Pr(>|z|)"])
+		thisDF[eachInd,"z_value"] = (
+			fitResults[["model_summary"]][[eachInd]]$coefficients[eachCoef,"z value"])
 		thisDF[eachInd,"coef_std_error"] = (
 			fitResults[["model_summary"]][[eachInd]]$coefficients[eachCoef,"Std. Error"])
 		thisDF[eachInd,"negLog10Pval"] = -log10(thisDF[eachInd,"pval"])
@@ -104,14 +107,9 @@ for (eachCoef in fixedCoefsToGet){
 	candidateHits = candidateHits[order(abs(candidateHits$coefficientValue), decreasing=TRUE),]
 	write.csv(candidateHits, paste0(outputDir, cellType, "_", eachCoef, "_Table.csv"))
 
-	# Also print histogram of the inter-donor variation
-	# png(paste0(outputDir, cellType, "_Donor_Stddev.png"))
-	# myPlot = ggplot(dfHere, 
-	# 	aes_string("Donor_Stddev")) + geom_histogram() + 
-	# 	xlab("Inter-donor Random Effect Standard Deviation") +
-	# 	ggtitle(paste0("Donor Variation in ", cellType))
-	# print(myPlot)
-	# dev.off()
+	# Also write a csv with all tests run, not just those passing a qval threshold
+	allHits = dfHere[order(abs(dfHere$coefficientValue), decreasing=TRUE),]
+	write.csv(allHits, paste0(outputDir, cellType, "_", eachCoef, "_AllTestsRun_Table.csv"))
 
 	# Don't plot points with huge std errors
 	stderrorDF = dfHere[dfHere$coef_std_error < 50,]

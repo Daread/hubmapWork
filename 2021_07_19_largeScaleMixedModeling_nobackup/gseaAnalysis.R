@@ -53,6 +53,7 @@ for (eachCoef in fixedCoefsToGet){
 
   # namesAndStatistics$statistic = abs(namesAndStatistics$statistic)
   namesAndStatistics = namesAndStatistics[order(-(namesAndStatistics$statistic)),]
+  browser()
   # Reformat into a list for input into fgsea
   namesAndStatisticsList = deframe(namesAndStatistics)
 
@@ -60,6 +61,16 @@ for (eachCoef in fixedCoefsToGet){
   # Get the gsea result for this coefficient
 	gseaResult = fgsea(pathways = msigdbr_list, stats=namesAndStatisticsList, nperm=1000)
   fgseaResTidy <- (gseaResult %>% as_tibble() %>%  arrange(desc(NES)))
+
+  # Save the output
+
+  saveDF = as.data.frame(fgseaResTidy)
+  # Change the leadingEdge column to a character column, for now, to save it
+  # sapply(output$leadingEdge, paste, collapse=", ") 
+  saveDF$leadingEdge <- vapply(saveDF$leadingEdge, paste, collapse = ", ", character(1L))
+  outputDF = paste0(outputDir, "GSEA_", cellType, "_", eachCoef, ".csv")
+  # browser()
+  write.csv(saveDF, file=outputDF)
 
   print("Plotting now")
 

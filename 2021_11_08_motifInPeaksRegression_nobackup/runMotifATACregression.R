@@ -123,16 +123,21 @@ option_list = list(
               help="Features of cds to save", metavar="character"),
     make_option(c("-k", "--kVal"), type="numeric", default=20, 
               help="K value for clustering", metavar="character"),
-    make_option(c("-m", "--matrixPath"), type="character", default="/net/trapnell/vol1/HuBMAP/novaseq/210111_Riza_sciATAC3_split_sample/analyze_out/", 
+    make_option(c("-m", "--matrixPath"), type="character", default="/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2022_01_20_Vary_Motif_Pval_nobackup/fileOutputs/",
+          ##default="/net/trapnell/vol1/HuBMAP/novaseq/210111_Riza_sciATAC3_split_sample/analyze_out/", 
               help="Path to peak x motif matrices", metavar="character"),
     make_option(c("-z", "--pcToUse"), type="numeric", default=50, 
               help="Principel components/LSI coords to use", metavar="numeric"),
 
+    make_option(c("-n", "--motifSetNote"), type="character", default="",
+          ##default="/net/trapnell/vol1/HuBMAP/novaseq/210111_Riza_sciATAC3_split_sample/analyze_out/", 
+              help="Note about motif collection tested", metavar="character"),
+
     make_option(c("-c", "--cellType"), type="character", default="Cardiomyocyte", #default="Endocardium", 
               help="Cell Type to subset for testing", metavar="character"),
 
-    make_option(c("-b", "--pvalToUse"), type="numeric", default=1e-7, 
-              help="Principel components/LSI coords to use", metavar="numeric"),
+    make_option(c("-b", "--pvalToUse"), type="character", default="1e-6", 
+              help="Principel components/LSI coords to use", metavar="character"),
 
     make_option(c("-p", "--cdsPath"), type="character",# default="/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_15_Greg_ATAC_Code_nobackup/archr/results/NB9/All_Cells/", # "peakMat" for greg/riza matrix, "bMat" for archr bins
                                                                               # "gMat" for archr activity scores
@@ -163,7 +168,7 @@ randomEffectVec = strsplit(opt$randomEffects, ",")[[1]]
 # Get the Model formula from these vectors
 modelFormula = getMixedModelFormula(fixedEffectVec, randomEffectVec)
 
-processingNote = paste0(opt$cellType, "_fix_", opt$fixedEffects, "_rand_", opt$randomEffects, "_", opt$ATACprocNote)
+processingNote = paste0(opt$cellType, "_fix_", opt$fixedEffects, "_rand_", opt$randomEffects, "_", opt$ATACprocNote, '_p', as.character(opt$pvalToUse), opt$motifSetNote)
 
 
 samplesATACnames = c(
@@ -184,45 +189,62 @@ names(samplesATACnames) = c("W134.Apex",
   "W145.Apex", "W145.Left.Vent", 
   "W146.Apex", "W146.Left.Vent")
 
-getPeakMotifMat <- function(opt, sampleNames){
+# Using outputs from the BBI ATAC pipeline. Used 1e-7 as p value. Deprecated, but saving for reference
+##########################
+# getPeakMotifMat <- function(opt, sampleNames){
+# 	# All samples have the same matrix. Get one and return it (will be a dgTmatrix)
+# 	eachSample = sampleNames[1]
+# 	thisMatrixPath = paste0(opt$matrixPath, eachSample, "/motif_matrices/", eachSample, "-peak_motif_matrix.mtx.gz")
+# 	thisMatrix = readMM(gzfile(thisMatrixPath))
 
-	# All samples have the same matrix. Get one and return it (will be a dgTmatrix)
-	eachSample = sampleNames[1]
-	thisMatrixPath = paste0(opt$matrixPath, eachSample, "/motif_matrices/", eachSample, "-peak_motif_matrix.mtx.gz")
-	thisMatrix = readMM(gzfile(thisMatrixPath))
+# 	matrixCol = read.table(paste0(opt$matrixPath, eachSample, "/motif_matrices/", eachSample, "-peak_motif_matrix.columns.txt"),
+# 							header=FALSE)
+# 	matrixRow = read.table(paste0(opt$matrixPath, eachSample, "/motif_matrices/", eachSample, "-peak_motif_matrix.rows.txt"),
+# 							header=FALSE)
 
-	matrixCol = read.table(paste0(opt$matrixPath, eachSample, "/motif_matrices/", eachSample, "-peak_motif_matrix.columns.txt"),
-							header=FALSE)
-	matrixRow = read.table(paste0(opt$matrixPath, eachSample, "/motif_matrices/", eachSample, "-peak_motif_matrix.rows.txt"),
-							header=FALSE)
+# 	colnames(thisMatrix) = paste0("chr", matrixCol$V1 )
+# 	rownames(thisMatrix) = matrixRow$V1
 
-	colnames(thisMatrix) = paste0("chr", matrixCol$V1 )
-	rownames(thisMatrix) = matrixRow$V1
+# 	return(thisMatrix)
+# }
+# # First, read in the peak x motif matrices and make sure we have a single matrix for the shared peaks
+# peakMotifMat = getPeakMotifMat(opt, samplesATACnames)
+################################################################
 
-	return(thisMatrix)
+getPeakMotifMat <- function(opt){
+
+  # Get the matrix file name based on pvalue and the path
+  matrixPath = paste0(opt$matrixPath, opt$motifSetNote, "peak_x_motif_matrix_pVal", as.character(opt$pvalToUse))
+  thisMatrix = readMM(gzfile(paste0(matrixPath, ".mtx")))
+
+  matrixCol = read.table(paste0(matrixPath, ".columns.txt"), header=FALSE)
+  matrixRow = read.table(paste0(matrixPath, ".rows.txt"), header=FALSE)
+
+  colnames(thisMatrix) = paste0("chr", matrixCol$V1 )
+  rownames(thisMatrix) = matrixRow$V1
+
+  return(thisMatrix)
 }
-
-# First, read in the peak x motif matrices and make sure we have a single matrix for the shared peaks
-peakMotifMat = getPeakMotifMat(opt, samplesATACnames)
+peakMotifMat = getPeakMotifMat(opt)
 
 # Now get the cds holding a binary peak matrix
 peakCDS = readRDS(paste0(opt$cdsPath, opt$ATACprocNote, ".rds"))
+
+# # Some peaks w/out reads in the current cds should be dropped from the peak x motif matrix
+# peakMotifMat = peakMotifMat[, colnames(peakMotifMat) %in% rownames(peakCDS)]
+
 
 
 # Write data for Jennifer to work with?
 # if (opt$cellType == "Cardiomyocyte"){
 # 	outFile = paste0("./rdsOutput/", opt$cellType, "_", opt$processingNote, "_cds.rds")
-
 # 	outputCDS = peakCDS[,colData(peakCDS)[[opt$groupColumn]] == opt$cellType]
 # 	outputCDS = assignDonorAndSite(outputCDS)
 # 	outputCDS = hardAssignDonorAges(outputCDS)
 # 	outputCDS = hardAssignDonorSexes(outputCDS)
 # 	outputCDS = estimate_size_factors(outputCDS)
-
 # 	saveRDS(outputCDS, outFile)
-
 # }
-
 
 # Now multiply the motif/peak matrix by the cell x peak matrix to get cell x motif counts
 # Get the matching peaks
@@ -278,7 +300,7 @@ source("/net/trapnell/vol1/home/readdf/trapLabDir/sharedProjectCode/DE_Code/expr
 source("/net/trapnell/vol1/home/readdf/trapLabDir/sharedProjectCode/DE_Code/mixedModelFittingMonocle3Style.R")
 
 
-# # # # # Make this a mini run to test
+# # # # # # Make this a mini run to test
 # # # ############################################################## Testing only 7-19-21
 # processingNote = paste0(processingNote, "miniTest")
 # testCDS = testCDS[1:20,]

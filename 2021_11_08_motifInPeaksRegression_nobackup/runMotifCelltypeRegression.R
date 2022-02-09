@@ -280,3 +280,44 @@ saveRDS(testResDF, outPath)
 print("All Done")
 
 
+
+
+
+
+
+
+
+
+
+
+# > sum(peakMotifMat["SPI1",])
+# [1] 2079
+
+as.vector(peakMotifMat["SPI1",])
+
+
+
+# Debuggin/investigating odd results: 2-8-22
+
+for (eachType in levels(as.factor(colData(testCDS)[[opt$groupColumn]]))){
+
+  miniCDS = testCDS[,colData(testCDS)[[opt$groupColumn]] == eachType]
+  print(eachType)
+
+  thisAv = sum(exprs(miniCDS[rowData(miniCDS)$Motif == "SPI1",])) / ncol(miniCDS)
+  print(thisAv)
+
+  totalReadsAv = sum(exprs(miniCDS)) / ncol(miniCDS)
+  print(totalReadsAv)
+  
+
+  umiAv = sum(colData(miniCDS)$umi) / ncol(miniCDS)
+  print(paste0("UMI Average ", as.character(umiAv)))
+  print(" ")
+}
+
+
+
+
+
+

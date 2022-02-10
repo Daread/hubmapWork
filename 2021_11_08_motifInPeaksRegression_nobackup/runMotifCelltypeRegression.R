@@ -96,6 +96,13 @@ option_list = list(
     make_option(c("-z", "--pcToUse"), type="numeric", default=50, 
               help="Principel components/LSI coords to use", metavar="numeric"),
 
+     make_option(c("-n", "--motifSetNote"), type="character", default="",
+          ##default="/net/trapnell/vol1/HuBMAP/novaseq/210111_Riza_sciATAC3_split_sample/analyze_out/", 
+              help="Note about motif collection tested", metavar="character"),
+
+  make_option(c("-b", "--pvalToUse"), type="character", default=NULL, 
+              help="Principel components/LSI coords to use", metavar="character"),
+
     make_option(c("-c", "--cellType"), type="character", default="Cardiomyocyte", #default="Endocardium", 
               help="Cell Type to subset for testing", metavar="character"),
 
@@ -170,8 +177,36 @@ getPeakMotifMat <- function(opt, sampleNames){
 	return(thisMatrix)
 }
 
+
+
+
+getPeakMotifMatCustomPval <- function(opt){
+
+  # Get the matrix file name based on pvalue and the path
+  matrixPath = paste0(opt$matrixPath, opt$motifSetNote, "peak_x_motif_matrix_pVal", as.character(opt$pvalToUse))
+  thisMatrix = readMM(gzfile(paste0(matrixPath, ".mtx")))
+
+  matrixCol = read.table(paste0(matrixPath, ".columns.txt"), header=FALSE)
+  matrixRow = read.table(paste0(matrixPath, ".rows.txt"), header=FALSE)
+
+  colnames(thisMatrix) = paste0("chr", matrixCol$V1 )
+  rownames(thisMatrix) = matrixRow$V1
+
+  return(thisMatrix)
+}
+
+
+
+
 # First, read in the peak x motif matrices and make sure we have a single matrix for the shared peaks
-peakMotifMat = getPeakMotifMat(opt, samplesATACnames)
+if (  is.null(opt$pvalToUse) ){
+  print("Using default peak matrix")
+  peakMotifMat = getPeakMotifMat(opt, samplesATACnames)
+  } else {
+    peakMotifMat = getPeakMotifMatCustomPval(opt)
+    processingNote = paste0("Cell_Type_Specificity_for", opt$cellType, "_fix_", opt$fixedEffects, "_rand_", opt$randomEffects, "_", opt$ATACprocNote, '_p', as.character(opt$pvalToUse), opt$motifSetNote)
+  }
+
 
 # Now get the cds holding a binary peak matrix
 peakCDS = readRDS(paste0(opt$cdsPath, opt$ATACprocNote, ".rds"))
@@ -290,31 +325,31 @@ print("All Done")
 
 
 
-# > sum(peakMotifMat["SPI1",])
-# [1] 2079
+# # > sum(peakMotifMat["SPI1",])
+# # [1] 2079
 
-as.vector(peakMotifMat["SPI1",])
+# as.vector(peakMotifMat["SPI1",])
 
 
 
-# Debuggin/investigating odd results: 2-8-22
+# # # Debuggin/investigating odd results: 2-8-22
 
-for (eachType in levels(as.factor(colData(testCDS)[[opt$groupColumn]]))){
+# for (eachType in levels(as.factor(colData(testCDS)[[opt$groupColumn]]))){
 
-  miniCDS = testCDS[,colData(testCDS)[[opt$groupColumn]] == eachType]
-  print(eachType)
+#   miniCDS = testCDS[,colData(testCDS)[[opt$groupColumn]] == eachType]
+#   print(eachType)
 
-  thisAv = sum(exprs(miniCDS[rowData(miniCDS)$Motif == "SPI1",])) / ncol(miniCDS)
-  print(thisAv)
+#   thisAv = sum(exprs(miniCDS[rowData(miniCDS)$Motif == "SPI1",])) / ncol(miniCDS)
+#   print(paste0("SPI1 expression is ", thisAv))
 
-  totalReadsAv = sum(exprs(miniCDS)) / ncol(miniCDS)
-  print(totalReadsAv)
+#   totalReadsAv = sum(exprs(miniCDS)) / ncol(miniCDS)
+#   print(paste0("Average motifs in peaks is ",  as.character(totalReadsAv)))
   
 
-  umiAv = sum(colData(miniCDS)$umi) / ncol(miniCDS)
-  print(paste0("UMI Average ", as.character(umiAv)))
-  print(" ")
-}
+#   umiAv = sum(colData(miniCDS)$umi) / ncol(miniCDS)
+#   print(paste0("UMI Average ", as.character(umiAv)))
+#   print(" ")
+# }
 
 
 

@@ -12,9 +12,9 @@ print("Libraries loaded, starting now")
 option_list = list(
   make_option(c("-m", "--modelNotes"), type="character", 
   			# default="_fix_Anatomical_Site_rand_Donor_HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40addAllTypes_MMresult", 
-  			default="_fix_Anatomical_Site,Age,Sex_rand_Donor_FRIP=0.2_FRIT=0.05UMI=1000DL=0.5_useMNN_Peak_CDS_50k_20_MMresult",
+  			# default="_fix_Anatomical_Site,Age,Sex_rand_Donor_FRIP=0.2_FRIT=0.05UMI=1000DL=0.5_useMNN_Peak_CDS_50k_20_MMresult",
   			# default="_fix_Anatomical_Site,Age,Sex_rand_Donor_Harmony_Aligned_CoordsRegress_Protocadherin_PC_20_All_CellsFRIP=0.2_FRIT=0.05UMI=1000DL=0.5_k_20_peak_cds_MMresult",
-  			# default="_fix_Anatomical_Site,Age,Sex,log10umi_rand_Donor_Harmony_Aligned_CoordsRegress_Protocadherin_PC_20_All_CellsFRIP=0.2_FRIT=0.05UMI=1000DL=0.5_k_20_peak_cds_MMresult",
+  			default="_fix_Anatomical_Site,Age,Sex,log10umi_rand_Donor_Harmony_Aligned_CoordsRegress_Protocadherin_PC_20_All_CellsFRIP=0.2_FRIT=0.05UMI=1000DL=0.5_k_20_peak_cds_MMresult",
               help="Processing note from model fitting", metavar="character"),
   # make_option(c("-c", "--cellType"), type="character", 
   # 			# default="Endocardium", 

@@ -214,6 +214,7 @@ peakCDS = readRDS(paste0(opt$cdsPath, opt$ATACprocNote, ".rds"))
 # Now multiply the motif/peak matrix by the cell x peak matrix to get cell x motif counts
 # Get the matching peaks
 peakMotifMat = peakMotifMat[,colnames(peakMotifMat) %in% rownames(exprs(peakCDS))]
+peakMotifMat = peakMotifMat[,rownames(exprs(peakCDS))]
 
 motifCellMat = as(peakMotifMat, "dgCMatrix") %*% exprs(peakCDS)
 

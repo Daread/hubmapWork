@@ -190,6 +190,7 @@ plotOverlaps <- function(overlapDF, opt, outDir = "./plots/"){
 
 	print(myPlot)
 	dev.off()	
+	
 }
 
 

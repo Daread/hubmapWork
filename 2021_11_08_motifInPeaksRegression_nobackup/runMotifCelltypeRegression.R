@@ -340,12 +340,17 @@ print("All Done")
 #   miniCDS = testCDS[,colData(testCDS)[[opt$groupColumn]] == eachType]
 #   print(eachType)
 
-#   thisAv = sum(exprs(miniCDS[rowData(miniCDS)$Motif == "SPI1",])) / ncol(miniCDS)
-#   print(paste0("SPI1 expression is ", thisAv))
-
+  
 #   totalReadsAv = sum(exprs(miniCDS)) / ncol(miniCDS)
 #   print(paste0("Average motifs in peaks is ",  as.character(totalReadsAv)))
   
+
+#   thisAv = sum(exprs(miniCDS[rowData(miniCDS)$Motif == "SPI1",])) / ncol(miniCDS)
+#   print(paste0("SPI1 expression is ", thisAv))
+
+#   exprNormd = thisAv *1000 / totalReadsAv
+#   print(paste0("Normalized expr is ", exprNormd))
+
 
 #   umiAv = sum(colData(miniCDS)$umi) / ncol(miniCDS)
 #   print(paste0("UMI Average ", as.character(umiAv)))

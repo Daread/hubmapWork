@@ -3,6 +3,7 @@ library(tidyr)
 library(ggplot2)
 library(glmnet)
 library(ROCR)
+library(data.table)
 
 # Get shared functions between this and runRegressionModel.R
 source("./utilityFunctions.R")
@@ -11,7 +12,7 @@ library("optparse")
 # Get the passed parameters
 option_list = list(
   make_option(c("-p", "--pValFIMOcutoff"), type="numeric", 
-  			default=1e-5, 
+  			default=1e-4, 
               help="Max FIMO p value to retain match", metavar="character"),
 
   make_option(c("-f", "--featureSelection"), type="character", 
@@ -20,6 +21,10 @@ option_list = list(
 
   make_option(c("-t", "--predictionTask"), type="character", 
         default="_log2_CPM",   # "_log2_ratio_Vs_AllTypeMean", #  "_log2_CPM"
+              help="Option of which RNA data to predict", metavar="character"),
+
+  make_option(c("-y", "--predictionFraming"), type="character", 
+        default="Regression",# "Classification",   # "Classification" or "Regression"
               help="Option of which RNA data to predict", metavar="character"),
 
   make_option(c("-z", "--highCutoff"), type="numeric", 
@@ -35,18 +40,18 @@ option_list = list(
               help="Alpha value to use in glment", metavar="numeric"),
 
   make_option(c("-u", "--promoterUpstream"), type="numeric", 
-        default=1000,
+        default=1500,
               help="Bases upstream of TSS to use for input features", metavar="numeric"),
   make_option(c("-d", "--promoterDownstream"), type="numeric", 
-        default=200,
+        default=500,
               help="Bases downstream of TSS to use for input features", metavar="numeric"),
 
   make_option(c("-k", "--coaccessCutoff"), type="numeric", 
-        default=.05,
+        default=.015,
               help="Cutoff for keeping coaccessible peaks", metavar="numeric"),
 
   make_option(c("-n", "--maxNdistalSites"), type="numeric", 
-        default=5,
+        default=20,
               help="Max number of sites to link to a gene's promoter", metavar="numeric"),
 
   make_option(c("-q", "--peakSize"), type="numeric", 
@@ -64,7 +69,7 @@ opt = parse_args(opt_parser)
 opt$variableParams = paste0(opt$promoterUpstream, "_", opt$promoterDownstream, "_",
                            opt$coaccessCutoff, "_", opt$maxNdistalSites, "_", opt$peakSize )
 
-outDirName = paste0("./plots/classification/",
+outDirName = paste0("./plots/", opt$predictionFraming, "/",
             "Prot_Only_Gene_Prom_Plus_Distal_WithSequence_Sites_Max", opt$maxNdistalSites, "_Upstream", opt$promoterUpstream,
                 "_Downstream", opt$promoterDownstream, "_cicCuf", opt$coaccessCutoff,
                     "peakSize", opt$peakSize,"pVal", as.character(opt$pValFIMOcutoff), "/" )
@@ -75,9 +80,8 @@ dir.create(outDirName)
 cellTypes = c("Adipocytes", "B_Cell", "Cardiomyocyte", "Endocardium", "Fibroblast", 
               "Lymphatic_Endothelium", "Macrophage", "Mast_Cell", "Neuronal", "T_Cell",
                 "Vascular_Endothelium", "VSM_and_Pericyte")
-cellTypes = c( "Macrophage", 
-                "Vascular_Endothelium")
-
+# cellTypes = c( "Macrophage", 
+#                 "Vascular_Endothelium")
 
 
 # Get the RNA data that'll be used in all models
@@ -85,12 +89,71 @@ rnaData = getRNAdf(opt, cellTypes)
 names(rnaData)[names(rnaData) == "id"] <- "GeneID"
 # Only use genes that are annotated as protein-coding
 rnaData = getProteinCodingGenes(rnaData, opt)
-rnaData = binarizeRNAdata(rnaData, opt, cellTypes)
+
+# If classification, turn all the RNA labels into high/low labels
+if (opt$predictionFraming == "Classification"){
+  rnaData = binarizeRNAdata(rnaData, opt, cellTypes)
+}
+
+
+# Now run this
+# opt$predictionFraming = "Classification" # Or "Regression"
+evalNames = c("AUC","R2")
+names(evalNames) = c("Classification", "Regression")
+evalCol = paste0("Eval_Set_", evalNames[opt$predictionFraming]) 
+
+trainAndVal_CombinedResults = getModelFitsAndAccuracy("Binary_Combined_Motif_Counts", c("Train", "Validation"), c("Test"),
+                                                         opt, rnaData, cellTypes)
+trainAndVal_PromoterResults = getModelFitsAndAccuracy("Binary_PromOnly_Motif_Counts", c("Train", "Validation"), c("Test"),
+                                                         opt, rnaData, cellTypes)
+fullFitDF = rbind(trainAndVal_CombinedResults, trainAndVal_PromoterResults)
+
+# Save in case needed later
+
+# Make the full, empty dataframe to hold all coefficients
+outDir = paste0("./fileOutputs/", opt$predictionFraming, "/")
+dir.create(outDir)
+
+outFile = paste0(outDir,  "With_and_without_promoter_", opt$predictionFraming, "_FitModel.csv")
+write.csv(fullFitDF, outFile)
+
+
+# colnames(fullFitDF) = c("Cell_Type", "Alpha", "Eval_Set_R2", "Best_Lambda", "Feature_Set")
+
+
+# Now plot
+png(paste0("./plots/", opt$predictionFraming, "/", opt$predictionFraming, "_", opt$variableParams, "_Test_Performance_Prom_Vs_Combined.png" ),
+      height=1400, width=1600, res = 200)
+myPlot = ggplot(fullFitDF, aes_string(x="Cell_Type", y=evalCol, color="Feature_Set")) +
+      geom_point() + ggtitle("Promoter-Only Vs. Promoter+Distal Performance") + 
+      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+print(myPlot)
+dev.off()
+
+
+
+
+png(paste0("./plots/", opt$predictionFraming, "/", opt$predictionFraming, "_", opt$variableParams, "_Barplot_Test_Performance_Prom_Vs_Combined.png" ),
+      height=1400, width=2000, res = 200)
+myPlot = ggplot(fullFitDF, aes_string(x="Cell_Type", y=evalCol, fill="Feature_Set")) +
+      geom_bar(position='dodge', stat='identity') + ggtitle("Promoter-Only Vs. Promoter+Distal Performance") + 
+      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+      scale_fill_discrete(name = "Sequence Used", labels = c("Promoter + Distal", "Distal Alone"))+
+      scale_x_discrete(breaks=cellTypes, labels=c("Adipocyte", "B Cell", "Cardiomyocyte", "Endocardium", "Fibroblast", 
+              "Lymphatic Endothelium", "Macrophage", "Mast Cell", "Neuronal", "T Cell",
+                "Vascular Endothelium", "Perivascular Cell")) + ylab("R^2 on Test Data") +
+                 xlab("Cell Type")+theme(text=element_text(size=21))
+print(myPlot)
+dev.off()
+
+
+
 
 
 
 #
-getModelFitsAndAccuracy <- function(featureSelection, setsForTraining, setsForTesting, opt, rnaData, cellTypes){
+getModelFitsAccuracyAndModel_noCV <- function(featureSelection, setsForTraining, setsForTesting, opt, rnaData, cellTypes,
+							bestLambdaList, saveModel=TRUE){
   opt$featureSelection = featureSelection
   # Get the correct input features
   inputFeatures = getInputDF(opt, specifyFeatures=TRUE, specifiedFeatures = featureSelection)  # (opt, specifyFeatures=FALSE, specifiedFeatures="NULL")
@@ -111,10 +174,10 @@ getModelFitsAndAccuracy <- function(featureSelection, setsForTraining, setsForTe
   names(evalNames) = c("Classification", "Regression")
   evalCol = paste0("Eval_Set_", evalNames[opt$predictionFraming]) 
   fitAccuracyDF = data.frame("Cell_Type" = character(),
-                            "Alpha" = double(),
-                            evalCol = double(),
-                            "Best_Lambda" = double() ) #,
+                            "Alpha" = double() ) #,
                             # "Feature_Set" = featureSelection)
+  fitModelList = vector(mode="list", length(cellTypes))
+  typeCount = 1
 
   set.seed(7)
   for (thisCellType in cellTypes){
@@ -123,55 +186,177 @@ getModelFitsAndAccuracy <- function(featureSelection, setsForTraining, setsForTe
 
     # Fit the model using cross-validation to pick a best lambda
     if (opt$predictionFraming == "Classification"){
-      trainCVfit = cv.glmnet(as.matrix(trainX), miniY, family="binomial", alpha=opt$alphaToUse)
+      fitModel = glmnet(as.matrix(trainX), miniY, family="binomial",
+      				 alpha=opt$alphaToUse, lambda = bestLambdaList[thisCellType])
     } else if (opt$predictionFraming == "Regression"){
-      trainCVfit = cv.glmnet(as.matrix(trainX), miniY, alpha=opt$alphaToUse)
+      fitModel = glmnet(as.matrix(trainX), miniY,
+      					  alpha=opt$alphaToUse, lambda = bestLambdaList[thisCellType])
     }
-    
-    minLambda = trainCVfit$lambda.min 
 
-    # Classification or regression?
-    if (opt$predictionFraming == "Classification"){
-      evalValue = getAUC(trainCVfit, valX, valY[[paste0(thisCellType, opt$predictionTask)]])
-    } else if (opt$predictionFraming == "Regression"){
-      evalValue = getAccuracy(trainCVfit, valX, valY[[paste0(thisCellType, opt$predictionTask)]])
-    }
+    # # Classification or regression?
+    # if (opt$predictionFraming == "Classification"){
+    #   evalValue = getAUC(trainCVfit, valX, valY[[paste0(thisCellType, opt$predictionTask)]])
+    # } else if (opt$predictionFraming == "Regression"){
+    #   evalValue = getAccuracy(trainCVfit, valX, valY[[paste0(thisCellType, opt$predictionTask)]])
+    # }
     
-    newRow = data.frame(thisCellType,  opt$alphaToUse, evalValue, minLambda)
-    names(newRow) = c("Cell_Type", "Alpha", evalCol, "Best_Lambda")
+    newRow = data.frame(thisCellType,  opt$alphaToUse)
+    names(newRow) = c("Cell_Type", "Alpha")
     fitAccuracyDF = rbind(fitAccuracyDF, newRow)
 
+    # Save the model
+    fitModelList[[typeCount]] = fitModel
+    typeCount = typeCount + 1
   }
-
+  # browser()
+  fitAccuracyDF$Fit_Models = fitModelList
   fitAccuracyDF$Feature_Set = featureSelection
   return(fitAccuracyDF)
+}
+
+
+# Feed in a named list of the optimal lambda values found in the train+validation set. These will be used for the final model fitting
+
+bestLambdaList = trainAndVal_CombinedResults$Best_Lambda
+names(bestLambdaList) = trainAndVal_CombinedResults$Cell_Type
+
+
+combinedModelRes = getModelFitsAccuracyAndModel_noCV("Binary_Combined_Motif_Counts", c("Train", "Validation", "Test"), c("Test"),
+                                                         opt, rnaData, cellTypes, bestLambdaList)
+
+# Make the full, empty dataframe to hold all coefficients
+outDir = paste0("./fileOutputs/", opt$predictionFraming, "/")
+dir.create(outDir)
+
+
+allCoefDF = data.frame("Motif" = character(),
+						"EmptyFit" = numeric())
+for (eachCelltype in cellTypes){
+  subsetResults = combinedModelRes[combinedModelRes$Cell_Type == eachCelltype,]
+  thisFit = subsetResults[1,"Fit_Models"]
+  # Now get the nonzero coefficients
+  # coefficientDF = as.data.frame(as.matrix(coef(thisFit[[1]], s= "lambda.min")))
+  coefficientDF = as.data.frame(as.matrix(coef(thisFit[[1]])))
+  colnames(coefficientDF) = c("Coefficient")
+  coefficientDF["Motif"] = rownames(coefficientDF)
+  coefficientDF["AbsVal_Motif"] = abs(coefficientDF[["Coefficient"]])
+  # Drop intercept
+  coefficientDF = coefficientDF[coefficientDF$Motif != "(Intercept)",]
+  # Sort
+  # browser()
+  coefficientDF = coefficientDF[order(-coefficientDF$AbsVal_Motif),]
+
+  # Write this as an output alone
+  outFile = paste0(outDir, eachCelltype, "_", opt$predictionFraming, "_Final_FullFit_Coefficients.csv")
+  write.csv(coefficientDF, outFile)
+
+  # Add this into the dataframe holding all results
+  coefficientDF[[eachCelltype]] = coefficientDF$Coefficient
+  allCoefDF = merge(allCoefDF, coefficientDF[c("Motif", eachCelltype)], by="Motif", all=TRUE)
 
 }
 
 
-
-# Now run this
-opt$predictionFraming = "Classification" # Or "Regression"
-evalNames = c("AUC","R^2")
-names(evalNames) = c("Classification", "Regression")
-evalCol = paste0("Eval_Set_", evalNames[opt$predictionFraming]) 
-
-trainAndVal_CombinedResults = getModelFitsAndAccuracy("Binary_Combined_Motif_Counts", c("Train", "Validation"), c("Test"),
-                                                         opt, rnaData, cellTypes)
-
-trainAndVal_PromoterResults = getModelFitsAndAccuracy("Binary_PromOnly_Motif_Counts", c("Train", "Validation"), c("Test"),
-                                                         opt, rnaData, cellTypes)
-
-fullFitDF = rbind(trainAndVal_CombinedResults, trainAndVal_PromoterResults)
+# From the allCoefDF, drop the placeholder
+allCoefDF = allCoefDF[, -which(names(allCoefDF) %in% c("EmptyFit"))]
+# Save this to a new CSV for convenience
+outFile = paste0(outDir,  "All_Celltype_Results_", opt$predictionFraming, "_Final_FullFit_Coefficients.csv")
+write.csv(allCoefDF, outFile)
 
 
-# Now plot
-png(paste0("./plots/classification/", opt$predictionFraming, "_", opt$variableParams, "_Test_Performance_Prom_Vs_Combined.png" ),
-      height=1400, width=1600, res = 200)
-myPlot = ggplot(fullFitDF, aes_string(x="Cell_Type", y=evalCol, color="Feature_Set")) +
-      geom_point() + ggtitle("Promoter-Only Vs. Promoter+Distal Performance") 
-print(myPlot)
-dev.off()
+
+
+# Make a plot showing motifs x cell types for some high-abs motifs
+makeMotifByTypePlot = function(allCoefDF, cellTypes, definedMotifs=FALSE, motifsToUse=NULL, nPerCelltype=3, plotNote="",
+								minZerosToPlot=0){
+	# For each celltype, get n top hits to show
+	if (definedMotifs == FALSE){
+		print("Finding top motifs by cell type")
+		hitMotifs = c()
+		# Filter down to rows with enough zeros
+		allCoefDF = allCoefDF[rowSums(allCoefDF == 0) >= minZerosToPlot,]
+
+		# Get the top nPerCellType TF motifs by coefficient magnitude
+		for (eachCelltype in cellTypes){
+			miniDF = data.frame(theseCoefs = allCoefDF[[eachCelltype]],
+								motifs = allCoefDF$Motif)
+			miniDF$absCoef = abs(miniDF$theseCoefs)
+			# Reorder
+			miniDF = miniDF[order(miniDF$absCoef, decreasing=TRUE),]
+			# Get the first few coefs
+			sortedMotifs = miniDF$motifs 
+			hitMotifs = c(hitMotifs, sortedMotifs[1:nPerCelltype])
+		}
+		# Now get the unique ones
+		uniqueHitMotifs = unique(hitMotifs)
+		fileName = paste0("./plots/", opt$predictionFraming, "/", plotNote, "_", opt$predictionFraming, "_", minZerosToPlot, "zeros_",
+						 "_n", nPerCelltype, "_", opt$variableParams, "_MotifCoefDotplot.png")
+	} else {
+		fileName =paste0("./plots/", opt$predictionFraming, "/", plotNote, "_", opt$predictionFraming,  opt$variableParams, "_MotifCoefDotplot.png")
+		uniqueHitMotifs = motifsToUse
+	}
+	
+
+	# Get a formatted dataframe
+	meltedDF = data.table::melt(allCoefDF, id.vars=c("Motif"), variable.name="Cell_Type", value.name="Coefficient")
+	meltedDF$absCoefficient = abs(meltedDF$Coefficient)
+	meltedDF$Coef_Sign = ifelse(meltedDF$Coefficient > 0, "Positive", "Negative")
+
+	# Now make a plot of coefficients
+	png(fileName,
+			res=100, width=1500, height=1200)
+	myPlot = ggplot(meltedDF[meltedDF$Motif %in% uniqueHitMotifs,],
+						 aes(x=Cell_Type, y=Motif, 
+						 	col=Coef_Sign, size=ifelse(absCoefficient==0, NA, absCoefficient))) +
+						geom_point()+ 
+      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+	print(myPlot)
+	dev.off()
+
+}
+
+
+makeMotifByTypePlot(allCoefDF, cellTypes, nPerCelltype=10, minZerosToPlot=2)
+makeMotifByTypePlot(allCoefDF, cellTypes, nPerCelltype=10, minZerosToPlot=5)
+
+makeMotifByTypePlot(allCoefDF, cellTypes)
+
+
+makeMotifByTypePlot(allCoefDF, cellTypes, nPerCelltype=5)
+
+
+makeMotifByTypePlot(allCoefDF, cellTypes, definedMotifs=TRUE, motifsToUse=c("Smad2..Smad3_AllSeq", "SMAD2..SMAD3..SMAD4_AllSeq",
+																		    "SMAD3_AllSeq", "Smad4_AllSeq", "FOXH1_AllSeq",
+																		    "FOS_AllSeq", "FOS..JUN_AllSeq", "FOS..JUN.var.2._AllSeq",
+																		    "JUN_AllSeq", "SNAI1_AllSeq"), plotNote="TGFBeta_Set")
+
+makeMotifByTypePlot(allCoefDF, cellTypes, definedMotifs=TRUE, motifsToUse=c("GATA4_AllSeq", "GATA5_AllSeq", "GATA6_AllSeq", "MEF2_AllSeq",
+																"FOXO_AllSeq", "NKX2.5_AllSeq", "YY1_AllSeq", "HEY2_AllSeq",
+																"MITF_AllSeq"), plotNote="Hypertrophy_Set")
+
+
+
+makeMotifByTypePlot(allCoefDF, cellTypes, nPerCelltype=30)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

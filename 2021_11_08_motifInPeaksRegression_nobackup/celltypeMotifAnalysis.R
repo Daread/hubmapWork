@@ -3,7 +3,8 @@ library(ggplot2)
 library(dplyr)
 library("optparse")
 library(stringr)
-
+library(ggrepel)
+options(ggrepel.max.overlaps = Inf)
 
 print("Libraries loaded, starting now")
 
@@ -79,8 +80,51 @@ getFetalCSV <- function(opt, typesToKeep){
 
   # Remove hits below the desired q value cutoff
   # returnCSV = returnCSV[returnCSV$qvalue < opt$padjCutoff,]
-
   return(returnCSV)
+}
+
+
+defineGenesToPlot <- function(inputDF, cellTypeHere){
+
+	inputDF$labelGene = ""
+
+	# For genes that I want to show on the scatter plot, add the motif name to the labelGene column
+	if (cellTypeHere == "Vascular_Endothelium"){
+		# Show clusters of genes above and below the y=x line. Also show a group at the end of highest enrichments
+		# High in adult, down in fetal
+		inputDF$labelGene = ifelse((inputDF$Adult_Fold_Change > 1.08 &  inputDF$Fetal_Fold_Change < .975), inputDF$Motif, inputDF$labelGene)
+		# High in fetal, down in adult
+		inputDF$labelGene = ifelse((inputDF$Adult_Fold_Change <.8 &  inputDF$Fetal_Fold_Change >1.025), inputDF$Motif, inputDF$labelGene)
+		# High in both
+		# inputDF$labelGene = ifelse(	(inputDF$Fetal_Fold_Change > 1.1) | 
+		# 						(inputDF$Adult_Fold_Change > 1.2 & inputDF$Fetal_Fold_Change > 1.06), inputDF$Motif, inputDF$labelGene)
+		# High in fetal, little chang in adult
+		inputDF$labelGene = ifelse(	inputDF$Fetal_Fold_Change > 1.075 & inputDF$Adult_Fold_Change < 1.05, inputDF$Motif, inputDF$labelGene)
+	}
+	# Cardiomyocytes
+	if (cellTypeHere == "Cardiomyocyte"){
+		# Show clusters of genes above and below the y=x line. Also show a group at the end of highest enrichments
+		# High in adult, down in fetal
+		# inputDF$labelGene = ifelse((inputDF$Adult_Fold_Change > 1.08 &  inputDF$Fetal_Fold_Change < .975), inputDF$Motif, inputDF$labelGene)
+		# # High in fetal, down in adult
+		# inputDF$labelGene = ifelse((inputDF$Adult_Fold_Change <.8 &  inputDF$Fetal_Fold_Change >1.025), inputDF$Motif, inputDF$labelGene)
+		# High in both
+		inputDF$labelGene = ifelse(	inputDF$Fetal_Fold_Change > 1.2 | inputDF$Adult_Fold_Change > 1.275, inputDF$Motif, inputDF$labelGene)
+	}
+	# Macrophages
+	if (cellTypeHere == "Macrophage"){
+		# Show clusters of genes above and below the y=x line. Also show a group at the end of highest enrichments
+		# High in adult, down in fetal
+		# inputDF$labelGene = ifelse((inputDF$Adult_Fold_Change > 1.08 &  inputDF$Fetal_Fold_Change < .975), inputDF$Motif, inputDF$labelGene)
+		# # High in fetal, down in adult
+		# inputDF$labelGene = ifelse((inputDF$Adult_Fold_Change <.8 &  inputDF$Fetal_Fold_Change >1.025), inputDF$Motif, inputDF$labelGene)
+		# High in both
+		inputDF$labelGene = ifelse(	inputDF$Fetal_Fold_Change > 1.12 | inputDF$Adult_Fold_Change > 1.25, inputDF$Motif, inputDF$labelGene)
+	}
+
+
+
+	return(inputDF)
 }
 
 
@@ -100,9 +144,6 @@ plotCSVcomparisons <- function(adultCSV, fetalCSV, opt, cellTypes, outDir="./plo
 		# Merge
 		miniMerge = merge(miniAdult, miniFetal, by="Motif")
 
-		# browser()
-
-
 		# Get the -log(q_val)
 		miniMerge$adultNegLogQ = -log10(miniMerge$Adult_Qval)
 		miniMerge$fetalNegLogQ = -log10(miniMerge$Fetal_Qval)
@@ -116,18 +157,29 @@ plotCSVcomparisons <- function(adultCSV, fetalCSV, opt, cellTypes, outDir="./plo
 		print(myPlot)
 		dev.off()
 
-
 		# Keep those that are sig in at least one
-		miniMerge = miniMerge[(miniMerge$Adult_Qval < opt$padjCutoff),]
-		# miniMerge = miniMerge[(miniMerge$Adult_Qval < opt$padjCutoff | miniMerge$Fetal_Qval < opt$padjCutoff),]
+		# miniMerge = miniMerge[(miniMerge$Adult_Qval < opt$padjCutoff),]
+		miniMerge = miniMerge[(miniMerge$Adult_Qval < opt$padjCutoff | miniMerge$Fetal_Qval < opt$padjCutoff),]
+
+		miniMerge = defineGenesToPlot(miniMerge, eachType)
 
 		thisCorr = cor(miniMerge$Adult_Fold_Change, miniMerge$Fetal_Fold_Change)
+
+		# Debug: 2-28-2022
+		# if (eachType == "Vascular_Endothelium"){
+		# 	browser()
+		# }
 
 		# Plot the correlation for these
 		thisPlotFile = paste0(outDir, eachType, "q_", as.character(opt$padjCutoff), "_motif_coef_correlation.png")
 		png(thisPlotFile, res=200, width=1200, height=1000)
 		myPlot = ggplot(miniMerge, aes_string(x="Fetal_Fold_Change", y="Adult_Fold_Change")) +
-					geom_point() + ggtitle(paste0(eachType, " Fold Change Correlation = ", as.character(thisCorr)))
+					geom_point() + #ggtitle(paste0(eachType, " Fold Change Correlation = ", as.character(thisCorr)))
+					geom_text_repel(aes(label = labelGene), box.padding =2) + 
+					theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+					xlab("Log Enrichment in Fetal") + 
+					ylab("Log Enrichment in Adult")+
+            		theme(text = element_text(size = 24)) 
 		print(myPlot)
 		dev.off()
 	}
@@ -190,7 +242,33 @@ plotOverlaps <- function(overlapDF, opt, outDir = "./plots/"){
 
 	print(myPlot)
 	dev.off()	
-	
+
+
+	overlapDF = overlapDF[overlapDF$Overlap_Type %in% c("Both", "Random"),]
+	overlapDF$Overlap_Type = ifelse(overlapDF$Overlap_Type == "Both", "Observed Intersection", "Random Intersection")
+
+	outputFile = paste0(outDir, "Fetal_and_Adult_Motif_Only_Overlap_qval_", as.character(opt$padjCutoff), ".png")
+	png(outputFile, res=200, width=1200, height=1000)
+	myPlot = ggplot(overlapDF, aes_string(x="Cell_Type", y="Motif_Count", fill="Overlap_Type")) + 
+			geom_bar(position="dodge", stat="identity") + 
+			theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+            theme(text = element_text(size = 20)) + xlab("Cell Type") + 
+            	ylab("TF Count") + 
+            	 guides(fill=guide_legend(title="Intersection"))
+
+	print(myPlot)
+	dev.off()
+
+}
+
+
+formatCellType <- function(inputColumn){
+
+	inputColumn = ifelse(inputColumn == "T_Cell", "T Cell", inputColumn)
+	inputColumn = ifelse(inputColumn == "VSM_and_Pericyte", "Perviascular Cell", inputColumn)
+	inputColumn = ifelse(inputColumn == "Vascular_Endothelium", "Vascular Endothelium", inputColumn)
+
+	return(inputColumn)
 }
 
 
@@ -213,6 +291,13 @@ plotCSVcomparisons(adultCombinedCSV, fetalCombinedCSV, opt, cellTypes, outDir=ou
 
 
 overlapDF = findMotifOverlap(adultCombinedCSV, fetalCombinedCSV, opt, cellTypes)
+
+overlapDF$Cell_Type = formatCellType(overlapDF$Cell_Type)
+
+
+
+
+
 
 plotOverlaps(overlapDF, opt, outDir = outputDir)
 

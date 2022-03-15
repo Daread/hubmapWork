@@ -21,8 +21,6 @@ assignDonorAndSite <- function(inputCDS){
 	return(inputCDS)
 }
 
-
-
 hardAssignDonorAges <- function(inputCDS){
   colData(inputCDS)$Age = 0
   colData(inputCDS)$Age =ifelse(colData(inputCDS)$Donor == "W134", 43, colData(inputCDS)$Age)
@@ -40,7 +38,6 @@ hardAssignDonorAges <- function(inputCDS){
   return(inputCDS)
 }
 
-
 hardAssignDonorSexes <- function(inputCDS){
   colData(inputCDS)$Sex = "Not_Set"
   colData(inputCDS)$Sex =ifelse(colData(inputCDS)$Donor == "W134", "F", colData(inputCDS)$Sex)
@@ -55,7 +52,6 @@ hardAssignDonorSexes <- function(inputCDS){
 
   return(inputCDS)
 }
-
 
 filterByCellsExpressed = function(inputCDS, cellPropMin){
 	rowData(inputCDS)$fracCellsExpr = (rowSums(exprs(inputCDS) != 0) /

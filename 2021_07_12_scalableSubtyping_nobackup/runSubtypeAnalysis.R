@@ -6,87 +6,18 @@ source("/net/trapnell/vol1/home/readdf/trapLabDir/sharedProjectCode/utility/sing
 modStatus <- loadMonoclePackages()
 print(modStatus)
 source("/net/trapnell/vol1/home/readdf/trapLabDir/sharedProjectCode/scRNA_Seq_Background_Code/backgroundMethods.R")
-
-redoProcessing <- function(inputCDS, useMNN=TRUE, mnnCategory="sample"){
-	set.seed(7)
-	inputCDS <- monocle3::estimate_size_factors(inputCDS)
-	inputCDS <- preprocess_cds(inputCDS)
-
-	if (useMNN){
-		inputCDS = align_cds(inputCDS, alignment_group = mnnCategory)
-	}
-	inputCDS = reduce_dimension(inputCDS)
-
-	return(inputCDS)
-}
-
-runAllClustering <- function(inputCDS, kToTry, kToKeep, processingNote, outputPath){
-	# Loop through all k that aren't the kToKeep. Just make plots
-	for (eachK in kToTry){
-		if (eachK != kToKeep){
-			print(paste0("Clustering with k = ", as.character(eachK)))
-			inputCDS = cluster_cells(inputCDS, k=eachK)
-			colData(inputCDS)$cluster_label = as.character(clusters(inputCDS))
-			# Plot
-			plotUMAP_Monocle(inputCDS, paste0(processingNote, "k=", as.character(eachK)),
-						 "cluster_label", outputPath=outputPath)
-		}
-	}
-
-	# Now do it for the correct k
-	print(paste0("Clustering with k = ", as.character(kToKeep)))
-	inputCDS = cluster_cells(inputCDS, k=kToKeep)
-	colData(inputCDS)$cluster_label = as.character(clusters(inputCDS))
-	colData(inputCDS)$partition_label = as.character(partitions(inputCDS))
-	# Plot
-	plotUMAP_Monocle(inputCDS, paste0(processingNote, "k=", as.character(kToKeep)),
-				 "cluster_label", outputPath=outputPath)
-	plotUMAP_Monocle(inputCDS, paste0(processingNote, "k=", as.character(kToKeep)),
-				 "partition_label", outputPath=outputPath)
-	# Return
-	return(inputCDS)
-}
-
-getMarkerListFromGarnettFile <- function(inputCDS, inputMarkerFilePath, inputMarkerFileName){
-
-    # Load Garnett    
-    load_all("~/bin/garnett")
-    library(org.Hs.eg.db)
-
-    # Initial test of marker utility
-    marker_file_path = paste0(inputMarkerFilePath, inputMarkerFileName, ".txt")
-    marker_check <- check_markers(inputCDS, marker_file_path,
-                              db=org.Hs.eg.db,
-                              # cds_gene_id_type = "SYMBOL",
-                              cds_gene_id_type = "ENSEMBL",
-                              marker_file_gene_id_type = "SYMBOL")
-    return(marker_check)
-}
-
-
-plotGarnettMarkersOnUMAP <- function(inputCDS, garnettMarkers, processingNote, outputPath){
-	
-	for (eachCelltype in as.character(levels(as.factor(garnettMarkers$cell_type)))){
-		# Get the genes
-		subsetDF = garnettMarkers[garnettMarkers$cell_type == eachCelltype,]
-		theseGenes = as.character(subsetDF$marker_gene )
-		# Plot
-		plotUMAP_Monocle_genes(inputCDS, processingNote, theseGenes, paste0(eachCelltype,"_Markers"), 
-					outputPath = outputPath)
-	}
-}
-
+source("/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_12_scalableSubtyping_nobackup/subtypeUtilFunctions.R")
 
 
 # Get the passed parameters
 library("optparse")
 
 option_list = list(
-  make_option(c("-n", "--name"), type="character", default="TestRun", 
+  make_option(c("-n", "--name"), type="character",  default="Macrophage", # default="Endothelium", # default="TestRun", 
               help="Name of this subset analysis", metavar="character"),
-    make_option(c("-c", "--clusters"), type="character", default="1,2", 
+    make_option(c("-c", "--clusters"), type="character", default="3,9,10,15", #default="7,12,16,22,13",#  default="1,2", 
               help="comma-separated clusters to analyze", metavar="character"),
-    make_option(c("-m", "--markerFile"), type="character", default="heartBroadMarkV2", 
+    make_option(c("-m", "--markerFile"), type="character", default="macrophageSubtypesV2", #default="heartBroadMarkV2", 
               help="Marker file name", metavar="character"),
     make_option(c("-k", "--kval"), type="numeric", default=20, 
               help="Name of this subset analysis", metavar="numeric")
@@ -113,6 +44,13 @@ myCDS = allCellCDS[,colData(allCellCDS)$cluster_label %in% clustToKeep]
 
 # Re-do the pre-processing
 myCDS = redoProcessing(myCDS, useMNN=TRUE, mnnCategory="sample")
+
+# 10-14-21: Hard-assign parameters to plot outputs for 
+source("/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_12_scalableSubtyping_nobackup/subtypeUtilFunctions.R")
+if (opt$name %in% c("Perivascular", "Endothelium", "Macrophage")){
+	plotHardAssignedTypes(myCDS, opt, outputPath)
+}
+
 
 # Run the clustering at different levels
 kToTry = c(10, 20, 50, 100)
@@ -146,8 +84,9 @@ propDF = plotGroupedProportions(myCDS, paste0(processingNote, "_", markerFileToU
 
 # Also go ahead and find some markers, since the ones from literature may be uninformative
 
-myTestRes = runDEtestingToID_markers(myCDS, processingNote, "cluster_label",
+myTestResClust = runDEtestingToID_markers(myCDS, processingNote, "cluster_label",
 									howManyGenesToTest = 50, outputPath=outputPath)
+
 
 myTestRes = runDEtestingToID_markers(myCDS, processingNote, "partition_label",
 									howManyGenesToTest = 50, outputPath=outputPath)
@@ -155,14 +94,22 @@ myTestRes = runDEtestingToID_markers(myCDS, processingNote, "partition_label",
 
 
 
+# 10-15-21: David working here
+
+# clustRes = myTestResClust$marker_test_res
+# clustRes = clustRes[clustRes$cell_group=="5",]
+# clustRes = clustRes[order(clustRes$marker_score, decreasing=TRUE),]
+
+# plotUMAP_Monocle_genes(myCDS, processingNote, c("DIAPH3", "TUBB", "TUBA1B"), paste0("Cytoskel_Markers"), 
+#           outputPath = outputPath)
 
 
+# plotUMAP_Monocle_genes(myCDS, processingNote, c("CLEC10A", "CD209A"), paste0("Dendritic_Markers"), 
+#           outputPath = outputPath)
 
 
-
-
-
-
+# plotUMAP_Monocle_genes(myCDS, processingNote, c("RBPJ"), paste0("General_Mac"), 
+#           outputPath = outputPath)
 
 
 

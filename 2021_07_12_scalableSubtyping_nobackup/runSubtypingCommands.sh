@@ -30,3 +30,14 @@ qsub -P trapnelllab -wd /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results
 
 # Not run yet
 qsub -P trapnelllab -wd /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_12_scalableSubtyping_nobackup/ /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_12_scalableSubtyping_nobackup/singleSubtypeRun.sh TCellOne 8,14 tCellSubtypesV1 20
+
+
+
+qsub -P trapnelllab -wd /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_12_scalableSubtyping_nobackup/ /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_12_scalableSubtyping_nobackup/singleSubtypeRun.sh Endothelium 7,12,16,22,13 endothSubtypesV3 10
+qsub -P trapnelllab -wd /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_12_scalableSubtyping_nobackup/ /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_12_scalableSubtyping_nobackup/singleSubtypeRun.sh Perivascular 11 smoothMuscPeriV2 10
+
+
+
+# 
+qsub -P trapnelllab -wd /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_12_scalableSubtyping_nobackup/ /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_12_scalableSubtyping_nobackup/singleSubtypeRun.sh MacrophageTwo 3,9,10,15 macrophageSubtypesV2 20
+

@@ -236,6 +236,7 @@ for (rowNum in 1:nrow(promoterDistalDF)){ # V8 gives the ensemble ID for a gene
   if (nrow(subsetCiceroDF) != 0){
     # Sort
     subsetCiceroDF = subsetCiceroDF[order(-subsetCiceroDF$coaccess),]
+    subsetCiceroDF = subsetCiceroDF[!(duplicated(subsetCiceroDF$Peak2)),]
     # Get up to 5
     sitesToGet = min(opt$maxNdistalSites, nrow(subsetCiceroDF))
     for (eachCoaccessInd in 1:sitesToGet){

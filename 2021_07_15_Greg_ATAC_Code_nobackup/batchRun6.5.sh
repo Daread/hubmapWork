@@ -39,3 +39,18 @@ qsub -P trapnelllab -pe serial 16 -l centos=7 -l mfree=20G -wd /net/trapnell/vol
 qsub -P trapnelllab -pe serial 16 -l centos=7 -l mfree=20G -wd /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_15_Greg_ATAC_Code_nobackup/ /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_15_Greg_ATAC_Code_nobackup/runSingleNB6.5.sh All_Cells FRIP=0.2_FRIT=0.05UMI=1000DL=0.5
 
 
+
+
+
+qsub -P trapnelllab  -l centos=7 -l mfree=100G -wd /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_15_Greg_ATAC_Code_nobackup/ /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_15_Greg_ATAC_Code_nobackup/singleNB10.sh All_Cells Cicero
+
+qsub -P trapnelllab  -l centos=7 -l mfree=200G -wd /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_15_Greg_ATAC_Code_nobackup/ /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_15_Greg_ATAC_Code_nobackup/singleNB10.sh All_Cells ArchR
+
+
+qsub -P trapnelllab  -l centos=7 -l mfree=40G -wd /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_15_Greg_ATAC_Code_nobackup/ /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_15_Greg_ATAC_Code_nobackup/singleNB10.sh W144.Apex Cicero
+qsub -P trapnelllab  -l centos=7 -l mfree=40G -wd /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_15_Greg_ATAC_Code_nobackup/ /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_15_Greg_ATAC_Code_nobackup/singleNB10.sh W144.Apex ArchR
+
+qsub -P trapnelllab  -l centos=7 -l mfree=40G -wd /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_15_Greg_ATAC_Code_nobackup/ /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_15_Greg_ATAC_Code_nobackup/singleNB10.sh W142.Left.Vent Cicero
+qsub -P trapnelllab  -l centos=7 -l mfree=40G -wd /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_15_Greg_ATAC_Code_nobackup/ /net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_15_Greg_ATAC_Code_nobackup/singleNB10.sh W142.Left.Vent ArchR
+
+

@@ -15,11 +15,23 @@ out_dir = paste0(out_path, "cds_objects/")
 # suppressPackageStartupMessages({
 #   library(monocle3)
 # })
+
+
+.libPaths("2")
+
+
 # DFR Mod: Load my packages
 source("../../../sharedProjectCode/utility/singleCellUtilFuncs.R")
-modStatus <- loadMonoclePackages()
 
-source("~/../gtb7/sciatac_pipeline/src/sylvia_scripts/scripts/atac_helper_functions.R")
+# modStatus <- loadMonoclePackages()
+library(monocle3)
+
+
+library(Seurat)
+
+
+
+source("~/../gtb7/git/sciatac_pipeline/src/sylvia_scripts/scripts/atac_helper_functions.R")
 
 
 sample_df = read.csv(file = paste0(basepath, "merged_plots/merged.called_cells_summary.stats.csv"), 
@@ -29,8 +41,8 @@ sample_df = read.csv(file = paste0(basepath, "merged_plots/merged.called_cells_s
          FRIT_cutoff = ifelse(med_FRIT - 0.025 < 0.05, 0.05, med_FRIT - 0.025))
 
 
-FRIP_cutoffToUse = .3
-FRIT_cutoffToUse = .1
+FRIP_cutoffToUse = .2
+FRIT_cutoffToUse = .05
 umiCutoff = 1000
 DLcutoff=.7
 processingNote = paste0("FRIP=", as.character(FRIP_cutoffToUse), "_FRIT=", as.character(FRIT_cutoffToUse),

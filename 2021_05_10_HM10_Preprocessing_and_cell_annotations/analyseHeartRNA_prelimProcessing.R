@@ -84,6 +84,17 @@ fullCDS <- readHeartCDS("../../../fibrosis/results/2021_03_29_HM10_Human15_Reset
 colData(fullCDS)$log10_umi = log10(colData(fullCDS)$n.umi)
 set.seed(7)
 
+# 9-29-21: Make a matrix to give to Matt at Hubmap
+mattCDS = fullCDS[,fullCDS$sampleName == "W144.Apex"]
+mattCDS = mattCDS[,mattCDS$n.umi > 99]
+
+# Output
+mattDir = "./mattOutputs/"
+dir.create(mattDir)
+writeMM(exprs(mattCDS), paste0(mattDir, "W144_Apex_countMatrix.MM"))
+write.csv(as.data.frame(colData(mattCDS)), paste0(mattDir, "W144_cellMetadata.csv") )
+write.csv(as.data.frame(rowData(mattCDS)), paste0(mattDir, "W144_geneMetadata.csv") )
+
 # Make some core plots of QC metrics before any correction/filtering
 # makeQCplots(fullCDS[,colData(fullCDS)$n.umi > 99], processingNote="UMI>=100", makeUMAP=TRUE,
 # 	genesToShow = c("GSN", "LDB2", "KCNAB1", "RBPJ", "TTN", "THEMIS"), geneSetName="MiscHeartMarkers")

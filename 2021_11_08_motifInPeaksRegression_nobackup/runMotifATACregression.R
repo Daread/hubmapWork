@@ -293,6 +293,20 @@ testCDS = motifCellCDS[,colData(motifCellCDS)[[opt$groupColumn]] == opt$cellType
 # Filter down to a minimum expression level. Try 1% of cells within this subtype
 testCDS = filterByCellsExpressed(testCDS, .01)
 
+# 9-16-21: 
+# To fix errors in the fitting package, need to raise the min expr level for some of the rarer cell types
+abundantCellTypes = c("Fibroblast", "Macrophage", "Cardiomyocyte", "T_Cell", "VSM_and_Pericyte", "Vascular_Endothelium")
+if (!(opt$cellType %in% abundantCellTypes)){
+  # Update to require 5% expressing cells
+  testCDS = filterByCellsExpressed(testCDS, .05)
+}
+veryRareCellTypes = c("None")
+if ((opt$cellType %in% veryRareCellTypes)){
+  # Update to require 5% expressing cells
+  testCDS = filterByCellsExpressed(testCDS, .1)
+}
+
+
 testCDS = assignDonorAndSite(testCDS)
 
 #Added 7-28-21

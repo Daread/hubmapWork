@@ -16,7 +16,7 @@ option_list = list(
   			default="_fix_Anatomical_Site,Age,Sex_rand_Donor_HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40addAllTypes_MMresult",
               help="Processing note from model fitting", metavar="character"),
   make_option(c("-b", "--covariate"), type="character", 
-  			default="SexM",   #"Age", # "SexM"
+  			default=     "Age",   #"Age", # "SexM"
               help="Covariate to plot GSEA summary plot", metavar="character"),
   make_option(c("-p", "--padjCutoff"), type="numeric", 
   			default=0.1,
@@ -45,7 +45,7 @@ getCombinedCSV <- function(opt, inputCelltypes){
 	}
 
 	# Add columns for absolute value of effect size and direction of effect (for plotting)
-	myDF$Effect_Magnitude = abs(myDF$NES)
+	myDF$Enrichment = abs(myDF$NES)
 	myDF$Effect_Direction = ifelse(myDF$NES > 0.0, "Positive", "Negative")
 
 	# Rename any pathways to remove the "HALLMARK_" prefix
@@ -56,18 +56,62 @@ getCombinedCSV <- function(opt, inputCelltypes){
 }
 
 
+formatCellType <- function(inputColumn){
+
+	inputColumn = ifelse(inputColumn == "T_Cell", "T Cell", inputColumn)
+	inputColumn = ifelse(inputColumn == "VSM_and_Pericyte", "Perviascular Cell", inputColumn)
+	inputColumn = ifelse(inputColumn == "Vascular_Endothelium", "Vascular Endothelium", inputColumn)
+
+	return(inputColumn)
+}
+
+getFormattedEffectDirection <- function(combinedCSV, opt){
+
+	if (opt$covariate == "SexM"){
+		combinedCSV$Effect_Direction = ifelse(combinedCSV$Effect_Direction == "Positive", "Higher in Males", 
+																				"Higher in Females")
+	}
+
+	if (opt$covariate == "Age"){
+		combinedCSV$Effect_Direction = ifelse(combinedCSV$Effect_Direction == "Positive", "Higher in Age", 
+																				"Lower in Age")
+	}
+
+	return(combinedCSV)
+}
+
+
+
+
 combinedCSV = getCombinedCSV(opt, cellTypes)
+
+combinedCSV$cellType = formatCellType(combinedCSV$cellType)
+
+combinedCSV$pathway = gsub("_", " ", combinedCSV$pathway)
+
+# Format the effect direction labels to indicate sex meant by a pos/negative result
+
+combinedCSV = getFormattedEffectDirection(combinedCSV, opt)
 
 # Simplest version: only plot those that 
 outDir = "./plots/GSEA_Summaries/"
 dir.create(outDir)
 
+if (opt$covariate == "SexM"){
+	figWidth = 1800
+} else{
+	figWidth = 2200
+}
+
 # Output:
 outfile = paste0("OnlySigHits_p", as.character(opt$padjCutoff), "_by_", opt$covariate, ".png" )
-png(paste0(outDir, outfile), res=200, width=1200, height=1000)
+png(paste0(outDir, outfile), res=200, width=figWidth, height=1400)
 myPlot = ggplot(combinedCSV[combinedCSV$padj < opt$padjCutoff,], aes_string(x="pathway", y="cellType", col="Effect_Direction")) +
-			geom_point(aes(size=Effect_Magnitude)) +
-			 theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+			geom_point(aes(size=Enrichment)) +
+			 theme(axis.text.x = element_text(angle = 45, hjust=1)) +              #theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
+			 theme(text = element_text(size = 18))  + ylab("Cell Type") +
+			 xlab("Hallmark Pathway") + 
+			 guides(col=guide_legend(title="Effect Direction"))
 
 print(myPlot)
 dev.off()

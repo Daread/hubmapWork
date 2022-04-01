@@ -63,13 +63,23 @@ option_list = list(
 
   make_option(c("-q", "--peakSize"), type="numeric", 
         default=600,
-              help="-1 -> Keep as is, or enter a positive integer to make all peaks the same size", metavar="numeric")
+              help="-1 -> Keep as is, or enter a positive integer to make all peaks the same size", metavar="numeric"),
+
+  make_option(c("-m", "--cpmMin"), type="numeric", 
+        default=2,
+              help="Min log2 CPM to count as expressed in a cell type", metavar="numeric"),
+
+  make_option(c("-r", "--ratMin"), type="numeric", 
+        default=.1,
+              help="Minimum log2(cpm/averageCPM) value for genes to count in a cell type", metavar="numeric")
+#   opt$cpmMin
+# log2RatioVsMeanCutoff = opt$ratMin
 )
 opt_parser = OptionParser(option_list=option_list)
 opt = parse_args(opt_parser)
 
 opt$variableParams = paste0(opt$promoterUpstream, "_", opt$promoterDownstream, "_",
-                           opt$coaccessCutoff, "_", opt$maxNdistalSites, "_", opt$peakSize )
+                           opt$coaccessCutoff, "_", opt$maxNdistalSites, "_", opt$peakSize, "_", opt$cpmMin, "_", opt$ratMin )
 
 
 getPromoterDF <- function(gzTSSfile, opt){
@@ -321,8 +331,10 @@ cellTypes = c("Adipocytes", "B_Cell", "Cardiomyocyte", "Endocardium", "Fibroblas
 
 rnaData = getRNAdf(opt, cellTypes)
 
-log2CPMcutoff = 2.0
-log2RatioVsMeanCutoff = .1
+# log2CPMcutoff = 2.0
+# log2RatioVsMeanCutoff = .1
+log2CPMcutoff = opt$cpmMin
+log2RatioVsMeanCutoff = opt$ratMin
 
 library(reshape2)
 

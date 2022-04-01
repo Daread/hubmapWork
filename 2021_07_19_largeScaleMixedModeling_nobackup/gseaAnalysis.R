@@ -34,11 +34,10 @@ outputDir = paste0("./plots/", cellType, modelFitDescription, "/")
 fixedCoefsToGet = c("SexM", "Age", "Anatomical_SiteRight_Vent", 
 					"Anatomical_SiteApex", "Anatomical_SiteSeptum" )
 
-
-
-
 msigdbr_df = msigdbr(species = "Homo sapiens", category = "H")
 msigdbr_list = split(x = msigdbr_df$gene_symbol, f = msigdbr_df$gs_name)
+
+#fgseaResTidy[fgseaResTidy$pathway == "HALLMARK_UNFOLDED_PROTEIN_RESPONSE",]
 
 # Run GSEA on each coefficient's output
 for (eachCoef in fixedCoefsToGet){
@@ -53,14 +52,19 @@ for (eachCoef in fixedCoefsToGet){
 
   # namesAndStatistics$statistic = abs(namesAndStatistics$statistic)
   namesAndStatistics = namesAndStatistics[order(-(namesAndStatistics$statistic)),]
-  browser()
+  
   # Reformat into a list for input into fgsea
   namesAndStatisticsList = deframe(namesAndStatistics)
 
 
   # Get the gsea result for this coefficient
-	gseaResult = fgsea(pathways = msigdbr_list, stats=namesAndStatisticsList, nperm=1000)
-  fgseaResTidy <- (gseaResult %>% as_tibble() %>%  arrange(desc(NES)))
+	# gseaResult = fgsea(pathways = msigdbr_list, stats=namesAndStatisticsList, nperm=1000)
+ #  fgseaResTidy <- (gseaResult %>% as_tibble() %>%  arrange(desc(NES)))
+
+ #  browser()
+
+  multiLevel = fgseaMultilevel(pathways = msigdbr_list, stats=namesAndStatisticsList)
+  fgseaResTidy = (multiLevel %>% as_tibble() %>%  arrange(desc(NES)))
 
   # Save the output
 

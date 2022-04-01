@@ -26,14 +26,23 @@ option_list = list(
               help="Max number of sites to link to a gene's promoter", metavar="numeric"),
   make_option(c("-q", "--peakSize"), type="numeric", 
         default=600,
-              help="-1 -> Keep as is, or enter a positive integer to make all peaks the same size", metavar="numeric")
+              help="-1 -> Keep as is, or enter a positive integer to make all peaks the same size", metavar="numeric"),
+
+  make_option(c("-m", "--cpmMin"), type="numeric", 
+        default=2,
+              help="Min log2 CPM to count as expressed in a cell type", metavar="numeric"),
+
+  make_option(c("-r", "--ratMin"), type="numeric", 
+        default=.1,
+              help="Minimum log2(cpm/averageCPM) value for genes to count in a cell type", metavar="numeric")
 )
 opt_parser = OptionParser(option_list=option_list)
 opt = parse_args(opt_parser)
 
 opt$variableParams = paste0(as.character(opt$promoterUpstream), "_", as.character(opt$promoterDownstream), "_",
                             as.character(opt$coaccessCutoff), "_", as.character(opt$maxNdistalSites), "_",
-                            as.character(opt$peakSize))
+                            as.character(opt$peakSize), "_",
+                             as.character(opt$cpmMin), "_", as.character(opt$ratMin))
 
 
 
@@ -51,8 +60,7 @@ input_file = paste0("/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/20
                     gwasRun, "/results_gathered.txt")
 
 # Read in results and modify the labels from file to make shorter
-outFileLabel = paste0("./fileOutputs/bedFilesForGWAS_", as.character(opt$promoterUpstream), "_", as.character(opt$promoterDownstream), 
-                        "_", opt$coaccessCutoff, "_", opt$maxNdistalSites, "_", opt$peakSize, "/")
+outFileLabel = paste0("./fileOutputs/bedFilesForGWAS_", opt$variableParams, "/")
 
 ukbb_results = readr::read_delim(input_file, delim='\t') %>%
                 mutate(result_file = str_replace(result_file, 'ldsc_results.[^/]+/score_sumstats/', '')) %>%

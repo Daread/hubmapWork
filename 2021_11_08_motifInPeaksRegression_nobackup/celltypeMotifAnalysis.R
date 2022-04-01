@@ -70,9 +70,25 @@ getFetalCSV <- function(opt, typesToKeep){
   # Keep the subset of types that have matches in adult data
   # Myeloid cells = closest to macrophages, at the level of high-level cell types in the fetal atlas
   # Thymocytes = closest to mature T cells
-  fetalTypesToUse = c("Cardiomyocytes", "Vascular endothelial cells", "Endocardial cells", "Myeloid cells", "Smooth muscle cells", "Stromal cells")
-  equivalentAdult = c( "Cardiomyocyte", "Vascular_Endothelium",  "Endocardium", "Macrophage",  "VSM_and_Pericyte", "Fibroblast") 
+  # Watch out for "Cardiomyocyte lineage/Endothelial cell". Maybe a better fit for endocardium?
+  # Use "Epicardial fat cells" for adipocytes
+  # "Lymphatic endothelial cells"
+  # "Myeloid/Lymphoid cell"
+  # "Purkinje neurons" for neurons
+
+  # # Backup, 3-31
+  # fetalTypesToUse = c("Cardiomyocytes", "Vascular endothelial cells", "Endocardial cells", "Myeloid cells", "Smooth muscle cells", "Stromal cells")
+  # equivalentAdult = c( "Cardiomyocyte", "Vascular_Endothelium",  "Endocardium", "Macrophage",  "VSM_and_Pericyte", "Fibroblast") 
+  # names(equivalentAdult) = fetalTypesToUse
+
+
+  # Backup, 3-31
+  fetalTypesToUse = c("Cardiomyocytes", "Vascular endothelial cells", "Cardiomyocyte lineage/Endothelial cell", "Myeloid cells", "Smooth muscle cells", "Stromal cells",
+  						"Epicardial fat cells", "Purkinje neurons", "Thymocytes")
+  equivalentAdult = c( "Cardiomyocyte", "Vascular_Endothelium",  "Endocardium",                                  "Macrophage",  "VSM_and_Pericyte",      "Fibroblast",
+  						"Adipocytes", "Neuronal", "T_Cell") 
   names(equivalentAdult) = fetalTypesToUse
+
 
   # Map fetal atlas cell type names to closest equivalent in adult tissue. Add this info, then return the desired types
   returnCSV = rawCSV[rawCSV$cell_type %in% fetalTypesToUse,]
@@ -94,7 +110,7 @@ defineGenesToPlot <- function(inputDF, cellTypeHere){
 		# High in adult, down in fetal
 		inputDF$labelGene = ifelse((inputDF$Adult_Fold_Change > 1.08 &  inputDF$Fetal_Fold_Change < .975), inputDF$Motif, inputDF$labelGene)
 		# High in fetal, down in adult
-		inputDF$labelGene = ifelse((inputDF$Adult_Fold_Change <.8 &  inputDF$Fetal_Fold_Change >1.025), inputDF$Motif, inputDF$labelGene)
+		# inputDF$labelGene = ifelse((inputDF$Adult_Fold_Change <.8 &  inputDF$Fetal_Fold_Change >1.025), inputDF$Motif, inputDF$labelGene)
 		# High in both
 		# inputDF$labelGene = ifelse(	(inputDF$Fetal_Fold_Change > 1.1) | 
 		# 						(inputDF$Adult_Fold_Change > 1.2 & inputDF$Fetal_Fold_Change > 1.06), inputDF$Motif, inputDF$labelGene)
@@ -275,7 +291,11 @@ formatCellType <- function(inputColumn){
 
 outputDir = paste0("./plots/fetalAtlasComparison/", opt$modelNotes, "/")
 dir.create(outputDir)
-cellTypes = c("Vascular_Endothelium", "Cardiomyocyte", "Macrophage",  "VSM_and_Pericyte", "Fibroblast", "Endocardium") 
+# cellTypes = c("Vascular_Endothelium", "Cardiomyocyte", "Macrophage",  "VSM_and_Pericyte", "Fibroblast", "Endocardium") 
+
+cellTypes = c( "Cardiomyocyte", "Vascular_Endothelium",  "Endocardium",                                  "Macrophage",  "VSM_and_Pericyte",      "Fibroblast",
+  						"Adipocytes", "Neuronal", "T_Cell") 
+
 # 1-28-22: Re-run "T_Cell", as naming conventions were off for that. Looks like I didn't properly re-run that after changing file name conventions for output
 cellTypeCSVs = vector(mode='list', length=length(cellTypes))
 names(cellTypeCSVs) = cellTypes

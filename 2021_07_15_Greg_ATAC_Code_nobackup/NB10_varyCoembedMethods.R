@@ -19,19 +19,23 @@ source("/net/trapnell/vol1/home/readdf/trapLabDir/sharedProjectCode/utility/sing
 
 library("optparse")
 library("harmony")
+library('class')
 # Get the passed parameters
 
 option_list = list(
   make_option(c("-p", "--processingNote"), type="character", 
         default="HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40addAllTypes", 
               help="Processing note from upstream CDS", metavar="character"),
-    make_option(c("-s", "--sampleRNAname"), type="character",  default= "W144.Apex", # "W144.Apex",  # default="W142.Left.Vent",  # "All_Cells"
+    make_option(c("-s", "--sampleRNAname"), type="character",  default= "All_Cells", # "W144.Apex",  # default="W142.Left.Vent",  # "All_Cells"
               help="Sample to integrate", metavar="character"),
     make_option(c("-u", "--useSubset"), type="character", default="Subset", 
               help="Subset or All", metavar="character"),
 
     make_option(c("-g", "--geneActiv"), type="character", default="ArchR",  # "ArchR", "Cicero"
               help="ArchR or Cicero activity scores for genes", metavar="character"),
+
+    make_option(c("-r", "--saveHarmonyCDS"), type="logical", default=TRUE,  # "ArchR", "Cicero"
+              help="Save a cds of RNA+ATAC data after running harmony alignment", metavar="character"),
 
     make_option(c("-n", "--numPCs"), type="numeric", default=20,  # "ArchR", "Cicero"
               help="ArchR or Cicero activity scores for genes", metavar="character"),
@@ -431,13 +435,21 @@ varSubset = cds.a.g[rownames(cds.a.g) %in% varFromATAC,]
 
 
 
+knnRNAtoATAC <- function(inputCDS){
 
+  # Set up a df
+  allCellsEmbed = as.data.frame(colData(inputCDS))
+  allCellsEmbed$UMAP1 = reducedDims(inputCDS)$UMAP[,1]
+  allCellsEmbed$UMAP2 = reducedDims(inputCDS)$UMAP[,2]
 
+  rnaCells = allCellsEmbed[allCellsEmbed$tech == "RNA",]
 
+  knnRes = class::knn(rnaCells[,c("UMAP1", "UMAP2")], allCellsEmbed[,c("UMAP1", "UMAP2")], 
+                          rnaCells$highLevelCellType, k =7)
+  colData(inputCDS)$harmonyKNN_type = knnRes
 
-
-
-
+  return(inputCDS)
+}
 
 
 
@@ -454,12 +466,12 @@ atacAndRNA_cds = combine_cds(list(rnaCDS_genesInATAC, atacCDS_genesInRNA))
 
 colData(atacAndRNA_cds)$log10umi = log10(colData(atacAndRNA_cds)$umi)
 
+set.seed(7)
 # # Try the approach of aligning/covariate correcting 
 atacAndRNA_cds = estimate_size_factors(atacAndRNA_cds)
 atacAndRNA_cds = preprocess_cds(atacAndRNA_cds, method="PCA", num_dim=opt$numPCs)
 
 # Harmony-based:
-
 # Try using harmony between PC and UMAP levels of reduction and see if that works better?
 harmonyPCs = harmony::HarmonyMatrix(reducedDims(atacAndRNA_cds)$PCA, 
                     as.data.frame(colData(atacAndRNA_cds)), c("tech", "sampleName"), do_pca = FALSE, verbose=TRUE)
@@ -473,7 +485,23 @@ plotUMAP_MonocleModded(harmonyCDS, paste0(processingSetup,  "harmonyAlign"),
                              "highLevelCellType", show_labels=FALSE,
                             outputPath = out_dir)
 
+# Save this?
+if (opt$saveHarmonyCDS){
 
+  # Assign by knn
+  harmonyCDS = knnRNAtoATAC(harmonyCDS)
+  testCDS = knnRNAtoATAC(harmonyCDS)
+
+  plotUMAP_MonocleModded(harmonyCDS, paste0(processingSetup,  "harmonyAlign_labelKNN"),
+                             "harmonyKNN_type", show_labels=FALSE,
+                            outputPath = out_dir)
+
+
+  # Set the path
+  outFile = paste0(processingSetup,  "harmonyAligned_cds.rds")
+  saveRDS(harmonyCDS, paste0(out_dir, outFile))
+
+}
 
 # Alternately, try using MNN & co to correct a co-embedding
 

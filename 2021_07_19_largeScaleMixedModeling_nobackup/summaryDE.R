@@ -9,6 +9,16 @@ library(tidyverse)
 print("Libraries loaded, starting now")
 
 
+formatCellType <- function(inputColumn){
+
+	inputColumn = ifelse(inputColumn == "T_Cell", "T Cell", inputColumn)
+	inputColumn = ifelse(inputColumn == "VSM_and_Pericyte", "Perviascular Cell", inputColumn)
+	inputColumn = ifelse(inputColumn == "Vascular_Endothelium", "Vascular Endothelium", inputColumn)
+
+	return(inputColumn)
+}
+
+
 getCombinedCSV <- function(opt, inputCelltypes, inputCovariateList){
 
 	# Loop and get a combined CSV for each covariate
@@ -92,6 +102,9 @@ getDEcounts <- function(inputCSVlist, inputCovariates){
 # Counts of the DE genes
 deCounts = getDEcounts(combinedCSVlist, covariatesToPlot)
 
+deCounts$cellType = formatCellType(deCounts$cellType)
+# Format the coviarate column
+deCounts$Covariate = ifelse(deCounts$covariate == "SexM", "Sex", deCounts$covariate)
 
 
 # Simplest version: only plot those that 
@@ -103,9 +116,11 @@ dir.create(outDir)
 # Output:
 outfile = paste0("DE_hits_qVal_", as.character(opt$padjCutoff), "_by_", paste0(covariatesToPlot, collapse="_"), ".png" )
 png(paste0(outDir, outfile), res=200, width=1200, height=1000)
-myPlot = ggplot(deCounts, aes_string(x="cellType", y="n", fill="covariate")) +
+myPlot = ggplot(deCounts, aes_string(x="cellType", y="n", fill="Covariate")) +
 			geom_bar(position="dodge", stat="identity") +
-			 theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+			 theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
+			 theme(text = element_text(size = 20))  + ylab("DE Genes") +
+			 xlab("Cell Type")
 
 print(myPlot)
 dev.off()

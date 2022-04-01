@@ -3,90 +3,17 @@
 ###########################################################################################
 # Load relevant packages
 source("/net/trapnell/vol1/home/readdf/trapLabDir/sharedProjectCode/utility/singleCellUtilFuncs.R")
-modStatus <- loadMonoclePackages()
-print(modStatus)
+# modStatus <- loadMonoclePackages()
+# print(modStatus)
+library(monocle3)
 source("/net/trapnell/vol1/home/readdf/trapLabDir/sharedProjectCode/scRNA_Seq_Background_Code/backgroundMethods.R")
-
-
-
-hardAssignAnatomicalSites <- function(inputCDS){
-	colData(inputCDS)$Anatomical_Site = "Not_Specified"
-	colData(inputCDS)$Anatomical_Site = ifelse(grepl("Apex", colData(inputCDS)$sample),
-										"Apex", colData(inputCDS)$Anatomical_Site)
-	colData(inputCDS)$Anatomical_Site = ifelse(grepl("Septum", colData(inputCDS)$sample),
-										"Septum", colData(inputCDS)$Anatomical_Site)
-	colData(inputCDS)$Anatomical_Site = ifelse(grepl("Left.Vent", colData(inputCDS)$sample),
-										"Left_Vent", colData(inputCDS)$Anatomical_Site)
-	colData(inputCDS)$Anatomical_Site = ifelse(grepl("Right.Vent", colData(inputCDS)$sample),
-										"Right_Vent", colData(inputCDS)$Anatomical_Site)
-	return(inputCDS)
-}
-hardAssignAnatomicalSitesDF <- function(inputDF){
-
-	inputDF$Anatomical_Site = "Not_Specified"
-	inputDF$Anatomical_Site = ifelse(grepl("Apex", inputDF$sample),
-										"Apex", inputDF$Anatomical_Site)
-	inputDF$Anatomical_Site = ifelse(grepl("Septum", inputDF$sample),
-										"Septum", inputDF$Anatomical_Site)
-	inputDF$Anatomical_Site = ifelse(grepl("Left.Vent", inputDF$sample),
-										"Left_Vent", inputDF$Anatomical_Site)
-	inputDF$Anatomical_Site = ifelse(grepl("Right.Vent", inputDF$sample),
-										"Right_Vent", inputDF$Anatomical_Site)
-	return(inputDF)
-}
-hardAssignDonors <- function(inputCDS){
-	colData(inputCDS)$Donor = "Not_Specified"
-	colData(inputCDS)$Donor = ifelse(grepl("W134", colData(inputCDS)$sample),
-										"W134", colData(inputCDS)$Donor)
-	colData(inputCDS)$Donor = ifelse(grepl("W135", colData(inputCDS)$sample),
-										"W135", colData(inputCDS)$Donor)
-	colData(inputCDS)$Donor = ifelse(grepl("W136", colData(inputCDS)$sample),
-										"W136", colData(inputCDS)$Donor)
-	colData(inputCDS)$Donor = ifelse(grepl("W139", colData(inputCDS)$sample),
-										"W139", colData(inputCDS)$Donor)
-	colData(inputCDS)$Donor = ifelse(grepl("W142", colData(inputCDS)$sample),
-										"W142", colData(inputCDS)$Donor)
-	colData(inputCDS)$Donor = ifelse(grepl("W144", colData(inputCDS)$sample),
-										"W144", colData(inputCDS)$Donor)
-	colData(inputCDS)$Donor = ifelse(grepl("W145", colData(inputCDS)$sample),
-										"W145", colData(inputCDS)$Donor)
-	colData(inputCDS)$Donor = ifelse(grepl("W146", colData(inputCDS)$sample),
-										"W146", colData(inputCDS)$Donor)
-	return(inputCDS)
-}
-
-
-hardAssignHighLevelCellTypes <- function(inputCDS, origProcessing){
-	if (origProcessing == "HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40"){
-		# Assign
-		colData(inputCDS)$highLevelCellType = "Unassigned"
-		colData(inputCDS)$highLevelCellType = ifelse(colData(inputCDS)$partition_label == "1", 
-						"Fibroblast", colData(inputCDS)$highLevelCellType)
-		colData(inputCDS)$highLevelCellType = ifelse(colData(inputCDS)$partition_label %in% c("4"), 
-						"Vascular_Endothelium", colData(inputCDS)$highLevelCellType)
-		colData(inputCDS)$highLevelCellType = ifelse(colData(inputCDS)$partition_label %in% c("7"), 
-						"Endocardium", colData(inputCDS)$highLevelCellType)
-		colData(inputCDS)$highLevelCellType = ifelse(colData(inputCDS)$partition_label %in% c("8", "13"), 
-						"Lymphatic_Endothelium", colData(inputCDS)$highLevelCellType)
-		colData(inputCDS)$highLevelCellType = ifelse(colData(inputCDS)$partition_label %in% c("6"), 
-						"VSM_and_Pericyte", colData(inputCDS)$highLevelCellType)
-		colData(inputCDS)$highLevelCellType = ifelse(colData(inputCDS)$partition_label %in% c("2"), 
-						"Macrophage", colData(inputCDS)$highLevelCellType)
-		colData(inputCDS)$highLevelCellType = ifelse(colData(inputCDS)$partition_label %in% c("3"), 
-						"Cardiomyocyte", colData(inputCDS)$highLevelCellType)
-		colData(inputCDS)$highLevelCellType = ifelse(colData(inputCDS)$partition_label %in% c("5"), 
-						"T_Cell", colData(inputCDS)$highLevelCellType)
-		colData(inputCDS)$highLevelCellType = ifelse(colData(inputCDS)$partition_label %in% c("11"), 
-						"Adipocytes", colData(inputCDS)$highLevelCellType)
-		colData(inputCDS)$highLevelCellType = ifelse(colData(inputCDS)$partition_label %in% c("10"), 
-						"Neuronal", colData(inputCDS)$highLevelCellType)
-	}
-	
-	
-
-	return(inputCDS)
-}
-
+source("./propUtilCode.R")
+library(reshape2)
+library("dplyr")
+library(data.table)
+library(tidyr)
+library(VGAM)
+library(ggplot2)
 
 # Get the passed parameters
 library("optparse")
@@ -113,6 +40,8 @@ colData(allCellCDS)$sample = colData(allCellCDS)$sampleName
 allCellCDS = hardAssignHighLevelCellTypes(allCellCDS, oldProcNote)
 allCellCDS = hardAssignDonors(allCellCDS)
 allCellCDS = hardAssignAnatomicalSites(allCellCDS)
+allCellCDS = hardAssignDonorSexes(allCellCDS)
+allCellCDS = hardAssignDonorAges(allCellCDS)
 
 # Based off of this original CDS name, make a new directory for outputs
 oldCDS_Path = paste0("/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_14_cellTypeProportions_nobackup/plots/", oldProcNote, "/")
@@ -131,13 +60,194 @@ for (eachGroup in as.character(levels(as.factor(colData(allCellCDS)[[opt$colToUs
 	
 }
 
-library(reshape2)
-library("dplyr")
 # Next, look and see if there are obvious trends in cell composition
 # cellPropDF = (as.data.frame(colData(allCellCDS)) %>% )
 countTable = with(as.data.frame(colData(allCellCDS)), table(get("sample"), get(opt$colToUse)))
 propTable = prop.table(countTable, margin=1)
 propDF = as.data.frame(propTable)
+
+
+
+# Beta Binomial fitting
+
+
+ getFormattedCountDF <- function(inputDF){
+ 	# Label the columns
+ 	colnames(inputDF) = c("Sample", "Cell_Type", "Count")
+ 	# Add info on anatomical site
+ 	inputDF = tidyr::separate(inputDF, col="Sample", into=c("Donor", "Anatomical_Site"), 
+ 					remove=FALSE, extra="merge", sep="[.]")
+ 	inputDF = hardAssignDonorSexesDF(inputDF)
+ 	inputDF = hardAssignDonorAgesDF(inputDF)
+
+ 	# I also need to add a column for the total cells per sample
+ 	sampleNames = as.character(unique(inputDF$Sample))
+ 	cellSampleTotals = rep(0, length(sampleNames))
+ 	names(cellSampleTotals) = sampleNames
+ 	# Loop and find the ttoal per sample
+ 	for (eachSample in sampleNames){
+ 		subsetTable = inputDF[inputDF$Sample == eachSample,]
+ 		cellSampleTotals[eachSample] = sum(subsetTable$Count)
+ 	}
+ 	# Add this to the df
+ 	inputDF$TotalCellsPerSample = cellSampleTotals[inputDF$Sample]
+
+ 	return(inputDF)
+ }
+
+
+
+
+# Format the dataframe to contain counts alongside information on anatomical site, age, and sex
+countDF = melt(countTable)
+cellTypeRegressionDF = getFormattedCountDF(countDF)
+
+
+
+
+formatCellType <- function(inputColumn){
+
+  inputColumn = ifelse(inputColumn == "T_Cell", "T Cell", inputColumn)
+  inputColumn = ifelse(inputColumn == "VSM_and_Pericyte", "Perviascular Cell", inputColumn)
+  inputColumn = ifelse(inputColumn == "Vascular_Endothelium", "Vascular Endothelium", inputColumn)
+  inputColumn = ifelse(inputColumn == "Lymphatic_Endothelium", "Lymphatic Endothelium", inputColumn)
+  inputColumn = ifelse(inputColumn == "Mast_Cell", "Mast Cell", inputColumn)
+  inputColumn = ifelse(inputColumn == "B_Cell", "B Cell", inputColumn)
+
+  return(inputColumn)
+}
+
+
+getBetaBinomialPropFits <- function(inputDF, modelFormula="countDF ~ Anatomical_Site + Sex + Age"){
+	# Loop and fit a model per cell type
+	cellTypesToTest = as.character(unique(inputDF$Cell_Type))
+	inputDF$Cell_Type = as.character(inputDF$Cell_Type)
+	fitResList = vector(mode="list", length(cellTypesToTest))
+	counter = 1
+	for (eachCelltype in cellTypesToTest){
+		print(paste0("Fitting ", eachCelltype))
+		subsetDF = inputDF[inputDF$Cell_Type == eachCelltype,]
+		# Get the fit
+		countDF = cbind(subsetDF$Count, subsetDF$TotalCellsPerSample - subsetDF$Count)
+		# browser()
+		fit =  vglm(as.formula(modelFormula), betabinomial, data = subsetDF, trace = TRUE)
+		fit_df = tidy.vglm(fit)
+		fit_df$Cell_Type = eachCelltype
+		fitResList[[counter]] = fit_df
+		counter = counter + 1
+	}
+
+	return(fitResList)
+}
+
+
+
+# Run the regression model on each
+betaBinomFits = getBetaBinomialPropFits(cellTypeRegressionDF)
+
+test_res = do.call(rbind, betaBinomFits)
+
+nonCoefRes = test_res[!(test_res$term %in% c("(Intercept):1", "(Intercept):2")),]
+nonCoefRes = nonCoefRes[order(nonCoefRes$p.value),]
+
+nonCoefRes$q_value = p.adjust(nonCoefRes$p.value, method = "BH")
+
+# Save the results
+testResultOutfile = paste0("./fileOutputs/betaBinomFitting.csv")
+write.csv(nonCoefRes, testResultOutfile)
+
+# countDF = as.data.frame(countTable)
+
+# formattedCountDF = getFormattedCountDF(countDF)
+
+
+
+
+
+# Make simple jitter plots
+jitterDir = paste0("./plots/boxplots/")
+dir.create(jitterDir)
+
+# Format the cell names for plotting
+cellTypeRegressionDF$Cell_Type = as.character(cellTypeRegressionDF$Cell_Type)
+cellTypeRegressionDF$Cell_Type = formatCellType(cellTypeRegressionDF$Cell_Type)
+
+cellTypesToTest = as.character(unique(cellTypeRegressionDF$Cell_Type))
+
+cellTypeRegressionDF$Proportion = (cellTypeRegressionDF$Count / cellTypeRegressionDF$TotalCellsPerSample)
+# For every cell type, plot by age/sex/site
+for (categoricalVar in c("Sex", "Anatomical_Site")){
+	# for (eachCelltype in cellTypesToTest){
+		# Make a box plot
+		png(paste0(jitterDir, "Proportions_grouped_by_", categoricalVar, ".png"), 
+				res=200, height=1200,width=1800)
+		myPlot = ggplot(cellTypeRegressionDF, aes_string(x="Cell_Type", y="Proportion",
+					# col=categoricalVar, 
+					fill=categoricalVar)) + 
+				geom_boxplot(outlier.shape=NA) + 
+				geom_point(position=position_jitterdodge()) +
+				theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) + 
+				theme(text=element_text(size=24)) + 
+				xlab("Cell Type")
+				# geom_jitter()
+		print(myPlot)
+		dev.off()
+	# }
+}
+
+
+# Scatter plot for each cell type showing age vs. 
+for (eachCelltype in cellTypesToTest){
+
+	subsetDF = cellTypeRegressionDF[cellTypeRegressionDF$Cell_Type == eachCelltype,]
+
+	png(paste0(jitterDir, "Age_vs_prop_for_", eachCelltype, ".png"), 
+			res=200, height=1000,width=1200)
+	myPlot = ggplot(subsetDF, aes_string(x="Age", y="Proportion")) + 
+			geom_point()  +
+			theme(text=element_text(size=20)) + 
+			ylab(paste0(eachCelltype, " Proportion"))
+		  # stat_summary(fun.data= mean_cl_normal) + 
+		  #geom_smooth(method='lm')
+			# theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+			# geom_jitter()
+	print(myPlot)
+	dev.off()
+
+	print(eachCelltype)
+	print(cor(subsetDF$Age, subsetDF$Proportion))
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+################ End beta binomial fitting
+
+##############################################################################################################
+# Formatting for generating panel correlation plots
 unmeltedPropDF = dcast(propDF, Var2 ~ Var1)
 colnames(unmeltedPropDF)[1] = opt$colToUse
 rownames(unmeltedPropDF) = unmeltedPropDF[[opt$colToUse]]
@@ -170,6 +280,22 @@ print(thisPlot)
 dev.off()
 
 
+# Make a plot just showing fibroblast vs cardiomyocyte abundance
+fibCardioDF = data.frame("Fibroblasts" = as.numeric(unmeltedPropDF["Fibroblast",]), 
+						"Cardiomyocytes" = as.numeric(unmeltedPropDF["Cardiomyocyte",]))
+
+png(paste0(outputPath, "_FibroblastVsCardiomyocytes",".png"),
+				width=1400, height=1400, res=200)
+thisPlot = ggplot(fibCardioDF, aes(x=Fibroblasts, y=Cardiomyocytes)) + 
+			geom_point() + ggtitle("Proportion of Fibroblasts Vs Cardiomyocytes") + 
+			theme(text=element_text(size=18)) 
+print(thisPlot)
+dev.off()
+
+
+
+
+
 # Just make a plot to show the UMAP
 plotUMAP_Monocle(allCellCDS, processingNote, "highLevelCellType", textSize=4,
 				show_labels=TRUE, outputPath=outputPath)
@@ -179,8 +305,6 @@ plotUMAP_Monocle(allCellCDS, processingNote, "highLevelCellType", textSize=4,
 
 # 8-17-21: Get a dataframe with proportions of each cell type for each sample, labeling donor and site.
 #.         Then use this to look at inter-site vs inter-donor variation, as well as 
-
-library(data.table)
 
 cellTypePropDF = transpose(unmeltedPropDF)
 rownames(cellTypePropDF) = colnames(unmeltedPropDF)
@@ -192,9 +316,13 @@ meltedPropDF = reshape::melt(cellTypePropDF, id="sampleName")
 colnames(meltedPropDF) = c("sampleName", "Cell_Type", "Proportion")
 
 
-library(tidyr)
+
 meltedPropDF = tidyr::separate(meltedPropDF, col="sampleName", into=c("Donor", "Anatomical_Site"), 
 				sep="[.]", remove=FALSE, extra="merge")
+
+
+
+
 
 
 # Now, time to get 

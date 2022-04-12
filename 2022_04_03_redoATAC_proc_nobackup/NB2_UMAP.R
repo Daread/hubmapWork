@@ -39,11 +39,12 @@ set.seed(7)
 # samples = c("allHeartATAC", "W144.heart.apex.s1", "W135.heart.LV.s1")
 # samples = c("allHeartATAC", "W144.heart.apex.s1",
 #       "W146.heart.LV.s1", "W134.heart.apex.s1")
+
 samples = c("allHeartATAC")
 
 # processingNote = "FRIP=0.05_FRIT=0.05UMI=1000"
 
-processingNote = "FRIP=0.1_FRIT=0.08UMI=1000DL=0.5"
+processingNote = "FRIP=0.1_FRIT=0.09UMI=1000DL=0.5"
 
 # samples = paste0(samples, processingNote)
 useMNN = TRUE
@@ -59,7 +60,7 @@ df = data.frame(sample = character(), n_filteredCells = numeric(), n_filteredFea
                 medUMI = numeric(), medFRIP = numeric(), medFRIT = numeric())
 
 
-
+print("Starting processing")
 for(s in samples){
   load(paste0(basepath, "cds_objects/cds_p_", s, processingNote))
   

@@ -19,7 +19,7 @@ suppressPackageStartupMessages({
   library(monocle3)
   library(dplyr)
   library(ggrastr)
-  library(Seurat)
+  # library(Seurat)
 })
 
 # set genome
@@ -89,17 +89,17 @@ cds_g = monocle3::new_cell_data_set(
 ##
 # load cds.rna 
 # cds.rna <- readRDS(paste0(basepath, "cds_objects/sciRNA_heart/basicCellTyped_HM10UMI=100BG=15MNN=sample_cds.RDS"))
-rnaPath = "/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_05_10_HM10_Preprocessing_and_cell_annotations/rdsOutput/"
-cds.rna = readRDS(paste0(rnaPath, "allCells_HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40addAllTypes.rds"))
-#adjust rownames to match ATAC geneScore matrix
-rd = rowData(cds.rna)
-cm = counts(cds.rna)
-cd = colData(cds.rna)
-row.names(rd) <- rd$gene_short_name
-row.names(cm) <- rd$gene_short_name
-cds.rna = new_cell_data_set(expression_data = cm, 
-                            cell_metadata = cd, 
-                            gene_metadata = rd)
+# rnaPath = "/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_05_10_HM10_Preprocessing_and_cell_annotations/rdsOutput/"
+# cds.rna = readRDS(paste0(rnaPath, "allCells_HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40addAllTypes.rds"))
+# #adjust rownames to match ATAC geneScore matrix
+# rd = rowData(cds.rna)
+# cm = counts(cds.rna)
+# cd = colData(cds.rna)
+# row.names(rd) <- rd$gene_short_name
+# row.names(cm) <- rd$gene_short_name
+# cds.rna = new_cell_data_set(expression_data = cm, 
+#                             cell_metadata = cd, 
+#                             gene_metadata = rd)
 
 # Added 7-29-21: Filter by checking names in a cds filtered by greg/riza's method
 filterByGregCDS = TRUE

@@ -57,7 +57,7 @@ option_list = list(
                                                                               # "gMat" for archr activity scores
               help="peakMat, bMat, or gMat", metavar="character"),
 
-    make_option(c("-a", "--ATACprocNote"), type="character", default="FRIP=0.1_FRIT=0.1UMI=1000DL=0.5", 
+    make_option(c("-a", "--ATACprocNote"), type="character", default="FRIP=0.1_FRIT=0.08UMI=1000DL=0.5", 
               help="How ATAC Cells were filtered", metavar="character")
 )
 opt_parser = OptionParser(option_list=option_list)
@@ -184,8 +184,8 @@ fileName = paste0("All_Cells", "_", opt$ATACprocNote, "gMatrixCDS_postTransfer.R
 # Read in the data
 cds.a.g = readRDS(paste0(rdsPath, fileName))
 # bMatFile = paste0(opt$sampleRNAname, "_", opt$ATACprocNote, "bMatrixCDS_postTransfer.RDS")
-bMatFile = paste0("All_Cells", "_", opt$ATACprocNote, "bMatrixCDS_postTransfer.RDS")
-cds.a.b = readRDS(paste0(rdsPath, bMatFile))
+# bMatFile = paste0("All_Cells", "_", opt$ATACprocNote, "bMatrixCDS_postTransfer.RDS")
+# cds.a.b = readRDS(paste0(rdsPath, bMatFile))
 
 # Get data from Greg's filtering process
 # Added 7-29-21: Filter by checking names in a cds filtered by greg/riza's method
@@ -262,7 +262,7 @@ ciceroActivCDS = ciceroActivCDS[,colnames(cds.a.g)]
 
 cds_p = cds_p[,colnames(cds.a.g)]
 colData(cds.a.g)$sampleName = colData(cds_p)$sampleName
-colData(cds.a.b)$sampleName = colData(cds_p)$sampleName
+# colData(cds.a.b)$sampleName = colData(cds_p)$sampleName
 
 colData(harmonyCDS)$seuratCCA_celltype = colData(cds_p)$predicted.id
 # All the CDS's are organized with matching names and orders.

@@ -73,10 +73,8 @@ plotPaneledPositive <- function(miniCDS, genesToPlot, cellTypeSubset, setName,
 		for (eachGroup in groupsToPlot){
 			cdsPlotSubset = miniCDS[rowData(miniCDS)$gene_short_name == eachGene, colData(miniCDS)[[colToGroupCells]] == eachGroup]
 			# browser()
-			thisPlot = plot_percent_cells_positive(cdsPlotSubset, group_cells_by=colToGroupCells,
-          ) 
-
-          #+ theme(axis.text.x=element_text(angle=45, hjust=1)) + geom_bar(stat="identity", width=0.03) + 
+			thisPlot = plot_percent_cells_positive(cdsPlotSubset, group_cells_by=colForFill,
+          ) #+ theme(axis.text.x=element_text(angle=45, hjust=1)) + geom_bar(stat="identity", width=0.03) + 
 				#ggtitle(paste0(eachGroup, " by ", colForFill))
 			panelList[[panelInd]] = thisPlot
 			panelInd = panelInd + 1
@@ -217,9 +215,6 @@ plotViolins(c("MEF2B", "MEF2A", "MEF2C", "MEF2D"), "MEF_Across_Types", rnaData, 
 
 
 
-
-plotViolins(c("RFX1", "RFX2", "RFX3", "RFX4", "RFX5", "RFX6", "RFX7", "RFX8"), "RFX_Across_Types", rnaData, #cellTypeSubset=c("Fibroblast"), 
-             outputDir = outputDir)
 
 
 

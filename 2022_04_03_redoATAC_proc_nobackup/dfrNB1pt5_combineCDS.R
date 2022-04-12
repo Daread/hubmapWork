@@ -34,7 +34,7 @@ samples = c("W134.heart.apex.s1",
               "W146.heart.apex.s1", "W146.heart.LV.s1")
 
 # Add a processing note?
-processingNote = "FRIP=0.1_FRIT=0.1UMI=1000"
+processingNote = "FRIP=0.1_FRIT=0.09UMI=1000"
 samples = paste0(samples, processingNote)
 
 # Read in the CDS list, combine into a single one

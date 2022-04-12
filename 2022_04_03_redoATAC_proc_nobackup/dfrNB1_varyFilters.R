@@ -5,7 +5,7 @@
 # performs some filtering (by QC and doublets)
 # returns a cds object of peak by cell data. 
 
-basepath = "/net/trapnell/vol1/HuBMAP/novaseq/210111_Riza_sciATAC3_split_sample/analyze_out/"
+basepath = "/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2022_03_24_reprocessHeartAlone_nobackup/analyze_out/"
 out_path = "/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2022_04_03_redoATAC_proc_nobackup/"
 blacklist = read.table("~/../gtb7/genomes/GRCh38/annotations/EncodeBlacklist/ENCFF356LFX.bed")
 dir.create(paste0(out_path, "cds_objects/"))
@@ -41,13 +41,13 @@ source("/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/misc/atac_helper_functi
 #          FRIT_cutoff = ifelse(med_FRIT - 0.025 < 0.05, 0.05, med_FRIT - 0.025))
 
 
-FRIP_cutoffToUse = .1
-FRIT_cutoffToUse = .1
+FRIP_cutoffToUse = .15
+FRIT_cutoffToUse = .05
 umiCutoff = 1000
 # DLcutoff=.7
 processingNote = paste0("FRIP=", as.character(FRIP_cutoffToUse), "_FRIT=", as.character(FRIT_cutoffToUse),
                         "UMI=", as.character(umiCutoff) ) #, "DL=", as.character(DLcutoff))
-
+print("Processing Note")
 
 
 sample_df = data.frame(

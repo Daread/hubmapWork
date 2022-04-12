@@ -66,7 +66,6 @@ opt = parse_args(opt_parser)
 
 PPIval = 300
 
-
 plotUMAP_MonocleModded <- function(dataCDS, processingNote, catToColor,
                     show_labels=TRUE, textSize=10, outputPath = "./plots/"){ #, xVal, yVal){
     png(paste0(outputPath, processingNote, "_UMAP_", catToColor, "colored.png"),
@@ -176,6 +175,7 @@ cds.r = cds.rna
 if (opt$geneActiv == "ArchR"){
   rdsPath = "/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2022_04_03_redoATAC_proc_nobackup/cds_objects/"
   fileName = paste0("HM10_all_heart_fullFilter_", opt$ATACprocNote, "_ATAC_cds_g.RDS")
+  unModProcNote = opt$ATACprocNote
   opt$ATACprocNote = paste0(opt$ATACprocNote, "_ArchRActiv")
 } else {
   print("Using Cicero")
@@ -183,6 +183,7 @@ if (opt$geneActiv == "ArchR"){
   # fileName = paste0(opt$ATACprocNote, "_All_Cells.rds")
   # opt$ATACprocNote = paste0(opt$ATACprocNote, "_CiceroActiv")
 }
+
 # Read in the data
 cds.a.g = readRDS(paste0(rdsPath, fileName))
 
@@ -226,7 +227,7 @@ colData(cds.a.g)$tech = "ATAC"
 
 
 
-knnRNAtoATAC <- function(inputCDS){
+knnRNAtoATAC <- function(inputCDS,kToUse=7){
 
   # Set up a df
   allCellsEmbed = as.data.frame(colData(inputCDS))
@@ -236,7 +237,7 @@ knnRNAtoATAC <- function(inputCDS){
   rnaCells = allCellsEmbed[allCellsEmbed$tech == "RNA",]
 
   knnRes = class::knn(rnaCells[,c("UMAP1", "UMAP2")], allCellsEmbed[,c("UMAP1", "UMAP2")], 
-                          rnaCells$highLevelCellType, k =7)
+                          rnaCells$highLevelCellType, k =kToUse)
   colData(inputCDS)$harmonyKNN_type = knnRes
 
   return(inputCDS)
@@ -274,10 +275,8 @@ plotUMAP_MonocleModded(harmonyCDS, paste0(processingSetup,  "harmonyAlign"),
 
 # Save this?
 if (opt$saveHarmonyCDS){
-
   # Assign by knn
   harmonyCDS = knnRNAtoATAC(harmonyCDS)
-  testCDS = knnRNAtoATAC(harmonyCDS)
 
   plotUMAP_MonocleModded(harmonyCDS, paste0(processingSetup,  "harmonyAlign_labelKNN"),
                              "harmonyKNN_type", show_labels=FALSE,
@@ -288,14 +287,16 @@ if (opt$saveHarmonyCDS){
   saveRDS(harmonyCDS, paste0(rdsPath, outFile))
 }
 
-
-
 # Transfer this onto cds p
 atacOnlyPostHarmony = harmonyCDS[,colData(harmonyCDS)$tech == "ATAC"]
 
-cds_p = readRDS(paste0(rdsPath, paste0("HM10_all_heart_fullFilter_", opt$ATACprocNote, "_ATAC_cds_p.RDS")))
+# Fix the formatting on the colnames
+colnames(atacOnlyPostHarmony) = sub('_[^_]*$', '', colnames(atacOnlyPostHarmony))
+
+cds_p = readRDS(paste0(rdsPath, paste0("HM10_all_heart_fullFilter_", unModProcNote, "_ATAC_cds_p.RDS")))
 cds_p = cds_p[,colnames(atacOnlyPostHarmony)]
-colData(cds_p)$harmonyAlign_labelKNN = atacOnlyPostHarmony$harmonyAlign_labelKNN
+
+colData(cds_p)$harmonyKNN_type = colData(atacOnlyPostHarmony)$harmonyKNN_type
 
 # UMAP and color
 set.seed(7)
@@ -303,16 +304,15 @@ cds_p =estimate_size_factors(cds_p)
 cds_p = preprocess_cds(cds_p, method="LSI")
 cds_p = align_cds(cds_p, preprocess_method = "LSI", alignment_group = "sampleName", 
                         residual_model_formula_str = ~log10umi + FRIP + doublet_likelihood)
+cds_p = reduce_dimension(cds_p, , reduction_method = 'UMAP', preprocess_method = "Aligned")
 # Plot the output
+
 plotUMAP_Monocle(cds_p, "CDS_p_with_harmonyLabelTrans", "harmonyKNN_type", show_labels = FALSE,
                       outputPath = out_dir)
 
 
-outFile = paste0(processingSetup,  "harmonyAligned_cds_p.rds")
+outFile = paste0(processingSetup,  "harmonyLabels_cds_p.rds")
 saveRDS(cds_p, paste0(rdsPath, outFile))
-
-
-
 
 
 regressProtocadherinAndReumap <- function(inputCDS, opt){
@@ -341,16 +341,85 @@ regressProtocadherinAndReumap <- function(inputCDS, opt){
 # Test out also regressing out repetitive gene signal
 cadherinSubtractedCDS = regressProtocadherinAndReumap(harmonyCDS)
 
+# plotUMAP_MonocleModded(cadherinSubtractedCDS, paste0(processingSetup,  "harmonyAlign_labelKNN_protocadherinRegressed"),
+#                              "harmonyKNN_type", show_labels=FALSE,
+#                             outputPath = out_dir)
+
+outFile = paste0(processingSetup,  "harmonyAligned_protocad_reg_cds.rds")
+
+# saveRDS(cadherinSubtractedCDS, paste0(rdsPath, outFile))
+
+# cadherinSubtractedCDS = readRDS(paste0(rdsPath, outFile))
+
+cadherinSubtractedCDS = knnRNAtoATAC(cadherinSubtractedCDS, kToUse=11)
+
+# Plot
 plotUMAP_MonocleModded(cadherinSubtractedCDS, paste0(processingSetup,  "harmonyAlign_labelKNN_protocadherinRegressed"),
                              "harmonyKNN_type", show_labels=FALSE,
                             outputPath = out_dir)
-outFile = paste0(processingSetup,  "harmonyAligned_protocad_reg_cds.rds")
+plotUMAP_MonocleModded(cadherinSubtractedCDS, paste0(processingSetup,  "harmonyAlign_labelKNN_protocadherinRegressed"),
+                             "highLevelCellType", show_labels=FALSE,
+                            outputPath = out_dir)
+
+# harmonyCDS = readRDS(paste0(rdsPath, processingSetup,  "harmonyAligned_cds.rds"))
 saveRDS(cadherinSubtractedCDS, paste0(rdsPath, outFile))
 
 
 
+# Save a cds_p with the knn labels after regressing out protocadherin
 
 
+
+# Transfer this onto cds p
+atacOnlyRegressProto = harmonyCDS[,colData(cadherinSubtractedCDS)$tech == "ATAC"]
+
+# Fix the formatting on the colnames
+colnames(atacOnlyRegressProto) = sub('_[^_]*$', '', colnames(atacOnlyRegressProto))
+
+cds_p = readRDS(paste0(rdsPath, paste0("HM10_all_heart_fullFilter_", unModProcNote, "_ATAC_cds_p.RDS")))
+cds_p = cds_p[,colnames(atacOnlyRegressProto)]
+
+colData(cds_p)$harmonyKNN_type = colData(atacOnlyRegressProto)$harmonyKNN_type
+
+
+outFile = paste0(processingSetup,  "harmonyLabels_regressProtocad_cds_p.rds")
+saveRDS(cds_p, paste0(rdsPath, outFile))
+
+
+# UMAP and color
+set.seed(7)
+cds_p =estimate_size_factors(cds_p)
+cds_p = preprocess_cds(cds_p, method="LSI")
+cds_p = align_cds(cds_p, preprocess_method = "LSI", alignment_group = "sampleName", 
+                        residual_model_formula_str = ~log10umi + FRIP + doublet_likelihood)
+cds_p = reduce_dimension(cds_p, , reduction_method = 'UMAP', preprocess_method = "Aligned")
+# Plot the output
+
+plotUMAP_Monocle(cds_p, "CDS_p_with_harmonyLabelTrans", "harmonyKNN_type", show_labels = FALSE,
+                      outputPath = out_dir)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# origLabels = as.character(colData(harmonyCDS)$harmonyKNN_type)
+# newLabels = as.character(colData(cadherinSubtractedCDS)$harmonyKNN_type)
+
+# sum(!(origLabels == newLabels))
 
 
 ################################################################################################################################################

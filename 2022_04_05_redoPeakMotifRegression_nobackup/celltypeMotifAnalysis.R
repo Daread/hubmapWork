@@ -4,7 +4,7 @@ library(dplyr)
 library("optparse")
 library(stringr)
 library(ggrepel)
-options(ggrepel.max.overlaps = Inf)
+# options(ggrepel.max.overlaps = Inf)
 
 print("Libraries loaded, starting now")
 
@@ -299,12 +299,13 @@ plotCSVcomparisons <- function(adultCSV, fetalCSV, opt, cellTypes, outDir="./plo
 		thisPlotFile = paste0(outDir, eachType, "q_", as.character(opt$padjCutoff), "_motif_coef_correlation.png")
 		png(thisPlotFile, res=200, width=1200, height=1000)
 		myPlot = ggplot(miniMerge, aes_string(x="Fetal_Fold_Change", y="Adult_Fold_Change")) +
-					geom_point() + #ggtitle(paste0(eachType, " Fold Change Correlation = ", as.character(thisCorr)))
-					geom_text_repel(aes(label = labelGene), box.padding =2) + 
+					geom_point(color="blue") + #ggtitle(paste0(eachType, " Fold Change Correlation = ", as.character(thisCorr)))
 					theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
 					xlab("Log Enrichment in Fetal") + 
 					ylab("Log Enrichment in Adult")+
-            		theme(text = element_text(size = 24)) 
+            		theme(text = element_text(size = 24)) +
+            		geom_smooth(stat="smooth", method="lm", se=FALSE, color="black", linetype='dashed', alpha=0.5) + 
+            		geom_text_repel(aes(label = labelGene), box.padding =1) 
 		print(myPlot)
 		dev.off()
 	}

@@ -147,13 +147,13 @@ plotCoefBars(atacResults, cellTypes, opt, plotCovar="Age", geneSet = c("IRF7", "
 # plotCoefBars(atacResults, cellTypes, opt, plotCovar="SexM", geneSet = c("Smad4", "JDP2", "SNAI2", "HIF1A", "ARNT::HIF1A", "RORA"), 
 # 				setLabel = "Sex_TGFB_and_Metab_Regs")
 
-plotCoefBars(atacResults, cellTypes, opt, plotCovar="SexM", geneSet = c("Smad3", "JDP2",  "HIF1A", "ARNT::HIF1A", "RORA"), 
+plotCoefBars(atacResults, cellTypes, opt, plotCovar="SexM", geneSet = c("SMAD3", "JDP2",  "HIF1A", "MYC", "RORA"), 
 				setLabel = "Sex_TGFB_and_Metab_Regs")
 
 # plotCoefBars(atacResults, cellTypes, opt, plotCovar="Age", geneSet = c("IRF1", "IRF7", "NFKB1", "STAT1", "STAT2", "CUX1"), 
 # 				setLabel = "Age_Immunity_and_Senesc")
 
-
+# c("SMAD3", "JDP2",  "HIF1A", "ARNT::HIF1A", "RORA"), 
 
 
 
@@ -161,7 +161,7 @@ plotCoefBars(atacResults, cellTypes, opt, plotCovar="SexM", geneSet = c("Smad3",
 # 				setLabel = "Age_Immunity_and_Senesc")
 
 
-plotCoefBars(atacResults, cellTypes, opt, plotCovar="Age", geneSet = c("IRF1", "IRF7", "NFKB2", "CUX1", "JUND"), 
+plotCoefBars(atacResults, cellTypes, opt, plotCovar="Age", geneSet = c("IRF1", "IRF7", "NFKB2", "FOS::JUN", "CUX1", "JUND"), 
 				setLabel = "Age_Immunity_and_Senesc")
 
 

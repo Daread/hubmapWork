@@ -366,7 +366,7 @@ plotPercentPosScatter <-function(genesToPlot, setName, rnaData, outputDir = past
     miniCDS = miniCDS[,colData(miniCDS)[[cellTypeCol]] == cellTypeSubset]
   }
 
-  allDonors = levels(as.factor(colData(rnaData)$Donor))
+  allSamples = levels(as.factor(colData(rnaData)$sampleName))
   # Loop for each gene. For each gene, get a df with each cell & the expression of the gene of interest
   for (eachGene in genesToPlot){
     plotDF = as.data.frame(colData(miniCDS))
@@ -374,13 +374,18 @@ plotPercentPosScatter <-function(genesToPlot, setName, rnaData, outputDir = past
 
     # Get the nonzero proportion per donor
     percentPosDF = data.frame()
-    for (eachDonor in allDonors){
-      subsetDF = plotDF[plotDF$Donor == eachDonor,]
+    for (eachSample in allSamples){
+      subsetDF = plotDF[plotDF$sampleName == eachSample,]
       subsetDF$nonzero = ifelse(subsetDF$Expression > 0, 1, 0)
       thisProp = sum(subsetDF$nonzero) * 1.0 / nrow(subsetDF)
       # Can shortcut to get the age of the donor from the subset df
       thisAge = median(subsetDF$Age)
-      donorDF = data.frame("Donor" = eachDonor, "Cells_Expressing" = thisProp, "Age"=thisAge)
+      # browser()
+      oneRow = subsetDF[1,]
+      # print(str(oneRow))
+      thisDonor = oneRow[["Donor"]]
+      donorDF = data.frame("Sample" = eachSample, "Donor"=thisDonor,
+      						 "Cells_Expressing" = thisProp, "Age"=thisAge)
       percentPosDF = rbind(percentPosDF, donorDF)
     }
 
@@ -388,17 +393,14 @@ plotPercentPosScatter <-function(genesToPlot, setName, rnaData, outputDir = past
     thisPlotTitle = paste0(outputDir, "Perc_Pos_Scatter_", eachGene, "_", setName, ".png")
     png(thisPlotTitle, res=200, width=1200, height=1200)
     myPlot = ggplot(percentPosDF, aes_string(x="Age", y="Cells_Expressing")) + 
-            geom_point() + ylab(paste0(cellTypeSubset, " Expressing ", eachGene)) +
+            geom_point(aes(col=Donor)) + ylab(paste0(cellTypeSubset, " Expressing ", eachGene)) +
             theme(text = element_text(size = 24))+
-  theme(plot.margin = margin(20,10,10,10, "pt"))
+  theme(plot.margin = margin(20,10,10,10, "pt")) + 
+   	geom_smooth(method = "lm", se = FALSE, col="black")
     print(myPlot)
     dev.off()
   }
 }
-
-
-
-
 
 plotPercentPosScatter(c("CFH", "CMKLR1"), "Inflam_In_Aged_Fibroblasts", rnaData, cellTypeSubset="Fibroblast",
               colToGroupCells="Age", outputDir=outputDir)

@@ -101,10 +101,10 @@ plotCellMarkers <- function(inputCSV, plotNote, markersToPlot, cellTypesToPlot, 
 	outputDir = "./plots/atacMarkers/"
 	dir.create(outputDir)
 	outputFile = paste0(outputDir, plotNote, opt$modelNotes, ".png")
-	png(outputFile, res=200, width = 1200, height=1000)
+	png(outputFile, res=200, width = 1400, height=1200)
 	myPlot = ggplot(inputCSV, aes_string(x="cellType", y="gene", size="coefficientValue", color="coefficientValue	")) + 
 					geom_point() + 
-					theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+					theme(axis.text.x = element_text(angle = 45, hjust=1))+
             theme(text = element_text(size = 20)) + xlab("Cell Type") + 
             	ylab("TF") + 
             	 guides(size=guide_legend(title="Enrichment"))+ 
@@ -120,6 +120,8 @@ formatCellType <- function(inputColumn){
 	inputColumn = ifelse(inputColumn == "T_Cell", "T Cell", inputColumn)
 	inputColumn = ifelse(inputColumn == "VSM_and_Pericyte", "Perviascular Cell", inputColumn)
 	inputColumn = ifelse(inputColumn == "Vascular_Endothelium", "Vascular Endothelium", inputColumn)
+	inputColumn = ifelse(inputColumn == "Lymphatic_Endothelium", "Lymphatic Endothelium", inputColumn)
+	inputColumn = ifelse(inputColumn == "Mast_Cell", "Mast Cell", inputColumn)
 
 	return(inputColumn)
 }
@@ -145,7 +147,7 @@ option_list = list(
 opt_parser = OptionParser(option_list=option_list)
 opt = parse_args(opt_parser)
 
-cellTypes = c("Vascular_Endothelium", "Cardiomyocyte", "Macrophage", "T_Cell", "VSM_and_Pericyte", "Fibroblast", "Endocardium", "Mast_Cells", "Adipocytes", "Lymphatic_Endothelium")
+cellTypes = c("Vascular_Endothelium", "Cardiomyocyte", "Macrophage", "T_Cell", "VSM_and_Pericyte", "Fibroblast", "Endocardium", "Mast_Cell", "Adipocytes", "Lymphatic_Endothelium")
 
 covariatesToPlot = c("SexM", "Age")
 covariateCSVs = vector(mode='list', length=length(covariatesToPlot))

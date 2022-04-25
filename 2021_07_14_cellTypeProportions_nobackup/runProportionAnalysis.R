@@ -175,6 +175,7 @@ cellTypeRegressionDF$Cell_Type = formatCellType(cellTypeRegressionDF$Cell_Type)
 cellTypesToTest = as.character(unique(cellTypeRegressionDF$Cell_Type))
 
 cellTypeRegressionDF$Proportion = (cellTypeRegressionDF$Count / cellTypeRegressionDF$TotalCellsPerSample)
+
 # For every cell type, plot by age/sex/site
 for (categoricalVar in c("Sex", "Anatomical_Site")){
 	# for (eachCelltype in cellTypesToTest){
@@ -204,9 +205,11 @@ for (eachCelltype in cellTypesToTest){
 	png(paste0(jitterDir, "Age_vs_prop_for_", eachCelltype, ".png"), 
 			res=200, height=1000,width=1200)
 	myPlot = ggplot(subsetDF, aes_string(x="Age", y="Proportion")) + 
-			geom_point()  +
+			# geom_point()  +
+			 geom_point(aes(col=Donor)) +
 			theme(text=element_text(size=20)) + 
-			ylab(paste0(eachCelltype, " Proportion"))
+			ylab(paste0(eachCelltype, " Proportion")) +
+			geom_smooth(method = "lm", se = FALSE, col="black")
 		  # stat_summary(fun.data= mean_cl_normal) + 
 		  #geom_smooth(method='lm')
 			# theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))

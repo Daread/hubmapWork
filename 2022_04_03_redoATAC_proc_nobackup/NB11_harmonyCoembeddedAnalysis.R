@@ -25,7 +25,8 @@ library("optparse")
 # Get the passed parameters
 option_list = list(
   make_option(c("-p", "--processingNote"), type="character", 
-  			default="PC_20_All_CellsFRIP=0.2_FRIT=0.05UMI=1000DL=0.5", 
+  			# default="PC_20_All_CellsFRIP=0.2_FRIT=0.05UMI=1000DL=0.5", 
+        default="FRIP=0.1_FRIT=0.08UMI=1000DL=0.5", 
               help="Processing note from upstream CDS", metavar="character"),
     make_option(c("-s", "--sampleRNAname"), type="character",  default= "All_Cells", #  "All_Cells",  # default="W142.Left.Vent",  "W144.Apex"
               help="Sample to integrate", metavar="character"),

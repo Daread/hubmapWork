@@ -25,7 +25,7 @@ option_list = list(
               help="How to quantify the accuracy of a whole run (which comprises many alpha vals and cell types)", metavar="character"),
 
   make_option(c("-p", "--paramFile"), type="character", 
-        default= "VaryDistalParams",  #"VaryPromoters",   #"VaryDistalParams",   # "VaryPromoters" or "VaryDistalParams"
+        default= "VaryPromoters",  #"VaryPromoters",   #"VaryDistalParams",   # "VaryPromoters" or "VaryDistalParams"
               help="File of which parameter sets to summarize", metavar="character")
 
 )
@@ -86,7 +86,6 @@ getSummarizedDF <- function(inputDF, opt){
 
 
 
-
 dfSummaries = data.frame(matrix(ncol=(length(colnames(parameterSets)) + 1),nrow=0))
 colnames(dfSummaries) = c(opt$summarizationPolicy, colnames(parameterSets))
 
@@ -99,10 +98,6 @@ for (eachRowNum in 1:nrow(parameterSets)){
   # Add this to the summary data frame
   dfSummaries = rbind(dfSummaries, thisParamDF)
 }
-
-
-
-
 
 # Plot, based on the input file used
 makePlotThisComparison <- function(paramFileName, dfSummaries, opt){
@@ -121,12 +116,13 @@ makePlotThisComparison <- function(paramFileName, dfSummaries, opt){
     png(paste0("./plots/summaryPlots/", opt$predictionFraming,
            "_", paramFileName, "_", opt$summarizationPolicy, ".png"),
         height=1200, width=1400,res=200)
-    myPlot = ggplot(dfSummaries, aes_string(x="Parameter_Set", y=opt$summarizationPolicy, color="pVal") ) + 
-          geom_point() + 
+    myPlot = ggplot(dfSummaries, aes_string(x="Parameter_Set", y=opt$summarizationPolicy,
+                fill="pVal") ) + 
+          geom_col(position='dodge') + 
           xlab("TSS Up/Downstream Lengths") + #+ ggtitle(paste0(paramFileName, "_", opt$summarizationPolicy)) +
             theme(text = element_text(size = 20)) + 
               ylab(yLabToUse) + 
-               guides(color=guide_legend(title="Motif p Value"))+ 
+               guides(fill=guide_legend(title="Motif p Value"))+ 
           theme(axis.text.x = element_text(angle = 45, vjust = 0.5))
     print(myPlot)
     dev.off()
@@ -140,11 +136,12 @@ makePlotThisComparison <- function(paramFileName, dfSummaries, opt){
     png(paste0("./plots/summaryPlots/", opt$predictionFraming,
            "_", paramFileName, "_", opt$summarizationPolicy, ".png"),
         height=1000, width=1600,res=200)
-    myPlot = ggplot(dfSummaries, aes_string(x="Parameter_Set", y=opt$summarizationPolicy, color="pVal") ) + 
-          geom_point() + 
+    myPlot = ggplot(dfSummaries, aes_string(x="Parameter_Set", y=opt$summarizationPolicy,
+               fill="pVal") ) + 
+          geom_col(position='dodge') + 
           xlab("Cicero Cutoff/Max Distal Sites Linked/Distal Site Size in bp") + ylab("R^2 Average") +
           #ggtitle(paste0(paramFileName, "_", opt$summarizationPolicy))+ 
-          guides(color=guide_legend(title="Motif p Value"))+ 
+          guides(fill=guide_legend(title="Motif p Value"))+ 
           theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
     print(myPlot)
     dev.off()
@@ -157,8 +154,84 @@ makePlotThisComparison(paramFileName, dfSummaries, opt)
 
 
 
+dfFullData = data.frame(matrix(ncol=(length(colnames(parameterSets)) + ncol(fitDF)),nrow=0))
+colnames(dfFullData) = c(colnames(fitDF), colnames(parameterSets))
+
+for (eachRowNum in 1:nrow(parameterSets)){
+  thisParamDF = parameterSets[eachRowNum,]
+  fitDF = getFitDF(thisParamDF, opt)
+
+  fitDFparams = data.frame(do.call('rbind',strsplit(as.character(fitDF$hyperParams), "_", fixed=TRUE)))
+  colnames(fitDFparams) = c("Upstream", "Downstream", "coaccessCutoff", "maxNsites", "peakSize")
+  fitDF = cbind(fitDF, fitDFparams)
+  fitDF$pVal = thisParamDF$pVal
+
+  # Now, summarize this fitting acrossGroups
+  # thisParamDF[[opt$summarizationPolicy]] = getSummarizedDF(fitDF, opt)
+  # Add this to the summary data frame
+  dfFullData = rbind(dfFullData, fitDF)
+}
 
 
+
+# fitDFparams = data.frame(do.call('rbind',strsplit(as.character(fitDF$hyperParams), "_", fixed=TRUE)))
+# colnames(fitDFparams) = c("Upstream", "Downstream", "coaccessCutoff", "maxNsites", "pVal")
+
+# fitDF = cbind(fitDF, fitDFparams)
+# # fitDFparams = data.frame(do.call('rbind',strsplit(as.character(fitDF$hyperParams), "_", fixed=TRUE)))
+
+
+
+
+
+# Plot, based on the input file used
+makePlotUnsummarizedThisComparison <- function(paramFileName, fitDF, opt){
+
+  if (paramFileName == "VaryPromoters") {
+    # Show varied upstrea/downstream sizes and a point per alpha
+    fitDF$Parameter_Set = paste0(fitDF$Upstream, "/", fitDF$Downstream)
+    fitDF$pVal = as.character(fitDF$pVal)
+
+    yLabToUse = "Validation R^2"
+
+    png(paste0("./plots/summaryPlots/ShowCellTypes_", opt$predictionFraming,
+           "_", paramFileName,  ".png"),
+        height=1200, width=1400,res=200)
+    myPlot = ggplot(fitDF, aes_string(x="Parameter_Set", y="Val_R_Squared") ) + 
+          geom_boxplot(aes(fill=pVal)) + 
+          geom_point(position=position_dodge(width=0.75), aes(group=pVal)) +
+          xlab("TSS Up/Downstream Lengths") + #+ ggtitle(paste0(paramFileName, "_", opt$summarizationPolicy)) +
+            theme(text = element_text(size = 20)) + 
+              ylab(yLabToUse) + 
+               guides(fill=guide_legend(title="Motif p Value"))+ 
+          theme(axis.text.x = element_text(angle = 45, vjust = 0.5))
+    print(myPlot)
+    dev.off()
+  }
+
+  # if (paramFileName %in% c("VaryDistalAllRunsMade", "VaryDistalParams")) {
+  #   # Show varied upstrea/downstream sizes and a point per alpha
+  #   fitDF$Parameter_Set = paste0(fitDF$coaccessCutoff, "/", fitDF$maxNsites, "/", fitDF$peakSize)
+  #   fitDF$pVal = as.character(fitDF$pVal)
+
+  #   png(paste0("./plots/summaryPlots/", opt$predictionFraming,
+  #          "_", paramFileName, "_", opt$summarizationPolicy, ".png"),
+  #       height=1000, width=1600,res=200)
+  #   myPlot = ggplot(fitDF, aes_string(x="Parameter_Set", y=opt$summarizationPolicy,
+  #              fill="pVal") ) + 
+  #         geom_col(position='dodge') + 
+  #         xlab("Cicero Cutoff/Max Distal Sites Linked/Distal Site Size in bp") + ylab("R^2 Average") +
+  #         #ggtitle(paste0(paramFileName, "_", opt$summarizationPolicy))+ 
+  #         guides(fill=guide_legend(title="Motif p Value"))+ 
+  #         theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+  #   print(myPlot)
+  #   dev.off()
+  # }
+}
+
+
+# Plot, based on the input file used
+makePlotUnsummarizedThisComparison(paramFileName, dfFullData, opt)
 
 
 

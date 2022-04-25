@@ -25,7 +25,7 @@ option_list = list(
               help="How to quantify the accuracy of a whole run (which comprises many alpha vals and cell types)", metavar="character"),
 
   make_option(c("-p", "--paramFile"), type="character", 
-        default= "VaryDistalParams",  #"VaryPromoters",   #"VaryDistalParams",   # "VaryPromoters" or "VaryDistalParams"
+        default="VaryPromotersAllRunsMade",   # "VaryPromotersAllRunsMade.csv",  "VaryDistalParams",  #"VaryPromoters",   #"VaryDistalParams",   # "VaryPromoters" or "VaryDistalParams"
               help="File of which parameter sets to summarize", metavar="character")
 
 )
@@ -132,6 +132,8 @@ makePlotThisComparison <- function(paramFileName, dfSummaries, opt){
     dev.off()
   }
 
+
+
   if (paramFileName %in% c("VaryDistalAllRunsMade", "VaryDistalParams")) {
     # Show varied upstrea/downstream sizes and a point per alpha
     dfSummaries$Parameter_Set = paste0(dfSummaries$coaccessCutoff, "/", dfSummaries$maxNsites, "/", dfSummaries$peakSize)
@@ -152,6 +154,7 @@ makePlotThisComparison <- function(paramFileName, dfSummaries, opt){
 }
 
 
+print("Plotting Comparison Now")
 # Plot, based on the input file used
 makePlotThisComparison(paramFileName, dfSummaries, opt)
 

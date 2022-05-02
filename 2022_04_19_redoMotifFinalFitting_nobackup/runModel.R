@@ -4,6 +4,7 @@ library(ggplot2)
 library(glmnet)
 library(ROCR)
 library(data.table)
+library(RColorBrewer)
 
 # Get shared functions between this and runRegressionModel.R
 source("./utilityFunctions.R")
@@ -175,13 +176,16 @@ if (file.exists(outFile)){
 
 # colnames(fullFitDF) = c("Cell_Type", "Alpha", "Eval_Set_R2", "Best_Lambda", "Feature_Set")
 
+myPalette = brewer.pal(8, "Set1")
+myPalette = c(myPalette[4], myPalette[7], myPalette[6])
 
 # Now plot
 png(paste0("./plots/", opt$predictionFraming, "/", opt$predictionFraming, "_", opt$variableParams, "_Test_Performance_Prom_Vs_Combined.png" ),
       height=1400, width=1600, res = 200)
 myPlot = ggplot(fullFitDF, aes_string(x="Cell_Type", y=evalCol, color="Feature_Set")) +
       geom_point() + ggtitle("Promoter-Only Vs. Promoter+Distal Performance") + 
-      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) #+ 
+      #scale_color_brewer(palette= myPalette)
 print(myPlot)
 dev.off()
 
@@ -194,11 +198,15 @@ myPlot = ggplot(fullFitDF, aes_string(x="Cell_Type", y=evalCol, fill="Feature_Se
       geom_bar(position='dodge', stat='identity') + # ggtitle("Promoter-Only Vs. Promoter+Distal Performance") + 
       # theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
        theme(axis.text.x = element_text(angle = 45, hjust=1)) +
-      scale_fill_discrete(name = "Sequence Used", labels = c("Promoter + Distal", "Promoter Alone"))+
+       scale_fill_manual(name = "Sequence Used", labels = c("Promoter + Distal", "Promoter Alone"), values=myPalette) +
+      # scale_fill_discrete(name = "Sequence Used", labels = c("Promoter + Distal", "Promoter Alone"))+
+      # scale_fill_discrete(name = "Sequence Used", labels = c("Promoter + Distal", "Promoter Alone"), palette=myPalette)+
       scale_x_discrete(breaks=cellTypes, labels=c("Adipocyte", "B Cell", "Cardiomyocyte", "Endocardium", "Fibroblast", 
               "Lymphatic Endothelium", "Macrophage", "Mast Cell", "Neuronal", "T Cell",
                 "Vascular Endothelium", "Perivascular Cell")) + ylab("R^2 on Test Data") +
-                 xlab("Cell Type")+theme(text=element_text(size=21))
+                 xlab("Cell Type") +
+                 theme(text=element_text(size=21))  #+ 
+      #scale_fill_brewer(palette= myPalette)
 print(myPlot)
 dev.off()
 
@@ -220,9 +228,6 @@ formatCellType <- function(inputColumn){
 makeFitResults_vs_proportion_plot <- function(fullFitDF, opt, cellPropCol="RNA"){
   fullFitDF$Cell_Type = as.character(fullFitDF$Cell_Type)
   fullFitDF$Cell_Type = formatCellType(fullFitDF$Cell_Type)
-  # For each cell type, get plots of proportion vs. 1) R^2 promoter only
-                              #                     2) R^2 prom+distal/prom ratio
-  # browser()
 
   propAndAccuracyDF = data.frame("Cell_Type" = fullFitDF$Cell_Type)
   # Get accuracies of promoters only
@@ -242,18 +247,18 @@ makeFitResults_vs_proportion_plot <- function(fullFitDF, opt, cellPropCol="RNA")
   cellProps = cellPropDF[[paste0(cellPropCol, "_Prop")]]
   names(cellProps) = cellPropDF$Cell_Type
   propAndAccuracyDF[["Cell_Type_Proportion"]] = cellProps[propAndAccuracyDF$Cell_Type]
-
   propAndAccuracyDF[["Combined_Over_Promoter_Ratio"]] = propAndAccuracyDF$Promoter_Plus_Distal_R2 / propAndAccuracyDF$Promoter_Only_R2
 
   # Now make plots from the two desired comparisons
   plotFile = paste0("./plots/", opt$predictionFraming, "/", opt$predictionFraming, "_", 
                     opt$variableParams, "_Scatter_Promoter_Accuracy_Vs_Celltype_Prop.png" )
   png(plotFile, res=200, height = 1000, width=1000)
-  myPlot = ggplot(propAndAccuracyDF, aes_string(x="Promoter_Only_R2", y="Cell_Type_Proportion")) + 
+  myPlot = ggplot(propAndAccuracyDF, aes_string(y="Promoter_Only_R2", x="Cell_Type_Proportion")) + 
             geom_point() + 
-            xlab("R^2 Using Promoter Only") + 
-            ylab(paste0("Cell type proportion in ", cellPropCol)) + 
-            theme(text=element_text(size=18))
+            ylab("R^2 Using Promoter Only") + 
+            xlab(paste0("Cell type proportion in ", cellPropCol)) + 
+            theme(text=element_text(size=18))+ 
+            geom_smooth(se=FALSE, method= 'lm', formula = y~poly(x,1), color="gray")
   print(myPlot)
   dev.off()
 
@@ -261,28 +266,27 @@ makeFitResults_vs_proportion_plot <- function(fullFitDF, opt, cellPropCol="RNA")
   plotFile = paste0("./plots/", opt$predictionFraming, "/", opt$predictionFraming, "_", 
                     opt$variableParams, "_Scatter_Combined_Accuracy_Vs_Celltype_Prop.png" )
   png(plotFile, res=200, height = 1000, width=1000)
-  myPlot = ggplot(propAndAccuracyDF, aes_string(x="Promoter_Plus_Distal_R2", y="Cell_Type_Proportion")) + 
+  myPlot = ggplot(propAndAccuracyDF, aes_string(y="Promoter_Plus_Distal_R2", x="Cell_Type_Proportion")) + 
             geom_point() + 
-            xlab("R^2 Using Promoter + Distal") + 
-            ylab(paste0("Cell type proportion in ", cellPropCol)) + 
-            theme(text=element_text(size=18))
+            ylab("R^2 Using Promoter + Distal") + 
+            xlab(paste0("Cell type proportion in ", cellPropCol)) + 
+            theme(text=element_text(size=18))+ 
+            geom_smooth(se=FALSE, method= 'lm', formula = y~poly(x,1), color="gray")
   print(myPlot)
   dev.off()
-
-
 
   # Gain vs. abundance
   plotFile = paste0("./plots/", opt$predictionFraming, "/", opt$predictionFraming, "_", 
                     opt$variableParams, "_Scatter_Combined_Gain_Accuracy_Vs_Celltype_Prop.png" )
   png(plotFile, res=200, height = 1000, width=1000)
-  myPlot = ggplot(propAndAccuracyDF, aes_string(x="Combined_Over_Promoter_Ratio", y="Cell_Type_Proportion")) + 
+  myPlot = ggplot(propAndAccuracyDF, aes_string(y="Combined_Over_Promoter_Ratio", x="Cell_Type_Proportion")) + 
             geom_point() + 
-            xlab("Distal+Promoter / Promoter R^2") + 
-            ylab(paste0("Cell type proportion in ", cellPropCol)) + 
-            theme(text=element_text(size=18))
+            ylab("Distal+Promoter / Promoter R^2") + 
+            xlab(paste0("Cell type proportion in ", cellPropCol)) + 
+            theme(text=element_text(size=18)) + 
+            geom_smooth(se=FALSE, method= 'lm', formula = y~poly(x,1), color="gray")
   print(myPlot)
   dev.off()
-
 }
 
 # Make a plot comparing accuracy gains vs. cell type abundances

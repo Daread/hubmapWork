@@ -7,6 +7,8 @@ library(data.table)
 library(monocle3)
 library(gridExtra)
 
+library(RColorBrewer)
+
 # Get shared functions between this and runRegressionModel.R
 source("./utilityFunctions.R")
 
@@ -51,6 +53,9 @@ getATACcoefs <- function(opt, cellTypes, covariatesToGet=c("SexM", "Age")){
 			thisDF = read.csv(thisFile)
 			thisDF$CellType = eachType
 			coefDF = rbind(coefDF, thisDF)
+			# Set order of cell types as a factor
+			# coefDF$CellType = factor(coefDF$CellType, levels = cellTypes)
+
 		}
 		# Save this combined df into the list slot for this coefficient
 		covariateList[[eachCovar]] = coefDF
@@ -84,6 +89,11 @@ plotCoefBars <- function(coefList, cellTypes, opt, plotCovar="Age", geneSet = c(
 	# Go down to the genes to be plotted
 	plotDF = plotDF[plotDF$gene %in% geneSet,]
 
+	plotDF$CellType = factor(plotDF$CellType, levels=formatCellType(cellTypes))
+
+	# Set the custom pallete
+	cellColors = setNames(brewer.pal(length(cellTypes), "Set1"), levels(plotDF$CellType))
+
 	# Trim by p value?
 	if (cutoffByP){
 		# Changed on 2-22-22. Just set coefficients to zero if not significant. Makes plotting behave better
@@ -98,7 +108,7 @@ plotCoefBars <- function(coefList, cellTypes, opt, plotCovar="Age", geneSet = c(
 
 	# covarName = ifelse(plotCovar == "SexM", "Sex", plotCovar)
 	yLabToUse = ifelse(plotCovar == "SexM", "Log Motif Enrichment, Male/Female",
-										"Coefficient. Positive = Higher with Age")
+										"Enrichment with Age")
 
 	# Change TFs into a factor so that order is specified
 	plotDF$gene = factor(plotDF$gene, levels=geneSet)
@@ -116,7 +126,9 @@ plotCoefBars <- function(coefList, cellTypes, opt, plotCovar="Age", geneSet = c(
 			 ylab(yLabToUse) +
 			 xlab("TF") + 
 			 guides(fill=guide_legend(title="Cell Type")) +
-			 theme(axis.text.x = element_text(angle = 45, hjust=1))
+			 theme(axis.text.x = element_text(angle = 45, hjust=1)) +
+  				# scale_fill_brewer(palette = "Dark2")
+  				scale_fill_manual(values=cellColors, drop = TRUE, limits=force)
 	print(myPlot)
 	dev.off()
 }
@@ -129,7 +141,9 @@ formatCellType <- function(inputColumn){
 	return(inputColumn)
 }
 
-cellTypes= c("Macrophage", "Cardiomyocyte", "Endocardium", "Fibroblast", "T_Cell", "Vascular_Endothelium")
+# cellTypes= c("Macrophage", "Cardiomyocyte", "Endocardium", "Fibroblast", "T_Cell", "Vascular_Endothelium")
+cellTypes = c("Vascular_Endothelium", "Cardiomyocyte", "Macrophage", "Fibroblast", "T_Cell", "VSM_and_Pericyte",  "Endocardium", "Mast_Cell") #, "Adipocytes", "Lymphatic_Endothelium", "B_Cell", "Neuronal")
+
 
 # rnaResults = getRNAcoefs(opt)
 atacResults = getATACcoefs(opt, cellTypes)
@@ -161,7 +175,7 @@ plotCoefBars(atacResults, cellTypes, opt, plotCovar="SexM", geneSet = c("SMAD3",
 # 				setLabel = "Age_Immunity_and_Senesc")
 
 
-plotCoefBars(atacResults, cellTypes, opt, plotCovar="Age", geneSet = c("IRF1", "IRF7", "NFKB2", "FOS::JUN", "CUX1", "JUND"), 
+plotCoefBars(atacResults, cellTypes, opt, plotCovar="Age", geneSet = c("IRF1", "IRF7", "NFKB2", "FOS::JUN(var.2)", "CUX1", "JUND"), 
 				setLabel = "Age_Immunity_and_Senesc")
 
 

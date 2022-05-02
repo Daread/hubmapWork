@@ -14,6 +14,7 @@ library(data.table)
 library(tidyr)
 library(VGAM)
 library(ggplot2)
+library(RColorBrewer)
 
 # Get the passed parameters
 library("optparse")
@@ -181,7 +182,7 @@ for (categoricalVar in c("Sex", "Anatomical_Site")){
 	# for (eachCelltype in cellTypesToTest){
 		# Make a box plot
 		png(paste0(jitterDir, "Proportions_grouped_by_", categoricalVar, ".png"), 
-				res=200, height=1200,width=1800)
+				res=300, height=1800,width=2700)
 		myPlot = ggplot(cellTypeRegressionDF, aes_string(x="Cell_Type", y="Proportion",
 					# col=categoricalVar, 
 					fill=categoricalVar)) + 
@@ -189,7 +190,8 @@ for (categoricalVar in c("Sex", "Anatomical_Site")){
 				geom_point(position=position_jitterdodge()) +
 				theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) + 
 				theme(text=element_text(size=24)) + 
-				xlab("Cell Type")
+				xlab("Cell Type") + 
+				scale_fill_brewer(palette= "Dark2")
 				# geom_jitter()
 		print(myPlot)
 		dev.off()

@@ -71,7 +71,8 @@ option_list = list(
 opt_parser = OptionParser(option_list=option_list)
 opt = parse_args(opt_parser)
 
-cellTypes = c("Vascular_Endothelium", "Cardiomyocyte", "Macrophage", "T_Cell", "VSM_and_Pericyte", "Fibroblast", "Endocardium")
+# cellTypes = c("Vascular_Endothelium", "Cardiomyocyte", "Macrophage", "T_Cell", "VSM_and_Pericyte", "Fibroblast", "Endocardium")
+cellTypes = c("Vascular_Endothelium", "Cardiomyocyte", "Macrophage", "T_Cell", "VSM_and_Pericyte", "Fibroblast", "Endocardium", "Mast_Cell", "Adipocytes", "Lymphatic_Endothelium", "B_Cell", "Neuronal")
 
 covariatesToPlot = c("SexM", "Age")
 covariateCSVs = vector(mode='list', length=length(covariatesToPlot))

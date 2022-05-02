@@ -4,6 +4,7 @@ library(ggplot2)
 library(glmnet)
 library(ROCR)
 library(data.table)
+library(RColorBrewer)
 # library(monocle3)
 
 # Get shared functions between this and runRegressionModel.R
@@ -76,10 +77,10 @@ opt = parse_args(opt_parser)
 opt$variableParams = paste0(opt$promoterUpstream, "_", opt$promoterDownstream, "_",
                            opt$coaccessCutoff, "_", opt$maxNdistalSites, "_", opt$peakSize )
 
-outDirName = paste0("./plots/", opt$predictionFraming, "/",
-            "Prot_Only_Gene_Prom_Plus_Distal_WithSequence_Sites_Max", opt$maxNdistalSites, "_Upstream", opt$promoterUpstream,
-                "_Downstream", opt$promoterDownstream, "_cicCuf", opt$coaccessCutoff,
-                    "peakSize", opt$peakSize,"pVal", as.character(opt$pValFIMOcutoff), "/" )
+# outDirName = paste0("./plots/", opt$predictionFraming, "/",
+#             "Prot_Only_Gene_Prom_Plus_Distal_WithSequence_Sites_Max", opt$maxNdistalSites, "_Upstream", opt$promoterUpstream,
+#                 "_Downstream", opt$promoterDownstream, "_cicCuf", opt$coaccessCutoff,
+#                     "peakSize", opt$peakSize,"pVal", as.character(opt$pValFIMOcutoff), "/" )
 
 # Read in from the csv where outputs were made at the end of final fitting
 outDir = paste0("./fileOutputs/", opt$predictionFraming, "/")
@@ -94,6 +95,7 @@ cellTypes = c("Adipocytes", "B_Cell", "Cardiomyocyte", "Endocardium", "Fibroblas
                 "Vascular_Endothelium", "VSM_and_Pericyte")
 
 
+dir.create(paste0("./plots/", opt$predictionFraming, "/dotplots/"))
 
 
 formatCellType <- function(inputColumn){
@@ -107,28 +109,6 @@ formatCellType <- function(inputColumn){
 
   return(inputColumn)
 }
-
-
-# cellTypes = c( "Macrophage", 
-
-# # Make a sub-directory for violin plots
-# violinDir = paste0(outDir, "violinPlots/")
-# dir.create(violinDir)
-
-
-# plotViolins <- function(genesToPlot, setName, opt, outputDir = paste0("./fileOutputs/", opt$predictionFraming, "/violinPlots/")){
-#   # Get the RNA data
-  
-
-#   # Now make a violin plot for this set
-#   png(outputDir, res=200, height=1200, width=1200)
-#   myPlot = plot_genes_violin(rnaData[rnaData$gene_short_name %in% genesToPlot,], group_cells_by="Cell_Type",
-#           ncol=2) + theme(axis.text.x=element_text(angle=45, hjust=1))
-#   print(myPlot)
-#   dev.off()
-
-# }
-
 
 
 
@@ -163,10 +143,9 @@ plotNonzeroCoefficients(allCoefDF, cellTypes, opt)
 
 
 
-
 # Make a plot showing motifs x cell types for some high-abs motifs
 makeMotifByTypePlot <- function(allCoefDF, cellTypes, definedMotifs=FALSE, motifsToUse=NULL, nPerCelltype=3, plotNote="",
-                minZerosToPlot=0, sizeScaleMax=40, widthToUse=2800, heightToUse=2400, textSizeToUse=40){
+                minZerosToPlot=0, sizeScaleMax=40, widthToUse=3400, heightToUse=2800, textSizeToUse=40, outDirName="./plots/Regression/dotplots/"){
   # For each celltype, get n top hits to show
   if (definedMotifs == FALSE){
     print("Finding top motifs by cell type")
@@ -187,13 +166,15 @@ makeMotifByTypePlot <- function(allCoefDF, cellTypes, definedMotifs=FALSE, motif
     }
     # Now get the unique ones
     uniqueHitMotifs = unique(hitMotifs)
-    fileName = paste0("./plots/", opt$predictionFraming, "/", plotNote, "_", opt$predictionFraming, "_", minZerosToPlot, "zeros_",
+    # fileName = paste0("./plots/", opt$predictionFraming, "/", plotNote, "_", opt$predictionFraming, "_", minZerosToPlot, "zeros_",
+    #          "_n", nPerCelltype, "_", opt$variableParams, "_", plotNote, "_MotifCoefDotplot.png")
+    fileName = paste0(outDirName, plotNote, "_", opt$predictionFraming, "_", minZerosToPlot, "zeros_",
              "_n", nPerCelltype, "_", opt$variableParams, "_", plotNote, "_MotifCoefDotplot.png")
     # If also provided, add defined motifs to use as well
     uniqueHitMotifs = uniqueHitMotifs[!(uniqueHitMotifs %in% motifsToUse)]
     uniqueHitMotifs = rev( c(uniqueHitMotifs, motifsToUse) )
   } else {
-    fileName =paste0("./plots/", opt$predictionFraming, "/", plotNote, "_", opt$predictionFraming,  opt$variableParams, "_MotifCoefDotplot.png")
+    fileName =paste0(outDirName, plotNote, "_", opt$predictionFraming,  opt$variableParams, "_MotifCoefDotplot.png")
     uniqueHitMotifs = rev( motifsToUse)
   }
   
@@ -208,13 +189,18 @@ makeMotifByTypePlot <- function(allCoefDF, cellTypes, definedMotifs=FALSE, motif
   # uniqueHitMotifs = meltedDF$Motif
   uniqueHitMotifs = as.character(as.vector(as.data.frame(strsplit(uniqueHitMotifs, "_"))[1,]))
 
+  # meltedDF$logCoef = log10(meltedDF$absCoefficient + 1e-50)
+
   # Now make a plot of coefficients
   png(fileName,
       res=200, width=widthToUse, height=heightToUse)
   myPlot = ggplot(meltedDF[meltedDF$Motif %in% uniqueHitMotifs,],
-             aes(x=Cell_Type, y=factor(Motif, level=uniqueHitMotifs), 
-              col=Coef_Sign, size=ifelse(absCoefficient==0, NA, absCoefficient))) +
-            geom_point()+ 
+             # aes(x=Cell_Type, y=factor(Motif, level=uniqueHitMotifs), 
+             #  col=Coef_Sign, size=ifelse(absCoefficient==0, NA, absCoefficient))) +
+             aes(x=Cell_Type, y=factor(Motif, level=uniqueHitMotifs) 
+              )) +
+            geom_point(aes(col=Coef_Sign, size=ifelse(absCoefficient==0, NA, absCoefficient)))+
+            geom_point(aes(size=ifelse(absCoefficient==0, NA, absCoefficient)), colour='black', shape=1)+
        theme(axis.text.x = element_text(angle = 45, hjust=1)) +
       scale_x_discrete(breaks=cellTypes, labels=c("Adipocyte", "B Cell", "Cardiomyocyte", "Endocardium", "Fibroblast", 
               "Lymphatic Endothelium", "Macrophage", "Mast Cell", "Neuronal", "T Cell",
@@ -223,14 +209,14 @@ makeMotifByTypePlot <- function(allCoefDF, cellTypes, definedMotifs=FALSE, motif
       # theme(legend.title=element_text(color="Black",
       #                                    face="bold",size=0))+ 
             guides(size=guide_legend(title="Coefficient"))+
-            scale_size(range = c(0, sizeScaleMax)) +
+            scale_size(range = c(0, sizeScaleMax*.7)) +
+            # scale_size_area() + 
             ylab("Motif") + 
-            guides(col=guide_legend(title="Coefficient Sign", override.aes = list(size=20))) 
+            guides(col=guide_legend(title="Coefficient Sign", override.aes = list(size=20))) +
+            scale_color_brewer(palette="Set1")
   print(myPlot)
   dev.off()
 }
-
-
 
 
 # makeMotifByTypePlot(allCoefDF, cellTypes, definedMotifs=TRUE, 
@@ -239,14 +225,19 @@ makeMotifByTypePlot <- function(allCoefDF, cellTypes, definedMotifs=FALSE, motif
 
 
 
-
-
 makeMotifByTypePlot(allCoefDF, cellTypes, definedMotifs=TRUE, 
-                  motifsToUse=paste0(c("MEF2B", "MEF2A", "SOX15", "SPIC", "SPI1",
-                                        "CEBPA", "YY1", "ZNF384", "OTX2",
-                                        "Smad4"
+                  motifsToUse=paste0(c("MEF2A",  "SPIC", "SPI1", "SOX9",
+                                        "CEBPA", "YY1", "ZNF384",
+                                        "Smad4", "HEY2"
                                          ), "_AllSeq"),
                      plotNote= "Paper_Select_Hits")
+
+
+# makeMotifByTypePlot(allCoefDF, cellTypes, definedMotifs=TRUE, 
+#                   motifsToUse=paste0(c("Sox17", "MEF2A", "MEF2B", "SPI1", "SPIC", "RUNX3", "RXRA::VDR",
+#                   						"CEBPA", "SOX9", "MITF", "Ddit3::Cebpa", "E2F7"
+#                                          ), "_AllSeq"),
+#                      plotNote= "Celltype_Select_Hits")
 
 
 
@@ -368,4 +359,7 @@ makeMotifByTypePlot(allCoefDF, cellTypes, nPerCelltype=30)
 makeMotifByTypePlot(allCoefDF, cellTypes, definedMotifs=TRUE, 
                   motifsToUse=paste0(c("SOX15", "MEF2B", "TEAD3", "SPIC"), "_AllSeq"),
                      plotNote= "Knwon_TEAD3_SPIC")
+
+
+
 

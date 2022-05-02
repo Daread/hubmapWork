@@ -7,6 +7,7 @@ library(msigdbr)
 library(fgsea)
 library(tidyr)
 library(tidyverse)
+library(RColorBrewer)
 
 print("Libraries loaded, starting now")
 
@@ -20,10 +21,10 @@ option_list = list(
               help="Covariate to plot GSEA summary plot", metavar="character"),
   make_option(c("-p", "--padjCutoff"), type="numeric", 
   			default=0.1,
-              help="Max padj value to plot as significant", metavar="numeric"),
-  make_option(c("-c", "--cellType"), type="character", 
-  			default="Vascular_Endothelium",
-              help="Cell type for which the model was fit", metavar="character")
+              help="Max padj value to plot as significant", metavar="numeric")#,
+  # make_option(c("-c", "--cellType"), type="character", 
+  # 			default="Vascular_Endothelium",
+  #             help="Cell type for which the model was fit", metavar="character")
 )
 opt_parser = OptionParser(option_list=option_list)
 opt = parse_args(opt_parser)
@@ -99,8 +100,10 @@ dir.create(outDir)
 
 if (opt$covariate == "SexM"){
 	figWidth = 1800
+	colorPaletteToUse = "Dark2"
 } else{
 	figWidth = 2200
+	colorPaletteToUse = "Set1"
 }
 
 # Output:
@@ -110,8 +113,9 @@ myPlot = ggplot(combinedCSV[combinedCSV$padj < opt$padjCutoff,], aes_string(x="p
 			geom_point(aes(size=Enrichment)) +
 			 theme(axis.text.x = element_text(angle = 45, hjust=1)) +              #theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
 			 theme(text = element_text(size = 18))  + ylab("Cell Type") +
-			 xlab("Hallmark Pathway") + 
-			 guides(col=guide_legend(title="Effect Direction"))
+			 xlab("Pathway") + 
+			 guides(col=guide_legend(title="Effect Direction"))+
+			 scale_color_brewer(palette=colorPaletteToUse)
 
 print(myPlot)
 dev.off()

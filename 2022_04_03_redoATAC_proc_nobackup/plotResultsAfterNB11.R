@@ -16,6 +16,7 @@ suppressPackageStartupMessages({
 library(tidyr)
 library(plyr)
 library(ggplot2)
+library(RColorBrewer)
 
 
 source("/net/trapnell/vol1/home/readdf/trapLabDir/sharedProjectCode/utility/singleCellUtilFuncs.R")
@@ -160,6 +161,9 @@ plotUMAP_Monocle_formatted <- function(dataCDS, processingNote, catToColor,
           cell_stroke=.1 , group_label_size=textSize        
                 ))
     myPlot = (myPlot + theme(text=element_text(size=textSize)))
+    if (catToColor == "Assay"){
+      myPlot = myPlot + scale_color_brewer(palette="Dark2")
+    }
     print(myPlot)
     dev.off()   
 

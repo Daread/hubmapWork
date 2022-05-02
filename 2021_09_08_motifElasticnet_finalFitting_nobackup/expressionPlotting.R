@@ -6,6 +6,7 @@ library(ROCR)
 library(data.table)
 library(monocle3)
 library(gridExtra)
+library(RColorBrewer)
 
 # Get shared functions between this and runRegressionModel.R
 source("./utilityFunctions.R")
@@ -68,13 +69,15 @@ plotPaneledPositive <- function(miniCDS, genesToPlot, cellTypeSubset, setName,
 	# Loop. For each gene, get a plot for each subset of the cells
 	panelList = vector(mode="list", length = length(genesToPlot) * length(groupsToPlot))
 	# browser()
+	thisPalette = "Set1"
 	panelInd = 1
 	for (eachGene in genesToPlot){
 		for (eachGroup in groupsToPlot){
 			cdsPlotSubset = miniCDS[rowData(miniCDS)$gene_short_name == eachGene, colData(miniCDS)[[colToGroupCells]] == eachGroup]
 			# browser()
 			thisPlot = plot_percent_cells_positive(cdsPlotSubset, group_cells_by=colToGroupCells,
-          ) 
+          ) + scale_fill_brewer(palette=thisPalette) + scale_color_brewer(palette=thisPalette)
+			# browser()
 
           #+ theme(axis.text.x=element_text(angle=45, hjust=1)) + geom_bar(stat="identity", width=0.03) + 
 				#ggtitle(paste0(eachGroup, " by ", colForFill))
@@ -139,11 +142,13 @@ plotViolins <- function(genesToPlot, setName, rnaData, outputDir = paste0("./plo
   	plotPaneledPositive(miniCDS, genesToPlot, cellTypeSubset, setName, outputDir=outputDir, cellTypeCol,
   						colToGroupCells, colForFill)
   } else {
+  	thisPalette = "Dark2"
     png(paste0(outputDir, "percent_Positive_for_", setName, ".png"), res=200, height=2400, width=2400)
     myPlot = plot_percent_cells_positive(miniCDS, group_cells_by=colToGroupCells,
            ncol=1, #log_scale=TRUE, pseudocount=.01
             ) + theme(axis.text.x=element_text(angle=45, hjust=1)) + geom_bar(stat="identity", width=0.03) +
-            theme(text = element_text(size = 40))   + ylab("Percent Positive Cells")
+            theme(text = element_text(size = 40))   + ylab("Percent Positive Cells") +
+             scale_fill_brewer(palette=thisPalette) + scale_color_brewer(palette=thisPalette)
     # Add a split by 
     # if (!(is.null(colForFill))){
     #   myPlot = myPlot + aes_string(colForFill)
@@ -151,30 +156,29 @@ plotViolins <- function(genesToPlot, setName, rnaData, outputDir = paste0("./plo
     print(myPlot)
     dev.off()
   }
-  
 }
 
 
 
-plotViolins(c("SPI1", "CEBPA"), "Marker_test_MultiTypes", atacData, cellTypeCol = "harmonyKNN_type",
-           #cellTypeSubset=c("Fibroblast", "Macrophage", "VSM_and_Pericyte", "Vascular_Endothelium"), 
-            colToGroupCells= "harmonyKNN_type", colForFill = "harmonyKNN_type" )
+plotViolins(c("CCN2", "TGFB3"), "TGFB_In_Fibroblasts", rnaData, cellTypeSubset=c("Fibroblast"), 
+            colToGroupCells="Sex", outputDir = outputDir)
 
 
+plotViolins(c("PROM1", "IL1R1", "ALPL", "ACVRL1"), "Top_Sex_VascEnd", rnaData, cellTypeSubset=c("Vascular_Endothelium"), 
+            colToGroupCells="Sex", outputDir = outputDir)
 
 
-plotViolins(c("Smad4"), "Smad4_In_MultiTypes", atacData, cellTypeCol = "harmonyKNN_type",
-           cellTypeSubset=c("Fibroblast", "Macrophage", "VSM_and_Pericyte", "Vascular_Endothelium"), 
-            colToGroupCells= "harmonyKNN_type", colForFill = "Sex" )
+# plotViolins(c("SPI1", "CEBPA"), "Marker_test_MultiTypes", atacData, cellTypeCol = "harmonyKNN_type",
+#            #cellTypeSubset=c("Fibroblast", "Macrophage", "VSM_and_Pericyte", "Vascular_Endothelium"), 
+#             colToGroupCells= "harmonyKNN_type", colForFill = "harmonyKNN_type" )
 
+# plotViolins(c("Smad4"), "Smad4_In_MultiTypes", atacData, cellTypeCol = "harmonyKNN_type",
+#            cellTypeSubset=c("Fibroblast", "Macrophage", "VSM_and_Pericyte", "Vascular_Endothelium"), 
+#             colToGroupCells= "harmonyKNN_type", colForFill = "Sex" )
 
-
-
-plotViolins(c("FOS", "FOS::JUNB"), "FOS_and_JUN_In_MultiTypes", atacData, cellTypeCol = "harmonyKNN_type",
-           cellTypeSubset=c("Fibroblast", "Macrophage", "VSM_and_Pericyte", "Vascular_Endothelium", "Cardiomyocyte", "T_Cell"), 
-            colToGroupCells= "harmonyKNN_type", colForFill = "Sex" )
-
-
+# plotViolins(c("FOS", "FOS::JUNB"), "FOS_and_JUN_In_MultiTypes", atacData, cellTypeCol = "harmonyKNN_type",
+#            cellTypeSubset=c("Fibroblast", "Macrophage", "VSM_and_Pericyte", "Vascular_Endothelium", "Cardiomyocyte", "T_Cell"), 
+#             colToGroupCells= "harmonyKNN_type", colForFill = "Sex" )
 
 # atacTypeCol = "harmonyKNN_type"
 # testCDS = atacData
@@ -190,20 +194,11 @@ plotViolins(c("FOS", "FOS::JUNB"), "FOS_and_JUN_In_MultiTypes", atacData, cellTy
 #   totalReadsAv = sum(exprs(miniCDS)) / ncol(miniCDS)
 #   print(paste0("Average motifs in peaks is ",  as.character(totalReadsAv)))
   
-
 #   umiAv = sum(colData(miniCDS)$umi) / ncol(miniCDS)
 #   print(paste0("UMI Average ", as.character(umiAv)))
 #   print(" ")
 # }
 
-
-
-plotViolins(c("CCN2", "TGFB3"), "TGFB_In_Fibroblasts", rnaData, cellTypeSubset=c("Fibroblast"), 
-            colToGroupCells="Sex", outputDir = outputDir)
-
-
-plotViolins(c("PROM1", "IL1R1", "ALPL", "ACVRL1"), "Top_Sex_VascEnd", rnaData, cellTypeSubset=c("Vascular_Endothelium"), 
-            colToGroupCells="Sex", outputDir = outputDir)
 
 
 

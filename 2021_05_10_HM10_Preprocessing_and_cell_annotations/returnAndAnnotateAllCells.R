@@ -212,16 +212,16 @@ plotUMAP_Monocle_modded <- function(dataCDS, processingNote, catToColor,
     if (returnPlotObj){
         return(myPlot)
     }
-
 }
-
-
 
 plotUMAP_Monocle_formatted <- function(dataCDS, processingNote, catToColor,
                     show_labels=TRUE, textSize=10, outputPath = "./plots/",
-                    returnPlotObj=FALSE){ #, xVal, yVal){
-
-	colData(dataCDS)[[catToColor]] = gsub("[.]", " ", colData(dataCDS)[[catToColor]])
+                    returnPlotObj=FALSE, periodsToSpaces=TRUE){ #, xVal, yVal){
+	if(periodsToSpaces){
+		colData(dataCDS)[[catToColor]] = gsub("[.]", " ", colData(dataCDS)[[catToColor]])
+	}
+	
+	set.seed(7)
 	# Shuffle data to not overplot with the last subset
 	dataCDS = dataCDS[,sample(ncol(dataCDS))]
 
@@ -238,17 +238,39 @@ plotUMAP_Monocle_formatted <- function(dataCDS, processingNote, catToColor,
     if (returnPlotObj){
         return(myPlot)
     }
+}
 
+
+boxplot_stat_by_X_formatted <- function(inputCDS, processingNote, statToPlot, statToSplit,
+                xLabToUse=statToSplit, yLabToUse=statToPlot, outputPath = "./plots/"){
+    # See doublet numbers (Scrublet Estimates)
+    png(paste0(outputPath, processingNote, "Boxplot", statToPlot,  "_by_", statToSplit, ".png"),
+    				res=300, height=1200, width=1500)
+    myPlot = ggplot(as.data.frame(colData(inputCDS)), aes_string(x=statToSplit, y=statToPlot)) + 
+        geom_boxplot() + theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+        xlab(xLabToUse) + ylab(yLabToUse)
+    print(myPlot)
+    dev.off()
 }
 
 
 
 
+# 10-15-21: Return and make plots showing representation of different sexes and donors for each cell type
+# Shuffle the CDS
+set.seed(7)
+allCellCDS = allCellCDS[,sample(ncol(allCellCDS))]
+
+allCellCDS = hardAssignDonorSexes(allCellCDS)
+allCellCDS = hardAssignDonorSexes(allCellCDS)
+
+
+colData(allCellCDS)$Sample = colData(allCellCDS)$sampleName
+
+
 # Make a plot of the cell types
 plotOutput = paste0("./plots/", oldProcNote, "/")
 plotUMAP_Monocle_modded(allCellCDS, paste0(processingNote, "_LabByPartition"), "highLevelCellType", outputPath=plotOutput, textSize=12)
-
-
 
 # Make a plot of the cell types
 plotOutput = paste0("./plots/", oldProcNote, "/")
@@ -257,36 +279,49 @@ plotUMAP_Monocle(allCellCDS, processingNote, "partition_label", outputPath=plotO
 
 
 
-
-
 # 2-24-22: Formatting for publication versions
 colData(allCellCDS)$Sample = colData(allCellCDS)$sampleName
 plotUMAP_Monocle_formatted(allCellCDS, processingNote, "Sample", outputPath=plotOutput, textSize=24, show_labels=FALSE)
+
 
 # Make a plot of the cell types
 plotOutput = paste0("./plots/", oldProcNote, "/")
 plotUMAP_Monocle_modded(allCellCDS, paste0(processingNote, "_LabByPartition_Formattted"), "highLevelCellType", outputPath=plotOutput, textSize=24, inUMAPscale=.3)
 
 
+# Figure plotting for supplemental QC figure
+#--------------------
+
+# By sample
+plotUMAP_Monocle_formatted(allCellCDS, processingNote, "Sample", outputPath=plotOutput, textSize=24, show_labels=FALSE)
+
+# By scrublet Score
+colData(allCellCDS)$Scrublet_Score = colData(allCellCDS)$new_scrub_score
+plotUMAP_Monocle_formatted(allCellCDS, processingNote, "Scrublet_Score", outputPath=plotOutput, textSize=24, show_labels=FALSE, periodsToSpaces=FALSE)
+boxplot_stat_by_X_formatted(allCellCDS, processingNote, "Scrublet_Score", "Sample", outputPath = plotOutput)
+
+# By mitochondrial percent
+colData(allCellCDS)$Percent_Mitochondrial = colData(allCellCDS)$perc_mitochondrial_umis
+plotUMAP_Monocle_formatted(allCellCDS, processingNote, "Percent_Mitochondrial", outputPath=plotOutput, textSize=24, show_labels=FALSE, periodsToSpaces=FALSE)
+boxplot_stat_by_X_formatted(allCellCDS, processingNote, "Percent_Mitochondrial", "Sample", outputPath = plotOutput)
+
+# By log10UMI
+plotUMAP_Monocle_formatted(allCellCDS, processingNote, "log10_umi", outputPath=plotOutput, textSize=24, show_labels=FALSE, periodsToSpaces=FALSE)
+boxplot_stat_by_X_formatted(allCellCDS, processingNote, "log10_umi", "Sample", outputPath = plotOutput)
 
 
 
-# 10-15-21: Return and make plots showing representation of different sexes and donors for each cell type
-# Shuffle the CDS
-allCellCDS = allCellCDS[,sample(ncol(allCellCDS))]
-
-allCellCDS = hardAssignDonorSexes(allCellCDS)
-
-# Now plot by sample and sex
-plotUMAP_Monocle(allCellCDS, processingNote, "Sex", outputPath=plotOutput, textSize=12, show_labels=FALSE)
-
-colData(allCellCDS)$Sample = colData(allCellCDS)$sampleName
-plotUMAP_Monocle(allCellCDS, processingNote, "Sample", outputPath=plotOutput, textSize=12, show_labels=FALSE)
 
 
-sexVec = colData(allCellCDS)$Sex 
-sum(sexVec == "F")
-sum(sexVec == "M")
+# # Now plot by sample and sex
+# plotUMAP_Monocle(allCellCDS, processingNote, "Sex", outputPath=plotOutput, textSize=12, show_labels=FALSE)
+
+# plotUMAP_Monocle(allCellCDS, processingNote, "Sample", outputPath=plotOutput, textSize=12, show_labels=FALSE)
+
+
+# sexVec = colData(allCellCDS)$Sex 
+# sum(sexVec == "F")
+# sum(sexVec == "M")
 
 
 

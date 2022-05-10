@@ -16,6 +16,8 @@ library(VGAM)
 library(ggplot2)
 library(RColorBrewer)
 
+library(stringr)
+
 # Get the passed parameters
 library("optparse")
 
@@ -109,7 +111,7 @@ cellTypeRegressionDF = getFormattedCountDF(countDF)
 formatCellType <- function(inputColumn){
 
   inputColumn = ifelse(inputColumn == "T_Cell", "T Cell", inputColumn)
-  inputColumn = ifelse(inputColumn == "VSM_and_Pericyte", "Perviascular Cell", inputColumn)
+  inputColumn = ifelse(inputColumn == "VSM_and_Pericyte", "Perivascular Cell", inputColumn)
   inputColumn = ifelse(inputColumn == "Vascular_Endothelium", "Vascular Endothelium", inputColumn)
   inputColumn = ifelse(inputColumn == "Lymphatic_Endothelium", "Lymphatic Endothelium", inputColumn)
   inputColumn = ifelse(inputColumn == "Mast_Cell", "Mast Cell", inputColumn)
@@ -138,9 +140,10 @@ getBetaBinomialPropFits <- function(inputDF, modelFormula="countDF ~ Anatomical_
 		counter = counter + 1
 	}
 
+	names(fitResList) = cellTypesToTest
+
 	return(fitResList)
 }
-
 
 
 # Run the regression model on each
@@ -160,6 +163,17 @@ write.csv(nonCoefRes, testResultOutfile)
 # countDF = as.data.frame(countTable)
 
 # formattedCountDF = getFormattedCountDF(countDF)
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -198,7 +212,6 @@ for (categoricalVar in c("Sex", "Anatomical_Site")){
 	# }
 }
 
-
 # Scatter plot for each cell type showing age vs. 
 for (eachCelltype in cellTypesToTest){
 
@@ -227,6 +240,89 @@ for (eachCelltype in cellTypesToTest){
 
 
 
+getAdjustedProportions = function(inputPropDF, inputFits,
+									regressOut){
+	cellTypes = as.character(levels(as.factor(inputPropDF$Cell_Type)))
+	coefficientsFit = as.character(levels(as.factor(inputFits$term)))
+	uncorrectedProps = inputPropDF$Proportion
+	logitUncorrected = log(uncorrectedProps / (1 - uncorrectedProps))
+	correctedProps = uncorrectedProps
+	logitCorrected = logitUncorrected
+	# Get the variables that appeared 
+	for (eachVar in regressOut){
+		coefMatchingVarInd = str_detect(coefficientsFit, eachVar)
+		coefMatchingVar = coefficientsFit[coefMatchingVarInd]
+		#Dummy variable this represents?
+		dummyVarValues = str_replace(coefMatchingVar, eachVar, "")
+		# browser()
+		# Loop through the variables to regress out
+		for (eachDummy in dummyVarValues){
+			# browser()
+			dummyVector = ifelse(inputPropDF[[eachVar]] == paste0(eachDummy), 1, 0)
+			# Get the fit values for each cell type
+			miniFit = inputFits[inputFits$term == paste0(eachVar, eachDummy),]
+			coefsAsVec = miniFit$estimate
+			names(coefsAsVec) = miniFit$Cell_Type
+			cellTypeSpecCoefs = coefsAsVec[inputPropDF$Cell_Type]
+			# Mulitply these together
+			thisAdjustment = dummyVector * cellTypeSpecCoefs
+
+			# browser()
+			# Adjust
+			logitCorrected = logitCorrected - thisAdjustment
+		}
+	}
+	# Now that we have the corrected logit, get corrected proportion
+	correctedProps = exp(logitCorrected) / (1 + exp(logitCorrected))
+
+	return(correctedProps)
+}
+
+
+
+
+
+
+# Make age vs. adjusted proportion plots, regressing out sex + anatomical site
+
+cellTypeRegressionDF$adjustedPropSexSite = getAdjustedProportions(cellTypeRegressionDF, test_res, 
+																regressOut=c("Sex", "Anatomical_Site"))
+
+
+# Scatter plot for adjusted props in each cell type vs. age
+for (eachCelltype in cellTypesToTest){
+
+	subsetDF = cellTypeRegressionDF[cellTypeRegressionDF$Cell_Type == eachCelltype,]
+
+	# Get the intercept and age coefficient for this cell type
+	cellTypeFits = test_res[test_res$Cell_Type == eachCelltype,]
+	cellTypeFitVec = cellTypeFits$estimate
+	names(cellTypeFitVec) = cellTypeFits$term
+	thisInt = cellTypeFitVec["(Intercept):1"]
+	ageCoef = cellTypeFitVec["Age"]
+
+	png(paste0(jitterDir, "Age_vs_adjustedProp_for_", eachCelltype, ".png"), 
+			res=200, height=1000,width=1200)
+	myPlot = ggplot(subsetDF, aes_string(x="Age", y="adjustedPropSexSite")) + 
+			# geom_point()  +
+			 geom_point(aes(col=Donor)) +
+			theme(text=element_text(size=20)) + 
+			ylab(paste0(eachCelltype, " Adjusted Proportion")) +
+			# geom_smooth(method = "lm", se = FALSE, col="black")
+			geom_function(fun = function(x) exp(thisInt + ageCoef*x)/(1 + exp(thisInt + ageCoef*x)))
+		  # stat_summary(fun.data= mean_cl_normal) + 
+		  #geom_smooth(method='lm')
+			# theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+			# geom_jitter()
+	print(myPlot)
+	dev.off()
+
+	print(eachCelltype)
+	# print(cor(subsetDF$Age, subsetDF$Proportion))
+	# print(thisInt)
+	# print(ageCoef)
+
+}
 
 
 

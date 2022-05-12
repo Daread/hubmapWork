@@ -42,7 +42,7 @@ source("/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/misc/atac_helper_functi
 
 
 FRIP_cutoffToUse = .15
-FRIT_cutoffToUse = .05
+FRIT_cutoffToUse = .08
 umiCutoff = 1000
 # DLcutoff=.7
 processingNote = paste0("FRIP=", as.character(FRIP_cutoffToUse), "_FRIT=", as.character(FRIT_cutoffToUse),

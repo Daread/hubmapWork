@@ -333,91 +333,85 @@ plotUMAP_Monocle(updatedHarmonyCDS, outputNote, "tech",
 
 
 
+# # Test for mixture
+# plotUMAP_Monocle(harmonyCDS, outputNote, "sampleName",
+#                       outputPath = out_dir, show_labels=FALSE)
+
+# # See how KNN/harmony assigned types match up to the peak-based clusering
+# plotUMAP_Monocle(harmonyCDS, outputNote, "predicted.id",
+#                       outputPath = out_dir, show_labels=FALSE)
+# plotUMAP_Monocle(harmonyCDS, outputNote, "harmonyKNN_type",
+#                       outputPath = out_dir, show_labels=FALSE)
+
+# # See some marker genes
+# plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("SKAP1", "CD247", "ARHGAP15", "RIPOR2" ), 
+#                       "tcellTopRNA",
+#                       outputPath = out_dir)
+
+# plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("THEMIS", "CD3E", "CD3D", "CD3G" ), 
+#                       "moreTCell",
+#                       outputPath = out_dir)
 
 
+# plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("TTN", "RBPJ","GSN", "LDB2", "MYH11", "THEMIS" ),
+#                       "generalMarkers",
+#                       outputPath = out_dir)
+# # 
+# plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("PECAM1", "CD106", "CD62E", "SELE", "KDR", "ENG" ),
+#                       "coleEndothMark",
+#                       outputPath = out_dir)
+# plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("MYH11", "SMTN", "CALD1", "CNN1", "CNN2" ),
+#                       "coleSmoothMuscMark",
+#                       outputPath = out_dir)
+# plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("CD68", "CD14", "FCGR1", "MS4A7", "FCER1A", "CD163", "LY6C1", "FCN1", "MERTK" ),
+#                       "coleMonoMacMark",
+#                       outputPath = out_dir)
+# plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("CD3E", "CD3G", 'CD3D", "CD4", "CD8A', "CD8B", "BCL11B" ),
+#                       "coleTCellMark",
+#                       outputPath = out_dir)
+# plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("CD90", "THY1", "VIM", "DES" ),
+#                       "coleFibroblastMark",
+#                       outputPath = out_dir)
 
+# plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("PCDHGA1", "PCDHGA2" ),
+#                       "protocadherins",
+#                       outputPath = out_dir)
 
+# plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("F13A1", "RBM47",  "CD74", "RBPJ" ), # Skip RBPJ
+#                       "macTopRNA",
+#                       outputPath = out_dir)
+# plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("SKAP1", "CD247", "ARHGAP15", "RIPOR2" ), # Skip RBPJ
+#                       "tcellTopRNA",
+#                       outputPath = out_dir)
+# plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("VWF", "LDB2", "ANO2", "FLT1" ), # Skip RBPJ
+#                       "vascEndTopRNA",
+#                       outputPath = out_dir)
+# plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("DLC1", "RGS5", "NOTCH3", "EGFLAM" ), # Skip RBPJ
+#                       "perivasTopRNA",
+#                       outputPath = out_dir)
+# plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("NRXN1", "XKR4", "NRXN3", "CADM2" ), # Skip RBPJ
+#                       "neuronTopRNA",
+#                       outputPath = out_dir)
+# plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("DCN", "GSN", "MGP", "C7" ), # Skip RBPJ
+#                       "fibroTopRNA",
+#                       outputPath = out_dir)
+# plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("PKHD1L1", "PCDH15", "LDB2", "NPR3" ), # Skip RBPJ
+#                       "endocardTopRNA",
+#                       outputPath = out_dir)
 
+# plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("EMCN", "POSTN", "VWF" ), # Skip RBPJ
+#                       "endocardTopRNA_2",
+#                       outputPath = out_dir)
+# plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("AQP1", "ADAMTSL1", "SMOC1" ), # Skip RBPJ
+#                       "endocardTopRNA_3",
+#                       outputPath = out_dir)
 
-# Test for mixture
-plotUMAP_Monocle(harmonyCDS, outputNote, "sampleName",
-                      outputPath = out_dir, show_labels=FALSE)
-
-# See how KNN/harmony assigned types match up to the peak-based clusering
-plotUMAP_Monocle(harmonyCDS, outputNote, "predicted.id",
-                      outputPath = out_dir, show_labels=FALSE)
-plotUMAP_Monocle(harmonyCDS, outputNote, "harmonyKNN_type",
-                      outputPath = out_dir, show_labels=FALSE)
-
-# See some marker genes
-plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("SKAP1", "CD247", "ARHGAP15", "RIPOR2" ), 
-                      "tcellTopRNA",
-                      outputPath = out_dir)
-
-plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("THEMIS", "CD3E", "CD3D", "CD3G" ), 
-                      "moreTCell",
-                      outputPath = out_dir)
-
-
-plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("TTN", "RBPJ","GSN", "LDB2", "MYH11", "THEMIS" ),
-                      "generalMarkers",
-                      outputPath = out_dir)
-# 
-plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("PECAM1", "CD106", "CD62E", "SELE", "KDR", "ENG" ),
-                      "coleEndothMark",
-                      outputPath = out_dir)
-plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("MYH11", "SMTN", "CALD1", "CNN1", "CNN2" ),
-                      "coleSmoothMuscMark",
-                      outputPath = out_dir)
-plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("CD68", "CD14", "FCGR1", "MS4A7", "FCER1A", "CD163", "LY6C1", "FCN1", "MERTK" ),
-                      "coleMonoMacMark",
-                      outputPath = out_dir)
-plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("CD3E", "CD3G", 'CD3D", "CD4", "CD8A', "CD8B", "BCL11B" ),
-                      "coleTCellMark",
-                      outputPath = out_dir)
-plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("CD90", "THY1", "VIM", "DES" ),
-                      "coleFibroblastMark",
-                      outputPath = out_dir)
-
-plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("PCDHGA1", "PCDHGA2" ),
-                      "protocadherins",
-                      outputPath = out_dir)
-
-plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("F13A1", "RBM47",  "CD74", "RBPJ" ), # Skip RBPJ
-                      "macTopRNA",
-                      outputPath = out_dir)
-plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("SKAP1", "CD247", "ARHGAP15", "RIPOR2" ), # Skip RBPJ
-                      "tcellTopRNA",
-                      outputPath = out_dir)
-plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("VWF", "LDB2", "ANO2", "FLT1" ), # Skip RBPJ
-                      "vascEndTopRNA",
-                      outputPath = out_dir)
-plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("DLC1", "RGS5", "NOTCH3", "EGFLAM" ), # Skip RBPJ
-                      "perivasTopRNA",
-                      outputPath = out_dir)
-plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("NRXN1", "XKR4", "NRXN3", "CADM2" ), # Skip RBPJ
-                      "neuronTopRNA",
-                      outputPath = out_dir)
-plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("DCN", "GSN", "MGP", "C7" ), # Skip RBPJ
-                      "fibroTopRNA",
-                      outputPath = out_dir)
-plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("PKHD1L1", "PCDH15", "LDB2", "NPR3" ), # Skip RBPJ
-                      "endocardTopRNA",
-                      outputPath = out_dir)
-
-plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("EMCN", "POSTN", "VWF" ), # Skip RBPJ
-                      "endocardTopRNA_2",
-                      outputPath = out_dir)
-plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("AQP1", "ADAMTSL1", "SMOC1" ), # Skip RBPJ
-                      "endocardTopRNA_3",
-                      outputPath = out_dir)
-
-plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("TTN", "MYBPC3", "DB3", "RBM20" ), # Skip RBPJ
-                      "cardiomyocyteTopRNA",
-                      outputPath = out_dir)
-plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("BANK1", "PAX5", "CD79A", "RALGPS2" ), # Skip RBPJ
-                      "bCellTopRNA",
-                      outputPath = out_dir)
+# plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("TTN", "MYBPC3", "DB3", "RBM20" ), # Skip RBPJ
+#                       "cardiomyocyteTopRNA",
+#                       outputPath = out_dir)
+# plotUMAP_Monocle_genes(harmonyCDS, outputNote, c("BANK1", "PAX5", "CD79A", "RALGPS2" ), # Skip RBPJ
+#                       "bCellTopRNA",
+#                       outputPath = out_dir)
 
 
 cdsAndDEtest = runDEtestingToID_markers(harmonyCDS, outputNote, "harmonyKNN_type",
@@ -529,10 +523,10 @@ plotGroupedProportions(cds_p, paste0("peak_clusts_vs_Harmony_Calls_bars"), "Assi
                       pathToPlot = out_dir )
 
 
-= function(inputCDS, processingNote,
-                        groupValue, colForProportions,
-                        pathToPlot="./plots/", widthToUse=1200,
-                        heightToUse=800){
+# = function(inputCDS, processingNote,
+#                         groupValue, colForProportions,
+#                         pathToPlot="./plots/", widthToUse=1200,
+#                         heightToUse=800){
 
 
 
@@ -547,180 +541,6 @@ saveRDS(cds_p, file=cdsFile)
 
 
 
-
-
-
-
-
-
-# cdsList = list(harmonyCDS)
-# names(cdsList) = c("HarmonyCDS")
-
-# preprocessMethods = c("PCA")
-# names(preprocessMethods) = c("HarmonyCDS")
-
-# # cdsList = list(cds_p, cds.a.g, cds.a.b, ciceroActivCDS)
-# # names(cdsList) = c("Peak_CDS", "Activity_CDS", "Bin_CDS", "CiceroActiv_CDS")
-
-# # preprocessMethods = c("LSI", "PCA", "LSI", "PCA")
-# # names(preprocessMethods) = c("Peak_CDS", "Activity_CDS", "Bin_CDS", "CiceroActiv_CDS")
-
-
-# # opt$sampleRNAname = "W144.heart.apex.s1"
-# # opt$useMNN = "NoMNN"
-
-# out_dir = paste0(basepath, "archr/results/NB9/", opt$sampleRNAname, "/")
-# dir.create(out_dir)
-# setwd(out_dir)
-
-# # Loop, make a UMAP for each of these and 
-# for (eachCDSname in names(cdsList)){
-#   thisCDS = cdsList[[eachCDSname]]
-#   colData(thisCDS)$Sample = colData(thisCDS)$sampleName
-#   colData(thisCDS)$FRIP = colData(cds_p)$FRIP 
-#   colData(thisCDS)$umi = colData(cds_p)$umi
-#   colData(thisCDS)$log10umi = log10(colData(cds_p)$umi)
-#   colData(thisCDS)$doublet_likelihood = colData(cds_p)$doublet_likelihood
-#   colData(thisCDS)$predicted.id = colData(cdsList[["Activity_CDS"]])$predicted.id
-
-#   # Subset?
-#   if (!(opt$sampleRNAname == "All_Cells")){
-#     # thisCDS = thisCDS[,colData(thisCDS)$sampleName == opt$sampleRNAname]
-#     # miniCDS_g = cds.a.g[,colData(cds.a.g)$sampleName == opt$sampleRNAname]
-#     thisCDS = thisCDS[,colData(thisCDS)$sampleName == samplesATACnames[opt$sampleRNAname]]
-#     miniCDS_g = cds.a.g[,colData(cds.a.g)$sampleName == samplesATACnames[opt$sampleRNAname]]
-#   } else {
-#     miniCDS_g = cds.a.g
-#   }
-
-#   # Subset by FRIP
-#   miniCDS_g$FRIP = thisCDS$FRIP
-#   miniCDS_g = miniCDS_g[,colData(miniCDS_g)$FRIP > opt$fripMin]
-#   thisCDS = thisCDS[,colData(thisCDS)$FRIP > opt$fripMin]
-
-#   print(paste0("Working on ", eachCDSname))
-#   print(str(colData(thisCDS)))
-
-#   thisCDS = estimate_size_factors(thisCDS)
-#   thisCDS = preprocess_cds(thisCDS, method=preprocessMethods[eachCDSname], num_dim=opt$pcToUse)
-
-#   # MNN?
-#   if (opt$useMNN == "useMNN"){
-#     thisCDS = align_cds(thisCDS, preprocess_method = preprocessMethods[eachCDSname], alignment_group = "Sample", 
-#                                          residual_model_formula_str = ~log10umi + FRIP + doublet_likelihood)
-#     thisCDS = reduce_dimension(thisCDS, reduction_method = 'UMAP', preprocess_method = "Aligned")
-#   } else{
-#     thisCDS = reduce_dimension(thisCDS, reduction_method = 'UMAP', preprocess_method = preprocessMethods[eachCDSname])
-#   }
-#   # Reduce dimension
-
-#   # Cluster
-#   thisCDS = cluster_cells(thisCDS, k=opt$kVal)
-#   colData(thisCDS)$cluster_label = as.character(clusters(thisCDS))
-#   plotUMAP_Monocle(thisCDS, paste0(eachCDSname, "comp", as.character(opt$pcToUse), "k", as.character(opt$kVal), opt$ATACprocNote), 
-#   						"cluster_label", outputPath=out_dir)
-
-#   # See if there's a reason to save this cds
-#   if (eachCDSname == opt$cdsToSave){
-#   	# Assign clusters?
-#   	thisCDS = hardAssignATAC_clusters(thisCDS, paste0(opt$ATACprocNote, "_", opt$useMNN, "_", eachCDSname, "_", as.character(opt$pcToUse)),
-#   								opt$kVal)
-#   	# Save it
-#   	outputFile = paste0(out_dir, paste0(opt$ATACprocNote, "_", opt$useMNN, "_", eachCDSname, "_", as.character(opt$pcToUse), "k_", as.character(opt$kVal)), ".rds")
-#   	saveRDS(thisCDS, file=outputFile)
-#   	print(outputFile)
-
-#   	# Get DE testing by cell type
-#   	plotLabel = paste0(opt$ATACprocNote, "_", opt$useMNN, "_", eachCDSname, "_", as.character(opt$pcToUse), "k_", as.character(opt$kVal))
-#   	cdsAndDEtest = runDEtestingToID_markers(thisCDS, plotLabel, "Assigned_Cell_Type",
-#                   howManyGenesToTest = 50, outputPath=out_dir)
-#   	DEtestResFile = paste0(out_dir,  paste0(opt$ATACprocNote, "_", opt$useMNN, "_", eachCDSname, "_", as.character(opt$pcToUse), "k_", as.character(opt$kVal)), "_DE.csv")
-# 	write.csv(cdsAndDEtest$marker_test_res[order(cdsAndDEtest$marker_test_res$cell_group),], DEtestResFile)
-#   }
-
-
-# # "FRIP=0.2_FRIT=0.05UMI=1000DL=0.5_useMNN_peakMat_LSI1_50"
-
-#   # Give these over to the g matrix
-#   thisProcNote = paste0("UMAP_by_", eachCDSname, "_", opt$useMNN, "FRIP_", as.character(opt$fripMin), "comp", as.character(opt$pcToUse))
-
-#   reducedDims(miniCDS_g)$UMAP = reducedDims(thisCDS)$UMAP
-#   plotUMAP_MonocleModded(miniCDS_g, paste0(thisProcNote, "_faceted"), "sampleName",
-#                         outputPath = out_dir, show_labels=FALSE)
-
-#   plotUMAP_Monocle(miniCDS_g, thisProcNote, "sampleName",
-#                         outputPath = out_dir, show_labels=FALSE)
-
-#   # Now color by some marker genes
-#   plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("TTN", "RBPJ","GSN", "LDB2", "MYH11", "THEMIS" ),
-#                         "generalMarkers",
-#                         outputPath = out_dir)
-#   # 
-#   plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("PECAM1", "CD106", "CD62E", "SELE", "KDR", "ENG" ),
-#                         "coleEndothMark",
-#                         outputPath = out_dir)
-#   plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("MYH11", "SMTN", "CALD1", "CNN1", "CNN2" ),
-#                         "coleSmoothMuscMark",
-#                         outputPath = out_dir)
-#   plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("CD68", "CD14", "FCGR1", "MS4A7", "FCER1A", "CD163", "LY6C1", "FCN1", "MERTK" ),
-#                         "coleMonoMacMark",
-#                         outputPath = out_dir)
-#   plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("CD3E", "CD3G", 'CD3D", "CD4", "CD8A', "CD8B", "BCL11B" ),
-#                         "coleTCellMark",
-#                         outputPath = out_dir)
-#   plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("CD90", "THY1", "VIM", "DES" ),
-#                         "coleFibroblastMark",
-#                         outputPath = out_dir)
-#   plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("CD90", "THY1", "VIM", "DES" ),
-#                         "coleFibroblastMark",
-#                         outputPath = out_dir)
-
-
-
-#   plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("CD90", "THY1", "VIM", "DES" ),
-#                         "coleFibroblastMark",
-#                         outputPath = out_dir)
-
-#   plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("PCDHGA1", "PCDHGA2" ),
-#                         "protocadherins",
-#                         outputPath = out_dir)
-
-#   plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("F13A1", "RBM47",  "CD74", "RBPJ" ), # Skip RBPJ
-#                         "macTopRNA",
-#                         outputPath = out_dir)
-#   plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("SKAP1", "CD247", "ARHGAP15", "RIPOR2" ), # Skip RBPJ
-#                         "tcellTopRNA",
-#                         outputPath = out_dir)
-#   plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("VWF", "LDB2", "ANO2", "FLT1" ), # Skip RBPJ
-#                         "vascEndTopRNA",
-#                         outputPath = out_dir)
-#   plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("DLC1", "RGS5", "NOTCH3", "EGFLAM" ), # Skip RBPJ
-#                         "perivasTopRNA",
-#                         outputPath = out_dir)
-#   plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("NRXN1", "XKR4", "NRXN3", "CADM2" ), # Skip RBPJ
-#                         "neuronTopRNA",
-#                         outputPath = out_dir)
-#   plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("DCN", "GSN", "MGP", "C7" ), # Skip RBPJ
-#                         "fibroTopRNA",
-#                         outputPath = out_dir)
-#   plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("PKHD1L1", "PCDH15", "LDB2", "NPR3" ), # Skip RBPJ
-#                         "endocardTopRNA",
-#                         outputPath = out_dir)
-
-#   plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("EMCN", "POSTN", "VWF" ), # Skip RBPJ
-#                         "endocardTopRNA_2",
-#                         outputPath = out_dir)
-#   plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("AQP1", "ADAMTSL1", "SMOC1" ), # Skip RBPJ
-#                         "endocardTopRNA_3",
-#                         outputPath = out_dir)
-
-#   plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("TTN", "MYBPC3", "DB3", "RBM20" ), # Skip RBPJ
-#                         "cardiomyocyteTopRNA",
-#                         outputPath = out_dir)
-#   plotUMAP_Monocle_genes(miniCDS_g, thisProcNote, c("BANK1", "PAX5", "CD79A", "RALGPS2" ), # Skip RBPJ
-#                         "bCellTopRNA",
-#                         outputPath = out_dir)
-# }
 
 
 

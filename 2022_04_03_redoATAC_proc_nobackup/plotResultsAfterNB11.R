@@ -101,34 +101,6 @@ harmonyRNA_and_ATAC = readRDS(harmonyFile)
 
 
 
-# replaceATAC_with_tssActivityScores <- function(originalCDS, opt){
-#   # Get the original ATAC data and the new cds with tss scores
-#   atacCDS = originalCDS[,colData(originalCDS)$tech == "ATAC"]
-#   colnames(atacCDS) = sub('_[^_]*$', '', colnames(atacCDS))
-#   tssCDS = readRDS("/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results//2022_03_10_rerun_ArchR_nobackup/archr/results/NB4/geneActivityByPromoterRegionCDS.rds")
-
-#   # Subset and match orders
-#   tssCDS = tssCDS[,colnames(tssCDS) %in% colnames(atacCDS)]
-#   tssCDS = tssCDS[,colnames(atacCDS)]
-
-#   # Make a new CDS
-#   mergedTSScds = monocle3::new_cell_data_set(
-#   exprs(tssCDS), 
-#   cell_metadata = colData(atacCDS),
-#   gene_metadata = rowData(tssCDS))
-
-#   mergedTSScds = estimate_size_factors(mergedTSScds)
-
-#   # Merge back in with RNA data
-#   cdsList = list("ATAC" = mergedTSScds, "RNA" = originalCDS[,colData(originalCDS)$tech == "RNA"])
-#   newATAC_and_RNA_cds = combine_cds(cdsList, sample_col_name="InputCDS")
-
-#   return(newATAC_and_RNA_cds)
-# }
-
-
-
-
 # procNoteFull = paste0(outputNote, "_k_", as.character(kVal))
 procNoteFull = outputNote
 
@@ -139,9 +111,6 @@ procNoteFull = outputNote
 #   out_dir = paste0(basepath, "archr/results/finalPlots/TSS_Scores/")
 #   dir.create(out_dir)
 # }
-
-
-
 
 
 
@@ -377,85 +346,6 @@ empricalRNAmarkers = c("TTN", "MYH7", "GPAM" )
 makeMarkerDotplot(harmonyRNA_and_ATAC, "ATAC", rnaGeneralMarkers, "General_RNA_Markers", 
 						"harmonyKNN_type", outputPath=out_dir)
 
-
-
-
-# # See if a marker file has already been found
-# DE_ATAC_File = paste0(inputDir, outputNote, "_based_Celltype_DE_testing.csv")
-# if (file.exists(DE_ATAC_File)){
-# 	print("Reading calculated and stored DE results")
-# 	deTestRes = read.csv(DE_ATAC_File)
-# } else {
-# 	print("Finding DE Results Now")
-# 	deTestRes = runDEtestingToID_markers(harmonyRNA_and_ATAC[,colData(harmonyRNA_and_ATAC)$tech == "ATAC"], outputNote, "harmonyKNN_type",
-#                   howManyGenesToTest = 50, outputPath=out_dir)
-# 	deTestRes = deTestRes$marker_test_res[order(deTestRes$marker_test_res$cell_group),]
-# 	write.csv(deTestRes, DE_ATAC_File)
-# }
-
-# DE_RNA_File = paste0(inputDir, outputNote, "_based_Celltype_RNA_DE_testing.csv")
-# if (file.exists(DE_RNA_File)){
-# 	print("Reading calculated and stored DE results")
-# 	deTestResRNA = read.csv(DE_RNA_File)
-# } else {
-# 	print("Finding DE Results Now")
-# 	deTestResRNA = runDEtestingToID_markers(harmonyRNA_and_ATAC[,colData(harmonyRNA_and_ATAC)$tech == "RNA"], outputNote, "highLevelCellType",
-#                   howManyGenesToTest = 50, outputPath=out_dir)
-# 	deTestResRNA = deTestResRNA$marker_test_res[order(deTestResRNA$marker_test_res$cell_group),]
-# 	write.csv(deTestResRNA, DE_RNA_File)
-# }
-
-
-
-
-
-
-
-# markerTestDir = paste0(out_dir, "testingATAC_gene_markers/")
-# dir.create(markerTestDir)
-
-# makeDotplotsFromDE(deTestRes, markerTestDir, harmonyRNA_and_ATAC, opt)
-# makeDotplotsFromDE(deTestRes, markerTestDir, harmonyRNA_and_ATAC, opt, sortPolicy="specificity")
-# makeDotplotsFromDE(deTestRes, markerTestDir, harmonyRNA_and_ATAC, opt, sortPolicy="pseudo_R2")
-# makeDotplotsFromDE(deTestRes, markerTestDir, harmonyRNA_and_ATAC, opt, sortPolicy="fraction_expressing")
-
-
-# # Show markers from RNA DE testing
-
-# markerTestDirRNA = paste0(out_dir, "testingRNA_gene_markers/")
-# dir.create(markerTestDirRNA)
-
-# makeDotplotsFromDE(deTestResRNA, markerTestDirRNA, harmonyRNA_and_ATAC, opt, assayToUse="RNA", cellTypeCol = "highLevelCellType")
-# makeDotplotsFromDE(deTestResRNA, markerTestDirRNA, harmonyRNA_and_ATAC, opt, sortPolicy="specificity", assayToUse="RNA", cellTypeCol = "highLevelCellType")
-# makeDotplotsFromDE(deTestResRNA, markerTestDirRNA, harmonyRNA_and_ATAC, opt, sortPolicy="pseudo_R2", assayToUse="RNA", cellTypeCol = "highLevelCellType")
-
-# # Show these markers on the ATAC side
-# makeDotplotsFromDE(deTestResRNA, markerTestDir, harmonyRNA_and_ATAC, opt, outputNote="RNA_DE_")
-
-# makeDotplotsFromDE(deTestResRNA, markerTestDir, harmonyRNA_and_ATAC, opt, outputNote="RNA_DE_", sortPolicy="pseudo_R2", nToPlot=20)
-# makeDotplotsFromDE(deTestResRNA, markerTestDir, harmonyRNA_and_ATAC, opt, outputNote="RNA_DE_", sortPolicy="specificity", nToPlot=20)
-
-# makeDotplotsFromDE(deTestResRNA, markerTestDir, harmonyRNA_and_ATAC, opt, outputNote="RNA_DE_", nToPlot=25)
-
-
-
-
-
-
-# setToCoPlot = c("TTN", "RBPJ", "BANK1", "PDGFRB", "VWF")
-# makeMarkerDotplot(harmonyRNA_and_ATAC, "RNA", setToCoPlot, "Matching_Markers", 
-# 						"highLevelCellType", outputPath=out_dir)
-# makeMarkerDotplot(harmonyRNA_and_ATAC, "ATAC", setToCoPlot, "Matching_Markers", 
-# 						"harmonyKNN_type", outputPath=out_dir)
-
-
-
-
-# setToCoPlotMismatch = c("CD247", "FLT1", "PKDL1", "CCL21", "PROX1", "DCN")
-# makeMarkerDotplot(harmonyRNA_and_ATAC, "RNA", setToCoPlotMismatch, "Mismatched_Markers", 
-# 						"highLevelCellType", outputPath=out_dir)
-# makeMarkerDotplot(harmonyRNA_and_ATAC, "ATAC", setToCoPlotMismatch, "Mismatched_Markers", 
-# 						"harmonyKNN_type", outputPath=out_dir)
 
 
 

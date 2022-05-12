@@ -45,6 +45,21 @@ outDirName = paste0("./plots/summaryPlots/")
 parameterSets = read.csv(paramSetsToPlotFile)
 
 
+monocle_theme_opts <- function()
+{
+  theme(strip.background = element_rect(colour = 'white', fill = 'white')) +
+    theme(panel.border = element_blank()) +
+    theme(axis.line.x = element_line(size=0.25, color="black")) +
+    theme(axis.line.y = element_line(size=0.25, color="black")) +
+    theme(panel.grid.minor.x = element_blank(),
+          panel.grid.minor.y = element_blank()) +
+    theme(panel.grid.major.x = element_blank(),
+          panel.grid.major.y = element_blank()) +
+    theme(panel.background = element_rect(fill='white')) +
+    theme(legend.key=element_blank())
+}
+
+
 
 getFitDF <- function(inputParams, opt){
   # Read the file
@@ -235,6 +250,7 @@ makePlotUnsummarizedThisComparison <- function(paramFileName, fitDF, opt){
     myPlot = ggplot(fitDF, aes_string(x="Parameter_Set", y="Val_R_Squared") ) + 
           geom_boxplot(aes(fill=pVal)) + 
           geom_point(position=position_dodge(width=0.75), aes(group=pVal)) +
+          monocle_theme_opts() + 
           xlab("TSS Up/Downstream Lengths") + #+ ggtitle(paste0(paramFileName, "_", opt$summarizationPolicy)) +
             theme(text = element_text(size = 20)) + 
               ylab(yLabToUse) + 
@@ -257,6 +273,7 @@ makePlotUnsummarizedThisComparison <- function(paramFileName, fitDF, opt){
     myPlot = ggplot(fitDF, aes_string(x="Parameter_Set", y="Val_R_Squared") ) + 
           geom_boxplot(aes(fill=pVal)) + 
           geom_point(position=position_dodge(width=0.75), aes(group=pVal)) +
+          monocle_theme_opts() + 
           xlab("TSS Up/Downstream Lengths") + #+ ggtitle(paste0(paramFileName, "_", opt$summarizationPolicy)) +
             theme(text = element_text(size = 20)) + 
               ylab(yLabToUse) + 
@@ -280,6 +297,7 @@ makePlotUnsummarizedThisComparison <- function(paramFileName, fitDF, opt){
     myPlot = ggplot(fitDF, aes_string(x="Parameter_Set", y="Val_R_Squared") ) + 
           geom_boxplot(aes(fill=pVal)) + 
           geom_point(position=position_dodge(width=0.75), aes(group=pVal)) +
+          monocle_theme_opts() + 
           xlab("Cicero Cutoff/Max Sites Linked/Distal Site Size in BP") + #+ ggtitle(paste0(paramFileName, "_", opt$summarizationPolicy)) +
             theme(text = element_text(size = 20)) + 
               ylab(yLabToUse) + 

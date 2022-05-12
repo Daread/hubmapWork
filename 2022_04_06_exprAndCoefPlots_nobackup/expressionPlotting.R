@@ -6,6 +6,7 @@ library(ROCR)
 library(data.table)
 library(monocle3)
 library(gridExtra)
+library(RColorBrewer)
 
 # Get shared functions between this and runRegressionModel.R
 source("./utilityFunctions.R")
@@ -55,6 +56,21 @@ rnaData = hardAssignDonorSexes(rnaData)
 # Get the ATAC cds
 atacData = readRDS(paste0(opt$atacPath, opt$cdsATAC))
 rowData(atacData)$gene_short_name = rowData(atacData)$Motif
+
+
+monocle_theme_opts <- function()
+{
+  theme(strip.background = element_rect(colour = 'white', fill = 'white')) +
+    theme(panel.border = element_blank()) +
+    theme(axis.line.x = element_line(size=0.25, color="black")) +
+    theme(axis.line.y = element_line(size=0.25, color="black")) +
+    theme(panel.grid.minor.x = element_blank(),
+          panel.grid.minor.y = element_blank()) +
+    theme(panel.grid.major.x = element_blank(),
+          panel.grid.major.y = element_blank()) +
+    theme(panel.background = element_rect(fill='white')) +
+    theme(legend.key=element_blank())
+}
 
 
 plotPaneledPositive <- function(miniCDS, genesToPlot, cellTypeSubset, setName, 
@@ -378,6 +394,7 @@ plotPercentPosScatter <-function(genesToPlot, setName, rnaData, outputDir = past
       subsetDF = plotDF[plotDF$sampleName == eachSample,]
       subsetDF$nonzero = ifelse(subsetDF$Expression > 0, 1, 0)
       thisProp = sum(subsetDF$nonzero) * 1.0 / nrow(subsetDF)
+      thisSex = names(sort(table(subsetDF$Sex), decreasing = TRUE)[1])[1]
       # Can shortcut to get the age of the donor from the subset df
       thisAge = median(subsetDF$Age)
       # browser()
@@ -385,7 +402,7 @@ plotPercentPosScatter <-function(genesToPlot, setName, rnaData, outputDir = past
       # print(str(oneRow))
       thisDonor = oneRow[["Donor"]]
       donorDF = data.frame("Sample" = eachSample, "Donor"=thisDonor,
-      						 "Cells_Expressing" = thisProp, "Age"=thisAge)
+      						 "Cells_Expressing" = thisProp, "Age"=thisAge, "Sex" =thisSex)
       percentPosDF = rbind(percentPosDF, donorDF)
     }
 
@@ -393,10 +410,13 @@ plotPercentPosScatter <-function(genesToPlot, setName, rnaData, outputDir = past
     thisPlotTitle = paste0(outputDir, "Perc_Pos_Scatter_", eachGene, "_", setName, ".png")
     png(thisPlotTitle, res=200, width=1200, height=1200)
     myPlot = ggplot(percentPosDF, aes_string(x="Age", y="Cells_Expressing")) + 
-            geom_point(aes(col=Donor)) + ylab(paste0(cellTypeSubset, " Expressing ", eachGene)) +
+            geom_point(aes(col=Sex)) + 
+            monocle_theme_opts() + 
+            ylab(paste0(cellTypeSubset, " Expressing ", eachGene)) +
             theme(text = element_text(size = 24))+
   theme(plot.margin = margin(20,10,10,10, "pt")) + 
-   	geom_smooth(method = "lm", se = FALSE, col="black")
+   	geom_smooth(method = "lm", se = FALSE, col="black") + 
+       scale_fill_brewer(palette = "Dark2")
     print(myPlot)
     dev.off()
   }

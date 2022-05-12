@@ -13,7 +13,7 @@ library("optparse")
 # Get the passed parameters
 option_list = list(
   make_option(c("-p", "--pValFIMOcutoff"), type="numeric", 
-  			default=1e-4, 
+        default=1e-4, 
               help="Max FIMO p value to retain match", metavar="character"),
 
   make_option(c("-f", "--featureSelection"), type="character", 
@@ -41,10 +41,10 @@ option_list = list(
               help="Alpha value to use in glment", metavar="numeric"),
 
   make_option(c("-u", "--promoterUpstream"), type="numeric", 
-        default=1500,
+        default=2000,
               help="Bases upstream of TSS to use for input features", metavar="numeric"),
   make_option(c("-d", "--promoterDownstream"), type="numeric", 
-        default=500,
+        default=1000,
               help="Bases downstream of TSS to use for input features", metavar="numeric"),
 
   make_option(c("-k", "--coaccessCutoff"), type="numeric", 
@@ -56,12 +56,18 @@ option_list = list(
               help="Max number of sites to link to a gene's promoter", metavar="numeric"),
 
   make_option(c("-q", "--peakSize"), type="numeric", 
-        default=600,
+        default=1000,
               help="-1 -> Keep as is, or enter a positive integer to make all peaks the same size", metavar="numeric"),
 
   make_option(c("-g", "--gtfFile"), type="character", 
-        default="/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_08_18_motifElasticnet_nobackup/fileOutputs/protCodingOnlyHumanGTF.gtf",
-              help="Path and file for human gtf", metavar="character")
+        default="/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2022_04_07_redoMotifModel_nobackup/fileOutputs/protCodingOnlyHumanGTF.gtf",
+              help="Path and file for human gtf", metavar="character"),
+   make_option(c("-c", "--cdsRNA"), type="character", 
+        default="allCells_HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40addAllTypes.rds", 
+              help="Name of RNA cds to use", metavar="character"),
+  make_option(c("-x", "--rnaPath"), type="character", 
+        default="/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_05_10_HM10_Preprocessing_and_cell_annotations/rdsOutput/", 
+              help="Path to RNA cds", metavar="character")
 
 
 )
@@ -127,6 +133,23 @@ allCoefDF = allCoefDF[,-which(colnames(allCoefDF) == "X")]
 corrPlotDir = "./plots/correlationMatModified/"
 dir.create(corrPlotDir)
 
+
+monocle_theme_opts <- function()
+{
+  theme(strip.background = element_rect(colour = 'white', fill = 'white')) +
+    theme(panel.border = element_blank()) +
+    theme(axis.line.x = element_line(size=0.25, color="black")) +
+    theme(axis.line.y = element_line(size=0.25, color="black")) +
+    theme(panel.grid.minor.x = element_blank(),
+          panel.grid.minor.y = element_blank()) +
+    theme(panel.grid.major.x = element_blank(),
+          panel.grid.major.y = element_blank()) +
+    theme(panel.background = element_rect(fill='white')) +
+    theme(legend.key=element_blank())
+}
+
+
+
 getCorrModifiedDF <- function(allCoefDF, motifCorrelationMatrix, cellTypes, normalizeCorr=FALSE,
                     cutoffVal=0.0){
   # Reduce values under a cutoff to zero
@@ -160,6 +183,7 @@ meltedCorr = melt(as.data.frame(motifCorrelationMatrix))
 png(paste0(corrPlotDir, "Correlation_Histogram.png"), res=200, height=1000, width=1000)
 myPlot = ggplot(meltedCorr[meltedCorr$value < .9999999,], aes(x=value)) +
                geom_histogram() +
+               monocle_theme_opts() + 
              # ggtitle("Correlations of motifs") +
              theme(text=element_text(size=24)) + xlab("Correlation") +
              ylab("Motif Pair Count")

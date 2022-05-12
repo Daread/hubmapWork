@@ -58,6 +58,21 @@ atacData = readRDS(paste0(opt$atacPath, opt$cdsATAC))
 rowData(atacData)$gene_short_name = rowData(atacData)$Motif
 
 
+monocle_theme_opts <- function()
+{
+  theme(strip.background = element_rect(colour = 'white', fill = 'white')) +
+    theme(panel.border = element_blank()) +
+    theme(axis.line.x = element_line(size=0.25, color="black")) +
+    theme(axis.line.y = element_line(size=0.25, color="black")) +
+    theme(panel.grid.minor.x = element_blank(),
+          panel.grid.minor.y = element_blank()) +
+    theme(panel.grid.major.x = element_blank(),
+          panel.grid.major.y = element_blank()) +
+    theme(panel.background = element_rect(fill='white')) +
+    theme(legend.key=element_blank())
+}
+
+
 plotPaneledPositive <- function(miniCDS, genesToPlot, cellTypeSubset, setName, 
 									outputDir = paste0("./plots/",  "expressionPlots/"), cellTypeCol, colToGroupCells, colForFill){
 
@@ -143,12 +158,15 @@ plotViolins <- function(genesToPlot, setName, rnaData, outputDir = paste0("./plo
   						colToGroupCells, colForFill)
   } else {
   	thisPalette = "Dark2"
-    png(paste0(outputDir, "percent_Positive_for_", setName, ".png"), res=200, height=2400, width=2400)
+    png(paste0(outputDir, "percent_Positive_for_", setName, ".png"), res=200, height=2400, width=1200)
+    # myPlot = plot_percent_cells_positive(miniCDS, group_cells_by=colToGroupCells,
     myPlot = plot_percent_cells_positive(miniCDS, group_cells_by=colToGroupCells,
-           ncol=1, #log_scale=TRUE, pseudocount=.01
-            ) + theme(axis.text.x=element_text(angle=45, hjust=1)) + geom_bar(stat="identity", width=0.03) +
+           ncol=1#,# widthVal=.01 #log_scale=TRUE, pseudocount=.01 
+            ) + theme(axis.text.x=element_text(angle=45, hjust=1)) + #geom_bar(stat="identity", width=0.003) +
             theme(text = element_text(size = 40))   + ylab("Percent Positive Cells") +
              scale_fill_brewer(palette=thisPalette) + scale_color_brewer(palette=thisPalette)
+    myPlot = delete_layers(myPlot, "GeomBar")
+    myPlot = myPlot + geom_bar(stat="identity", width=0.5) 
     # Add a split by 
     # if (!(is.null(colForFill))){
     #   myPlot = myPlot + aes_string(colForFill)
@@ -202,19 +220,19 @@ plotViolins(c("PROM1", "IL1R1", "ALPL", "ACVRL1"), "Top_Sex_VascEnd", rnaData, c
 
 
 
-plotViolins(c("MYBL1", "MYBL2"), "MYBL_Across_Types", rnaData, #cellTypeSubset=c("Fibroblast"), 
-             outputDir = outputDir)
+# plotViolins(c("MYBL1", "MYBL2"), "MYBL_Across_Types", rnaData, #cellTypeSubset=c("Fibroblast"), 
+#              outputDir = outputDir)
 
 
-plotViolins(c("MEF2B", "MEF2A", "MEF2C", "MEF2D"), "MEF_Across_Types", rnaData, #cellTypeSubset=c("Fibroblast"), 
-             outputDir = outputDir)
+# plotViolins(c("MEF2B", "MEF2A", "MEF2C", "MEF2D"), "MEF_Across_Types", rnaData, #cellTypeSubset=c("Fibroblast"), 
+#              outputDir = outputDir)
 
 
 
 
 
-plotViolins(c("RFX1", "RFX2", "RFX3", "RFX4", "RFX5", "RFX6", "RFX7", "RFX8"), "RFX_Across_Types", rnaData, #cellTypeSubset=c("Fibroblast"), 
-             outputDir = outputDir)
+# plotViolins(c("RFX1", "RFX2", "RFX3", "RFX4", "RFX5", "RFX6", "RFX7", "RFX8"), "RFX_Across_Types", rnaData, #cellTypeSubset=c("Fibroblast"), 
+#              outputDir = outputDir)
 
 
 
@@ -249,73 +267,73 @@ plotCoefBars <- function(genesToPlot, setName, rnaData, outputDir = paste0("./pl
 
 
 
-plotViolins(c("IL1R1"), "IL1R1_In_Vasculature", rnaData, cellTypeSubset="Vascular_Endothelium", 
-            colToGroupCells="Sex", outputDir = outputDir)
+# plotViolins(c("IL1R1"), "IL1R1_In_Vasculature", rnaData, cellTypeSubset="Vascular_Endothelium", 
+#             colToGroupCells="Sex", outputDir = outputDir)
 
 
 
 
-plotUMAP_Monocle_genes(rnaData, opt$predictionFraming, c("SMAD6", "SMAD7", "SMAD2", "SMAD3", "SMAD4", "SMAD5", "SMAD1"), 
-          "SMADS", outputPath = outputDir)
+# plotUMAP_Monocle_genes(rnaData, opt$predictionFraming, c("SMAD6", "SMAD7", "SMAD2", "SMAD3", "SMAD4", "SMAD5", "SMAD1"), 
+#           "SMADS", outputPath = outputDir)
 
-plotUMAP_Monocle_genes(rnaData, opt$predictionFraming, c("ACVRL1", "TGFBR1", "SMURF1", "SMURF2"), 
-          "TGF_Access", outputPath = outputDir)
-
-
-
-plotUMAP_Monocle_genes(rnaData, opt$predictionFraming, c("TGFBR3", "ENG", "EP300", "CBP", "CSKI", "SNON"), 
-          "TGF_Access_2", outputPath = outputDir)
-
-plotUMAP_Monocle_genes(rnaData, opt$predictionFraming, c("MSTN", "NFATC2", "CALC"),
- "Myostatin_Sig", outputPath = outputDir)
+# plotUMAP_Monocle_genes(rnaData, opt$predictionFraming, c("ACVRL1", "TGFBR1", "SMURF1", "SMURF2"), 
+#           "TGF_Access", outputPath = outputDir)
 
 
 
+# plotUMAP_Monocle_genes(rnaData, opt$predictionFraming, c("TGFBR3", "ENG", "EP300", "CBP", "CSKI", "SNON"), 
+#           "TGF_Access_2", outputPath = outputDir)
 
-plotViolins(c("THEMIS"), "Just_THEMIS", rnaData)
-
-
-
-plotViolins(c("IL1R1", "ALPL", "PROM1", "LCN6"), "Vasculature_Cardiac_Hits", rnaData, cellTypeSubset="Vascular_Endothelium", 
-            colToGroupCells="Sex")
-
-
-
-plotViolins(c("BACH1"), "Just_BACH1", rnaData)
-
-
-plotUMAP_Monocle_genes(rnaData, opt$predictionFraming, c("THEMIS"), "Just_THEMIS", outputPath = outputDir)
-
-plotUMAP_Monocle_genes(rnaData, opt$predictionFraming, c("BACH1"), "Just_BACH1", outputPath = outputDir)
+# plotUMAP_Monocle_genes(rnaData, opt$predictionFraming, c("MSTN", "NFATC2", "CALC"),
+#  "Myostatin_Sig", outputPath = outputDir)
 
 
 
 
-
-plotViolins(c("SOX15", "MEF2B", "CEBPA", "SPIB", "SPIC"), "Known_Plus_SPIC", rnaData)
-
-plotUMAP_Monocle_genes(rnaData, opt$predictionFraming, c("SOX15", "MEF2B", "CEBPA", "SPIB", "SPIC", "BACH1"),
-                      "Known_Plus_SPIC", outputPath = outputDir)
-
-
-plotViolins(c("TFAP2C", "TFAP2B"), "TFAP2_Set", rnaData)
-
-plotUMAP_Monocle_genes(rnaData, opt$predictionFraming, c("TFAP2C", "TFAP2B"),
-                      "TFAP2_Set", outputPath = outputDir)
+# plotViolins(c("THEMIS"), "Just_THEMIS", rnaData)
 
 
 
-plotUMAP_Monocle_genes(rnaData, opt$predictionFraming, c("MTAP", "CDKN2A", "CDKN2B", "DMRTA1"),
-                      "Locus_9p21", outputPath = outputDir)
-# "MTAP", "CDKN2A", "CDKN2B",
+# plotViolins(c("IL1R1", "ALPL", "PROM1", "LCN6"), "Vasculature_Cardiac_Hits", rnaData, cellTypeSubset="Vascular_Endothelium", 
+#             colToGroupCells="Sex")
 
 
-plotUMAP_Monocle_genes(rnaData, opt$predictionFraming, c("DLG2", "CAMTA1", "CTNNA3", "NPIPA1", "CCSER1", "MAGI2"),
-                      "Harmony_ATAC_T_cell_hits", outputPath = outputDir)
+
+# plotViolins(c("BACH1"), "Just_BACH1", rnaData)
 
 
-plotUMAP_Monocle_genes(rnaData, opt$predictionFraming, c("PCDHGA1", "PCDHGA2"),
-                      "Protocadherins", outputPath = outputDir)
+# plotUMAP_Monocle_genes(rnaData, opt$predictionFraming, c("THEMIS"), "Just_THEMIS", outputPath = outputDir)
+
+# plotUMAP_Monocle_genes(rnaData, opt$predictionFraming, c("BACH1"), "Just_BACH1", outputPath = outputDir)
+
+
+
+
+
+# plotViolins(c("SOX15", "MEF2B", "CEBPA", "SPIB", "SPIC"), "Known_Plus_SPIC", rnaData)
+
+# plotUMAP_Monocle_genes(rnaData, opt$predictionFraming, c("SOX15", "MEF2B", "CEBPA", "SPIB", "SPIC", "BACH1"),
+#                       "Known_Plus_SPIC", outputPath = outputDir)
+
+
+# plotViolins(c("TFAP2C", "TFAP2B"), "TFAP2_Set", rnaData)
+
+# plotUMAP_Monocle_genes(rnaData, opt$predictionFraming, c("TFAP2C", "TFAP2B"),
+#                       "TFAP2_Set", outputPath = outputDir)
+
+
+
+# plotUMAP_Monocle_genes(rnaData, opt$predictionFraming, c("MTAP", "CDKN2A", "CDKN2B", "DMRTA1"),
+#                       "Locus_9p21", outputPath = outputDir)
+# # "MTAP", "CDKN2A", "CDKN2B",
+
+
+# plotUMAP_Monocle_genes(rnaData, opt$predictionFraming, c("DLG2", "CAMTA1", "CTNNA3", "NPIPA1", "CCSER1", "MAGI2"),
+#                       "Harmony_ATAC_T_cell_hits", outputPath = outputDir)
+
+
+# plotUMAP_Monocle_genes(rnaData, opt$predictionFraming, c("PCDHGA1", "PCDHGA2"),
+#                       "Protocadherins", outputPath = outputDir)
 
 # # Find and save marker genes by cell type
 # cdsAndDEtest = runDEtestingToID_markers(rnaData, "all_RNA_cell_markers", "highLevelCellType",
@@ -337,21 +355,21 @@ plotUMAP_Monocle_genes(rnaData, opt$predictionFraming, c("PCDHGA1", "PCDHGA2"),
 #            cellTypeSubset="Macrophage", 
 #             colToGroupCells="Sex" )
 
-plotViolins(c("Smad4"), "Smad4_In_MultiTypes", atacData, cellTypeCol = "harmonyKNN_type",
-           cellTypeSubset=c("Fibroblast", "Macrophage", "VSM_and_Pericyte", "Vascular_Endothelium"), 
-            colToGroupCells="harmonyKNN_type", colForFill = "Sex" )
+# plotViolins(c("Smad4"), "Smad4_In_MultiTypes", atacData, cellTypeCol = "harmonyKNN_type",
+#            cellTypeSubset=c("Fibroblast", "Macrophage", "VSM_and_Pericyte", "Vascular_Endothelium"), 
+#             colToGroupCells="harmonyKNN_type", colForFill = "Sex" )
 
 
 
-plotViolins(c("Rarg(var.2)", "RUNX1", "DBP"), "Macrophage_Hits_Motifs_Sex", atacData, cellTypeCol = "harmonyKNN_type",
-           cellTypeSubset="Macrophage", 
-            colToGroupCells="Sex" )
+# plotViolins(c("Rarg(var.2)", "RUNX1", "DBP"), "Macrophage_Hits_Motifs_Sex", atacData, cellTypeCol = "harmonyKNN_type",
+#            cellTypeSubset="Macrophage", 
+#             colToGroupCells="Sex" )
 
 
 
 
-plotViolins(c("TGFB3", "CCN2"), "TGFB_In_Fibroblasts", rnaData, cellTypeSubset="Fibroblast", 
-            colToGroupCells="Sex", outputDir = outputDir)
+# plotViolins(c("TGFB3", "CCN2"), "TGFB_In_Fibroblasts", rnaData, cellTypeSubset="Fibroblast", 
+#             colToGroupCells="Sex", outputDir = outputDir)
 
 
 
@@ -376,11 +394,12 @@ plotPercentPosScatter <-function(genesToPlot, setName, rnaData, outputDir = past
     percentPosDF = data.frame()
     for (eachDonor in allDonors){
       subsetDF = plotDF[plotDF$Donor == eachDonor,]
+      thisSex = names(sort(table(subsetDF$Sex), decreasing = TRUE)[1])[1]
       subsetDF$nonzero = ifelse(subsetDF$Expression > 0, 1, 0)
       thisProp = sum(subsetDF$nonzero) * 1.0 / nrow(subsetDF)
       # Can shortcut to get the age of the donor from the subset df
       thisAge = median(subsetDF$Age)
-      donorDF = data.frame("Donor" = eachDonor, "Cells_Expressing" = thisProp, "Age"=thisAge)
+      donorDF = data.frame("Donor" = eachDonor, "Cells_Expressing" = thisProp, "Age"=thisAge, "Sex" = thisSex)
       percentPosDF = rbind(percentPosDF, donorDF)
     }
 
@@ -388,17 +407,20 @@ plotPercentPosScatter <-function(genesToPlot, setName, rnaData, outputDir = past
     thisPlotTitle = paste0(outputDir, "Perc_Pos_Scatter_", eachGene, "_", setName, ".png")
     png(thisPlotTitle, res=200, width=1200, height=1200)
     myPlot = ggplot(percentPosDF, aes_string(x="Age", y="Cells_Expressing")) + 
-            geom_point() + ylab(paste0(cellTypeSubset, " Expressing ", eachGene)) +
+            geom_point(aes(color=Sex)) + 
+            monocle_theme_opts() + 
+            ylab(paste0(cellTypeSubset, " Expressing ", eachGene)) +
             theme(text = element_text(size = 24))+
-  theme(plot.margin = margin(20,10,10,10, "pt"))
+  theme(plot.margin = margin(20,10,10,10, "pt")) + 
+    geom_smooth(method = "lm", se = FALSE, col="black") + 
+       scale_fill_brewer(palette = "Dark2")
     print(myPlot)
     dev.off()
   }
 }
 
 
-
-
+# # Now plot 
 
 plotPercentPosScatter(c("CFH", "CMKLR1"), "Inflam_In_Aged_Fibroblasts", rnaData, cellTypeSubset="Fibroblast",
               colToGroupCells="Age", outputDir=outputDir)
@@ -409,7 +431,16 @@ plotPercentPosScatter(c("CFH", "CMKLR1"), "Inflam_In_Aged_Fibroblasts", rnaData,
 
 
 
-
+#     thisPlotTitle = paste0(outputDir, "Perc_Pos_Scatter_", eachGene, "_", setName, ".png")
+#     png(thisPlotTitle, res=200, width=1200, height=1200)
+#     myPlot = ggplot(percentPosDF, aes_string(x="Age", y="Cells_Expressing")) + 
+#             geom_point(aes(col=Donor)) + ylab(paste0(cellTypeSubset, " Expressing ", eachGene)) +
+#             theme(text = element_text(size = 24))+
+#   theme(plot.margin = margin(20,10,10,10, "pt")) + 
+#     geom_smooth(method = "lm", se = FALSE, col="black") + 
+#        scale_fill_brewer(palette = "Dark2")
+#     print(myPlot)
+#     dev.off()
 
 
 

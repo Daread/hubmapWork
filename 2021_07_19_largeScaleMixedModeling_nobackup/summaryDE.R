@@ -10,10 +10,26 @@ library(RColorBrewer)
 print("Libraries loaded, starting now")
 
 
+monocle_theme_opts <- function()
+{
+  theme(strip.background = element_rect(colour = 'white', fill = 'white')) +
+    theme(panel.border = element_blank()) +
+    theme(axis.line.x = element_line(size=0.25, color="black")) +
+    theme(axis.line.y = element_line(size=0.25, color="black")) +
+    theme(panel.grid.minor.x = element_blank(),
+          panel.grid.minor.y = element_blank()) +
+    theme(panel.grid.major.x = element_blank(),
+          panel.grid.major.y = element_blank()) +
+    theme(panel.background = element_rect(fill='white')) +
+    theme(legend.key=element_blank())
+}
+
+
+
 formatCellType <- function(inputColumn){
 
 	inputColumn = ifelse(inputColumn == "T_Cell", "T Cell", inputColumn)
-	inputColumn = ifelse(inputColumn == "VSM_and_Pericyte", "Perviascular Cell", inputColumn)
+	inputColumn = ifelse(inputColumn == "VSM_and_Pericyte", "Perivascular Cell", inputColumn)
 	inputColumn = ifelse(inputColumn == "Vascular_Endothelium", "Vascular Endothelium", inputColumn)
 	inputColumn = ifelse(inputColumn == "Lymphatic_Endothelium", "Lymphatic Endothelium", inputColumn)
 	inputColumn = ifelse(inputColumn == "Mast_Cell", "Mast Cell", inputColumn)
@@ -123,6 +139,7 @@ outfile = paste0("DE_hits_qVal_", as.character(opt$padjCutoff), "_by_", paste0(c
 png(paste0(outDir, outfile), res=200, width=1200, height=1000)
 myPlot = ggplot(deCounts, aes_string(x="cellType", y="n", fill="Covariate")) +
 			geom_bar(position="dodge", stat="identity") +
+			monocle_theme_opts() + 
 			 # theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
 			 theme(axis.text.x = element_text(angle = 45,  hjust=1)) + 
 			 theme(text = element_text(size = 20))  + ylab("DE Genes") +

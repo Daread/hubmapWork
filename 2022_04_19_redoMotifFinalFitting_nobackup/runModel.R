@@ -85,6 +85,21 @@ cellTypes = c("Adipocytes", "B_Cell", "Cardiomyocyte", "Endocardium", "Fibroblas
 #                 "Vascular_Endothelium")
 
 
+monocle_theme_opts <- function()
+{
+  theme(strip.background = element_rect(colour = 'white', fill = 'white')) +
+    theme(panel.border = element_blank()) +
+    theme(axis.line.x = element_line(size=0.25, color="black")) +
+    theme(axis.line.y = element_line(size=0.25, color="black")) +
+    theme(panel.grid.minor.x = element_blank(),
+          panel.grid.minor.y = element_blank()) +
+    theme(panel.grid.major.x = element_blank(),
+          panel.grid.major.y = element_blank()) +
+    theme(panel.background = element_rect(fill='white')) +
+    theme(legend.key=element_blank())
+}
+
+
 # Get the RNA data that'll be used in all models
 rnaData = getRNAdf(opt, cellTypes)
 names(rnaData)[names(rnaData) == "id"] <- "GeneID"
@@ -176,18 +191,18 @@ if (file.exists(outFile)){
 
 # colnames(fullFitDF) = c("Cell_Type", "Alpha", "Eval_Set_R2", "Best_Lambda", "Feature_Set")
 
-myPalette = brewer.pal(8, "Set1")
-myPalette = c(myPalette[4], myPalette[7], myPalette[6])
+myPalette = brewer.pal(8, "Dark2")
+myPalette = c(myPalette[1], myPalette[3], myPalette[6])
 
-# Now plot
-png(paste0("./plots/", opt$predictionFraming, "/", opt$predictionFraming, "_", opt$variableParams, "_Test_Performance_Prom_Vs_Combined.png" ),
-      height=1400, width=1600, res = 200)
-myPlot = ggplot(fullFitDF, aes_string(x="Cell_Type", y=evalCol, color="Feature_Set")) +
-      geom_point() + ggtitle("Promoter-Only Vs. Promoter+Distal Performance") + 
-      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) #+ 
-      #scale_color_brewer(palette= myPalette)
-print(myPlot)
-dev.off()
+# # Now plot
+# png(paste0("./plots/", opt$predictionFraming, "/", opt$predictionFraming, "_", opt$variableParams, "_Test_Performance_Prom_Vs_Combined.png" ),
+#       height=1400, width=1600, res = 200)
+# myPlot = ggplot(fullFitDF, aes_string(x="Cell_Type", y=evalCol, color="Feature_Set")) +
+#       geom_point() + ggtitle("Promoter-Only Vs. Promoter+Distal Performance") + 
+#       theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) #+ 
+#       #scale_color_brewer(palette= myPalette)
+# print(myPlot)
+# dev.off()
 
 
 
@@ -196,9 +211,11 @@ png(paste0("./plots/", opt$predictionFraming, "/", opt$predictionFraming, "_", o
       height=1400, width=2000, res = 200)
 myPlot = ggplot(fullFitDF, aes_string(x="Cell_Type", y=evalCol, fill="Feature_Set")) +
       geom_bar(position='dodge', stat='identity') + # ggtitle("Promoter-Only Vs. Promoter+Distal Performance") + 
+      monocle_theme_opts() + 
       # theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
        theme(axis.text.x = element_text(angle = 45, hjust=1)) +
        scale_fill_manual(name = "Sequence Used", labels = c("Promoter + Distal", "Promoter Alone"), values=myPalette) +
+
       # scale_fill_discrete(name = "Sequence Used", labels = c("Promoter + Distal", "Promoter Alone"))+
       # scale_fill_discrete(name = "Sequence Used", labels = c("Promoter + Distal", "Promoter Alone"), palette=myPalette)+
       scale_x_discrete(breaks=cellTypes, labels=c("Adipocyte", "B Cell", "Cardiomyocyte", "Endocardium", "Fibroblast", 
@@ -215,7 +232,7 @@ dev.off()
 formatCellType <- function(inputColumn){
 
   inputColumn = ifelse(inputColumn == "T_Cell", "T Cell", inputColumn)
-  inputColumn = ifelse(inputColumn == "VSM_and_Pericyte", "Perviascular Cell", inputColumn)
+  inputColumn = ifelse(inputColumn == "VSM_and_Pericyte", "Perivascular Cell", inputColumn)
   inputColumn = ifelse(inputColumn == "Vascular_Endothelium", "Vascular Endothelium", inputColumn)
   inputColumn = ifelse(inputColumn == "Lymphatic_Endothelium", "Lymphatic Endothelium", inputColumn)
   inputColumn = ifelse(inputColumn == "Mast_Cell", "Mast Cell", inputColumn)
@@ -255,6 +272,7 @@ makeFitResults_vs_proportion_plot <- function(fullFitDF, opt, cellPropCol="RNA")
   png(plotFile, res=200, height = 1000, width=1000)
   myPlot = ggplot(propAndAccuracyDF, aes_string(y="Promoter_Only_R2", x="Cell_Type_Proportion")) + 
             geom_point() + 
+            monocle_theme_opts()+
             ylab("R^2 Using Promoter Only") + 
             xlab(paste0("Cell type proportion in ", cellPropCol)) + 
             theme(text=element_text(size=18))+ 
@@ -268,6 +286,7 @@ makeFitResults_vs_proportion_plot <- function(fullFitDF, opt, cellPropCol="RNA")
   png(plotFile, res=200, height = 1000, width=1000)
   myPlot = ggplot(propAndAccuracyDF, aes_string(y="Promoter_Plus_Distal_R2", x="Cell_Type_Proportion")) + 
             geom_point() + 
+            monocle_theme_opts()+
             ylab("R^2 Using Promoter + Distal") + 
             xlab(paste0("Cell type proportion in ", cellPropCol)) + 
             theme(text=element_text(size=18))+ 
@@ -281,6 +300,7 @@ makeFitResults_vs_proportion_plot <- function(fullFitDF, opt, cellPropCol="RNA")
   png(plotFile, res=200, height = 1000, width=1000)
   myPlot = ggplot(propAndAccuracyDF, aes_string(y="Combined_Over_Promoter_Ratio", x="Cell_Type_Proportion")) + 
             geom_point() + 
+            monocle_theme_opts()+
             ylab("Distal+Promoter / Promoter R^2") + 
             xlab(paste0("Cell type proportion in ", cellPropCol)) + 
             theme(text=element_text(size=18)) + 

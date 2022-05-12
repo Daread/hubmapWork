@@ -357,3 +357,150 @@ plot_genes_violin_DFR_customPseudo <- function (cds_subset,
 
 
 
+plot_percent_cells_positive_customWidth <- function(cds_subset,
+                                        group_cells_by = NULL,
+                                        min_expr = 0,
+                                        nrow = NULL,
+                                        ncol = 1,
+                                        panel_order = NULL,
+                                        plot_as_count = FALSE,
+                                        label_by_short_name=TRUE,
+                                        normalize = TRUE,
+                                        plot_limits = NULL,
+                                        bootstrap_samples=100,
+                                        conf_int_alpha = .95,
+                                        widthVal=.5){
+
+  assertthat::assert_that(methods::is(cds_subset, "cell_data_set"))
+
+  if(!is.null(group_cells_by)) {
+    assertthat::assert_that(group_cells_by %in% names(colData(cds_subset)),
+                            msg = paste("group_cells_by must be a column in",
+                                        "the colData table"))
+  }
+  assertthat::assert_that(assertthat::is.number(min_expr))
+
+  if(!is.null(nrow)) {
+    assertthat::assert_that(assertthat::is.count(nrow))
+  }
+
+  assertthat::assert_that(assertthat::is.count(ncol))
+  assertthat::assert_that(is.logical(plot_as_count))
+  assertthat::assert_that(is.logical(label_by_short_name))
+  assertthat::assert_that(is.logical(normalize))
+
+  assertthat::assert_that(nrow(rowData(cds_subset)) <= 100,
+                          msg = paste("cds_subset has more than 100 genes -",
+                                      "pass only the subset of the CDS to be",
+                                      "plotted."))
+
+  marker_exprs <- SingleCellExperiment::counts(cds_subset)
+
+  if (normalize) {
+    marker_exprs <- Matrix::t(Matrix::t(marker_exprs)/size_factors(cds_subset))
+    marker_exprs_melted <- reshape2::melt(round(10000*as.matrix(marker_exprs))/10000)
+  } else {
+    marker_exprs_melted <- reshape2::melt(as.matrix(marker_exprs))
+  }
+
+  colnames(marker_exprs_melted) <- c("f_id", "Cell", "expression")
+
+  marker_exprs_melted <- merge(marker_exprs_melted, colData(cds_subset),
+                               by.x="Cell", by.y="row.names")
+  marker_exprs_melted <- merge(marker_exprs_melted, rowData(cds_subset),
+                               by.x="f_id", by.y="row.names")
+
+  if (label_by_short_name) {
+    if (!is.null(marker_exprs_melted$gene_short_name)){
+      marker_exprs_melted$feature_label <- marker_exprs_melted$gene_short_name
+      marker_exprs_melted$feature_label[
+        is.na(marker_exprs_melted$feature_label)] <- marker_exprs_melted$f_id
+    } else {
+      marker_exprs_melted$feature_label <- marker_exprs_melted$f_id
+    }
+  } else {
+    marker_exprs_melted$feature_label <- marker_exprs_melted$f_id
+  }
+
+  if (!is.null(panel_order)) {
+    marker_exprs_melted$feature_label <-
+      factor(marker_exprs_melted$feature_label, levels=panel_order)
+  }
+
+  if(is.null(group_cells_by)) {
+    marker_exprs_melted$all_cell <- "All"
+    group_cells_by <- "all_cell"
+  }
+
+  # marker_counts <-
+  #   plyr::ddply(marker_exprs_melted,
+  #               c("feature_label", group_cells_by),
+  #               function(x) {
+  #                 data.frame(target = sum(x$expression > min_expr),
+  #                            target_fraction = sum(x$expression >
+  #                                                    min_expr)/nrow(x))
+  #               })
+
+  marker_counts_bootstrap = rsample::bootstraps(marker_exprs_melted, times = bootstrap_samples)
+
+  group_mean_bootstrap <- function(split) {
+    rsample::analysis(split) %>%
+      dplyr::group_by(!!as.name("feature_label"), !!as.name(group_cells_by)) %>%
+      dplyr::summarize(target = sum(expression > min_expr),
+                       target_fraction = sum(expression > min_expr)/dplyr::n())
+  }
+
+  marker_counts <-
+    marker_counts_bootstrap %>%
+    dplyr::mutate(summary_stats = purrr::map(splits, group_mean_bootstrap)) %>%
+    tidyr::unnest(summary_stats)
+  marker_counts <- marker_counts %>% dplyr::ungroup() %>%
+    dplyr::group_by(!!as.name("feature_label"), !!as.name(group_cells_by)) %>%
+    dplyr::summarize(target_mean = mean(target),
+                     target_fraction_mean = mean(target_fraction),
+                     target_low = stats::quantile(target, conf_int_alpha / 2),
+                     target_high = stats::quantile(target, 1 - conf_int_alpha / 2),
+                     target_fraction_low = stats::quantile(target_fraction, (1 - conf_int_alpha) / 2),
+                     target_fraction_high = stats::quantile(target_fraction, 1 - (1 - conf_int_alpha) / 2))
+
+
+  # marker_counts <-
+  #   marker_exprs_melted %>% dplyr::group_by(!!as.name("feature_label"), !!as.name(group_cells_by)) %>%
+  #   dplyr::summarize(target = sum(expression > min_expr),
+  #             target_fraction = sum(expression > min_expr)/dplyr::n())
+
+  if (!plot_as_count){
+    marker_counts$target_fraction_mean <- marker_counts$target_fraction_mean * 100
+    marker_counts$target_fraction_low <- marker_counts$target_fraction_low * 100
+    marker_counts$target_fraction_high <- marker_counts$target_fraction_high * 100
+    qp <- ggplot(aes_string(x=group_cells_by, y="target_fraction_mean",
+                            fill=group_cells_by),
+                 data=marker_counts) +
+      ylab("Cells (percent)")
+  } else {
+    qp <- ggplot(aes_string(x=group_cells_by, y="target_mean", fill=group_cells_by),
+                 data=marker_counts) +
+      ylab("Cells")
+  }
+  if (group_cells_by == "all_cell") {
+    group_cells_by <- ""
+    qp <- qp + theme(legend.title = element_blank())
+  }
+  qp <- qp + xlab(group_cells_by)
+
+  if (is.null(plot_limits) == FALSE) {
+    qp <- qp + scale_y_continuous(limits=plot_limits)
+  }
+
+  qp <- qp + facet_wrap(~feature_label, nrow=nrow, ncol=ncol, scales="free_y")
+  qp <-  qp +
+    geom_bar(stat="identity", width=widthVal) +
+    geom_linerange(aes(ymin=target_fraction_low, ymax=target_fraction_high))+
+    monocle_theme_opts()
+
+  return(qp)
+}
+
+
+
+

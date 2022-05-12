@@ -8,6 +8,20 @@ library(tidyverse)
 
 print("Libraries loaded, starting now")
 
+monocle_theme_opts <- function()
+{
+  theme(strip.background = element_rect(colour = 'white', fill = 'white')) +
+    theme(panel.border = element_blank()) +
+    theme(axis.line.x = element_line(size=0.25, color="black")) +
+    theme(axis.line.y = element_line(size=0.25, color="black")) +
+    theme(panel.grid.minor.x = element_blank(),
+          panel.grid.minor.y = element_blank()) +
+    theme(panel.grid.major.x = element_blank(),
+          panel.grid.major.y = element_blank()) +
+    theme(panel.background = element_rect(fill='white')) +
+    theme(legend.key=element_blank())
+}
+
 
 getCombinedCovariateCSV <- function(opt, inputCelltypes, inputCovariateList){
 	# Loop and get a combined CSV for each covariate
@@ -82,7 +96,7 @@ getDEcounts <- function(inputCSVlist, inputCovariates){
 }
 
 
-
+library(scales)
 
 plotCellMarkers <- function(inputCSV, plotNote, markersToPlot, cellTypesToPlot, opt, onlyPosCoefs = TRUE){
 	# If only plotting enrichments, throw out all negative coefficient entries
@@ -101,24 +115,30 @@ plotCellMarkers <- function(inputCSV, plotNote, markersToPlot, cellTypesToPlot, 
 	outputDir = "./plots/atacMarkers/"
 	dir.create(outputDir)
 	outputFile = paste0(outputDir, plotNote, opt$modelNotes, ".png")
-	png(outputFile, res=200, width = 1400, height=1200)
-	myPlot = ggplot(inputCSV, aes_string(x="cellType", y="gene", size="coefficientValue", color="coefficientValue	")) + 
-					geom_point() + 
+	png(outputFile, res=300, width = 2400, height=1800)
+	myPlot = ggplot(inputCSV, aes_string(x="cellType", y="gene")) + 
+					geom_point(aes_string( size="coefficientValue", fill="coefficientValue"), shape=21) + 
+					monocle_theme_opts() + 
 					theme(axis.text.x = element_text(angle = 45, hjust=1))+
             theme(text = element_text(size = 20)) + xlab("Cell Type") + 
             	ylab("TF") + 
-            	 guides(size=guide_legend(title="Enrichment"))+ 
-            	 guides(color=FALSE)
+            	scale_size_continuous(range=c(0,7), breaks=pretty_breaks(4)) + 
+            	scale_fill_distiller(direction=1, palette="Blues", breaks=pretty_breaks(4)) + 
+            	# scale_fill_brewer( palette="Blues", breaks=pretty_breaks(4), direction = -1) + 
+            	guides(fill = guide_legend(title="Enrichment"), size = guide_legend(title="Enrichment"))
+            	 # guides(size=guide_legend(title="Enrichment")) #+ 
+            	 # guides(color=FALSE)
 
 	print(myPlot)
 	dev.off()
 
 }
 
+
 formatCellType <- function(inputColumn){
 
 	inputColumn = ifelse(inputColumn == "T_Cell", "T Cell", inputColumn)
-	inputColumn = ifelse(inputColumn == "VSM_and_Pericyte", "Perviascular Cell", inputColumn)
+	inputColumn = ifelse(inputColumn == "VSM_and_Pericyte", "Perivascular Cell", inputColumn)
 	inputColumn = ifelse(inputColumn == "Vascular_Endothelium", "Vascular Endothelium", inputColumn)
 	inputColumn = ifelse(inputColumn == "Lymphatic_Endothelium", "Lymphatic Endothelium", inputColumn)
 	inputColumn = ifelse(inputColumn == "Mast_Cell", "Mast Cell", inputColumn)
@@ -185,7 +205,8 @@ dir.create(outDir)
 outfile = paste0("DE_hits_qVal_", as.character(opt$padjCutoff), "_by_", paste0(covariatesToPlot, collapse="_"), ".png" )
 png(paste0(outDir, outfile), res=200, width=1200, height=1000)
 myPlot = ggplot(deCounts, aes_string(x="cellType", y="n", fill="covariate")) +
-			geom_bar(position="dodge", stat="identity") +
+			geom_bar(position="dodge", stat="identity")+ 
+					monocle_theme_opts() +
 			 theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 
 print(myPlot)

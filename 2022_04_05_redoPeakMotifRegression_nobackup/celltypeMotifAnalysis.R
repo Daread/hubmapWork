@@ -34,6 +34,21 @@ opt = parse_args(opt_parser)
 
 
 
+monocle_theme_opts <- function()
+{
+  theme(strip.background = element_rect(colour = 'white', fill = 'white')) +
+    theme(panel.border = element_blank()) +
+    theme(axis.line.x = element_line(size=0.25, color="black")) +
+    theme(axis.line.y = element_line(size=0.25, color="black")) +
+    theme(panel.grid.minor.x = element_blank(),
+          panel.grid.minor.y = element_blank()) +
+    theme(panel.grid.major.x = element_blank(),
+          panel.grid.major.y = element_blank()) +
+    theme(panel.background = element_rect(fill='white')) +
+    theme(legend.key=element_blank())
+}
+
+
 
 getCombinedCSV <- function(opt, inputCelltypes, inputcellTypeList){
 
@@ -139,10 +154,10 @@ defineGenesToPlot <- function(inputDF, cellTypeHere){
 		inputDF$labelGene = ifelse(	inputDF$Fetal_Fold_Change > 1.12 | inputDF$Adult_Fold_Change > 1.25, inputDF$Motif, inputDF$labelGene)
 	}
 	# T cells
-	if (cellTypeHere == "T_Cell"){
-		# High in both
-		inputDF$labelGene = ifelse(	inputDF$Fetal_Fold_Change < .9 & inputDF$Adult_Fold_Change > 1.1, inputDF$Motif, inputDF$labelGene)
-	}
+	# if (cellTypeHere == "T_Cell"){
+	# 	# High in both
+	# 	inputDF$labelGene = ifelse(	inputDF$Fetal_Fold_Change < .9 & inputDF$Adult_Fold_Change > 1.1, inputDF$Motif, inputDF$labelGene)
+	# }
 	# T cells
 	if (cellTypeHere == "Fibroblast"){
 		# High in both
@@ -236,7 +251,7 @@ plotOverlaps <- function(overlapDF, opt, outDir = "./plots/"){
 formatCellType <- function(inputColumn){
 
 	inputColumn = ifelse(inputColumn == "T_Cell", "T Cell", inputColumn)
-	inputColumn = ifelse(inputColumn == "VSM_and_Pericyte", "Perviascular Cell", inputColumn)
+	inputColumn = ifelse(inputColumn == "VSM_and_Pericyte", "Perivascular Cell", inputColumn)
 	inputColumn = ifelse(inputColumn == "Vascular_Endothelium", "Vascular Endothelium", inputColumn)
 
 	return(inputColumn)
@@ -300,6 +315,7 @@ plotCSVcomparisons <- function(adultCSV, fetalCSV, opt, cellTypes, outDir="./plo
 		png(thisPlotFile, res=200, width=1200, height=1000)
 		myPlot = ggplot(miniMerge, aes_string(x="Fetal_Fold_Change", y="Adult_Fold_Change")) +
 					geom_point(color="blue") + #ggtitle(paste0(eachType, " Fold Change Correlation = ", as.character(thisCorr)))
+					monocle_theme_opts() + 
 					theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
 					xlab("Log Enrichment in Fetal") + 
 					ylab("Log Enrichment in Adult")+

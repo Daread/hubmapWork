@@ -31,6 +31,23 @@ opt = parse_args(opt_parser)
 
 cellTypes = c("Vascular_Endothelium", "Cardiomyocyte", "Macrophage", "T_Cell", "VSM_and_Pericyte", "Fibroblast", "Endocardium")
 
+
+monocle_theme_opts <- function()
+{
+  theme(strip.background = element_rect(colour = 'white', fill = 'white')) +
+    theme(panel.border = element_blank()) +
+    theme(axis.line.x = element_line(size=0.25, color="black")) +
+    theme(axis.line.y = element_line(size=0.25, color="black")) +
+    theme(panel.grid.minor.x = element_blank(),
+          panel.grid.minor.y = element_blank()) +
+    theme(panel.grid.major.x = element_blank(),
+          panel.grid.major.y = element_blank()) +
+    theme(panel.background = element_rect(fill='white')) +
+    theme(legend.key=element_blank())
+}
+
+
+
 getCombinedCSV <- function(opt, inputCelltypes){
 	# Read the csv, combine into a larger on
 	myDF = data.frame()
@@ -60,7 +77,7 @@ getCombinedCSV <- function(opt, inputCelltypes){
 formatCellType <- function(inputColumn){
 
 	inputColumn = ifelse(inputColumn == "T_Cell", "T Cell", inputColumn)
-	inputColumn = ifelse(inputColumn == "VSM_and_Pericyte", "Perviascular Cell", inputColumn)
+	inputColumn = ifelse(inputColumn == "VSM_and_Pericyte", "Perivascular Cell", inputColumn)
 	inputColumn = ifelse(inputColumn == "Vascular_Endothelium", "Vascular Endothelium", inputColumn)
 
 	return(inputColumn)
@@ -111,6 +128,7 @@ outfile = paste0("OnlySigHits_p", as.character(opt$padjCutoff), "_by_", opt$cova
 png(paste0(outDir, outfile), res=200, width=figWidth, height=1400)
 myPlot = ggplot(combinedCSV[combinedCSV$padj < opt$padjCutoff,], aes_string(x="pathway", y="cellType", col="Effect_Direction")) +
 			geom_point(aes(size=Enrichment)) +
+			monocle_theme_opts() + 
 			 theme(axis.text.x = element_text(angle = 45, hjust=1)) +              #theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
 			 theme(text = element_text(size = 18))  + ylab("Cell Type") +
 			 xlab("Pathway") + 

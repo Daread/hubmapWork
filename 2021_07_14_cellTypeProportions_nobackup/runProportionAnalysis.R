@@ -71,6 +71,21 @@ propDF = as.data.frame(propTable)
 
 
 
+monocle_theme_opts <- function()
+{
+  theme(strip.background = element_rect(colour = 'white', fill = 'white')) +
+    theme(panel.border = element_blank()) +
+    theme(axis.line.x = element_line(size=0.25, color="black")) +
+    theme(axis.line.y = element_line(size=0.25, color="black")) +
+    theme(panel.grid.minor.x = element_blank(),
+          panel.grid.minor.y = element_blank()) +
+    theme(panel.grid.major.x = element_blank(),
+          panel.grid.major.y = element_blank()) +
+    theme(panel.background = element_rect(fill='white')) +
+    theme(legend.key=element_blank())
+}
+
+
 # Beta Binomial fitting
 
 
@@ -157,6 +172,8 @@ nonCoefRes = nonCoefRes[order(nonCoefRes$p.value),]
 nonCoefRes$q_value = p.adjust(nonCoefRes$p.value, method = "BH")
 
 # Save the results
+# nonCoefRes[1] = NULL
+rownames(nonCoefRes) = NULL
 testResultOutfile = paste0("./fileOutputs/betaBinomFitting.csv")
 write.csv(nonCoefRes, testResultOutfile)
 
@@ -201,6 +218,7 @@ for (categoricalVar in c("Sex", "Anatomical_Site")){
 					# col=categoricalVar, 
 					fill=categoricalVar)) + 
 				geom_boxplot(outlier.shape=NA) + 
+				monocle_theme_opts() + 
 				geom_point(position=position_jitterdodge()) +
 				theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) + 
 				theme(text=element_text(size=24)) + 
@@ -221,10 +239,12 @@ for (eachCelltype in cellTypesToTest){
 			res=200, height=1000,width=1200)
 	myPlot = ggplot(subsetDF, aes_string(x="Age", y="Proportion")) + 
 			# geom_point()  +
-			 geom_point(aes(col=Donor)) +
+			 geom_point(aes(col=Sex)) +
+			 monocle_theme_opts() + 
 			theme(text=element_text(size=20)) + 
 			ylab(paste0(eachCelltype, " Proportion")) +
-			geom_smooth(method = "lm", se = FALSE, col="black")
+			geom_smooth(method = "lm", se = FALSE, col="black") + 
+			 scale_color_brewer(palette="Dark2")
 		  # stat_summary(fun.data= mean_cl_normal) + 
 		  #geom_smooth(method='lm')
 			# theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
@@ -242,6 +262,9 @@ for (eachCelltype in cellTypesToTest){
 
 getAdjustedProportions = function(inputPropDF, inputFits,
 									regressOut){
+	# Format the cell type names from beta binomial fit object
+	inputFits$Cell_Type = formatCellType(inputFits$Cell_Type)
+
 	cellTypes = as.character(levels(as.factor(inputPropDF$Cell_Type)))
 	coefficientsFit = as.character(levels(as.factor(inputFits$term)))
 	uncorrectedProps = inputPropDF$Proportion
@@ -288,6 +311,8 @@ getAdjustedProportions = function(inputPropDF, inputFits,
 cellTypeRegressionDF$adjustedPropSexSite = getAdjustedProportions(cellTypeRegressionDF, test_res, 
 																regressOut=c("Sex", "Anatomical_Site"))
 
+# Format test_res to have cell type names match
+test_res$Cell_Type = formatCellType(test_res$Cell_Type)
 
 # Scatter plot for adjusted props in each cell type vs. age
 for (eachCelltype in cellTypesToTest){
@@ -305,11 +330,13 @@ for (eachCelltype in cellTypesToTest){
 			res=200, height=1000,width=1200)
 	myPlot = ggplot(subsetDF, aes_string(x="Age", y="adjustedPropSexSite")) + 
 			# geom_point()  +
-			 geom_point(aes(col=Donor)) +
+			 geom_point(aes(col=Sex)) +
+			 monocle_theme_opts() + 
 			theme(text=element_text(size=20)) + 
 			ylab(paste0(eachCelltype, " Adjusted Proportion")) +
 			# geom_smooth(method = "lm", se = FALSE, col="black")
-			geom_function(fun = function(x) exp(thisInt + ageCoef*x)/(1 + exp(thisInt + ageCoef*x)))
+			geom_function(fun = function(x) exp(thisInt + ageCoef*x)/(1 + exp(thisInt + ageCoef*x)))+ 
+			 scale_color_brewer(palette="Dark2")
 		  # stat_summary(fun.data= mean_cl_normal) + 
 		  #geom_smooth(method='lm')
 			# theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))

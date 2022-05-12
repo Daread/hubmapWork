@@ -98,10 +98,25 @@ cellTypes = c("Adipocytes", "B_Cell", "Cardiomyocyte", "Endocardium", "Fibroblas
 dir.create(paste0("./plots/", opt$predictionFraming, "/dotplots/"))
 
 
+monocle_theme_opts <- function()
+{
+  theme(strip.background = element_rect(colour = 'white', fill = 'white')) +
+    theme(panel.border = element_blank()) +
+    theme(axis.line.x = element_line(size=0.25, color="black")) +
+    theme(axis.line.y = element_line(size=0.25, color="black")) +
+    theme(panel.grid.minor.x = element_blank(),
+          panel.grid.minor.y = element_blank()) +
+    theme(panel.grid.major.x = element_blank(),
+          panel.grid.major.y = element_blank()) +
+    theme(panel.background = element_rect(fill='white')) +
+    theme(legend.key=element_blank())
+}
+
+
 formatCellType <- function(inputColumn){
 
   inputColumn = ifelse(inputColumn == "T_Cell", "T Cell", inputColumn)
-  inputColumn = ifelse(inputColumn == "VSM_and_Pericyte", "Perviascular Cell", inputColumn)
+  inputColumn = ifelse(inputColumn == "VSM_and_Pericyte", "Perivascular Cell", inputColumn)
   inputColumn = ifelse(inputColumn == "Vascular_Endothelium", "Vascular Endothelium", inputColumn)
   inputColumn = ifelse(inputColumn == "B_Cell", "B Cell", inputColumn)
   inputColumn = ifelse(inputColumn == "Mast_Cell", "Mast Cell", inputColumn)
@@ -131,6 +146,7 @@ plotNonzeroCoefficients <- function(plotDF, cellTypes, opt){
   png(plotFile, res=200, height=1000, width=1200)
   myPlot = ggplot(propDF, aes_string(x="Cell_Type", y="Nonzero_Coefficients")) + 
            geom_col() + xlab("Cell Type") + ylab("Motifs Used") +
+           monocle_theme_opts() + 
            theme(text=element_text(size=20)) + 
        theme(axis.text.x = element_text(angle = 45, hjust=1)) + ylim(0,1.0) +
        theme(plot.margin = unit(c(10,10,10,10), "pt"))
@@ -201,6 +217,7 @@ makeMotifByTypePlot <- function(allCoefDF, cellTypes, definedMotifs=FALSE, motif
               )) +
             geom_point(aes(col=Coef_Sign, size=ifelse(absCoefficient==0, NA, absCoefficient)))+
             geom_point(aes(size=ifelse(absCoefficient==0, NA, absCoefficient)), colour='black', shape=1)+
+            monocle_theme_opts() +
        theme(axis.text.x = element_text(angle = 45, hjust=1)) +
       scale_x_discrete(breaks=cellTypes, labels=c("Adipocyte", "B Cell", "Cardiomyocyte", "Endocardium", "Fibroblast", 
               "Lymphatic Endothelium", "Macrophage", "Mast Cell", "Neuronal", "T Cell",
@@ -249,116 +266,116 @@ makeMotifByTypePlot(allCoefDF, cellTypes, definedMotifs=TRUE,
 
 
 
-makeMotifByTypePlot(allCoefDF, cellTypes, definedMotifs=FALSE, nPerCelltype = 6, minZerosToPlot=1,
-                  motifsToUse=paste0(c("SOX15", "MEF2B", "SPIC"), "_AllSeq"), sizeScaleMax = 10,
-                     plotNote= "Presentation_Examples", widthToUse=3000, heightToUse=3800, textSizeToUse=30)
+# makeMotifByTypePlot(allCoefDF, cellTypes, definedMotifs=FALSE, nPerCelltype = 6, minZerosToPlot=1,
+#                   motifsToUse=paste0(c("SOX15", "MEF2B", "SPIC"), "_AllSeq"), sizeScaleMax = 10,
+#                      plotNote= "Presentation_Examples", widthToUse=3000, heightToUse=3800, textSizeToUse=30)
 
 
-makeMotifByTypePlot(allCoefDF, cellTypes, definedMotifs=TRUE, 
-                  motifsToUse=paste0(c("SOX15", "MEF2B", "SPIC"), "_AllSeq"),
-                     plotNote= "Presentation_Examples", textSizeToUse=40)
+# makeMotifByTypePlot(allCoefDF, cellTypes, definedMotifs=TRUE, 
+#                   motifsToUse=paste0(c("SOX15", "MEF2B", "SPIC"), "_AllSeq"),
+#                      plotNote= "Presentation_Examples", textSizeToUse=40)
 
 
-makeMotifByTypePlot(allCoefDF, cellTypes, nPerCelltype=10, minZerosToPlot=2)
-makeMotifByTypePlot(allCoefDF, cellTypes, nPerCelltype=10, minZerosToPlot=5)
+# makeMotifByTypePlot(allCoefDF, cellTypes, nPerCelltype=10, minZerosToPlot=2)
+# makeMotifByTypePlot(allCoefDF, cellTypes, nPerCelltype=10, minZerosToPlot=5)
 
-makeMotifByTypePlot(allCoefDF, cellTypes, nPerCelltype=3, minZerosToPlot=5)
-
-
-makeMotifByTypePlot(allCoefDF, cellTypes, nPerCelltype=3, minZerosToPlot=8)
-
-makeMotifByTypePlot(allCoefDF, cellTypes)
+# makeMotifByTypePlot(allCoefDF, cellTypes, nPerCelltype=3, minZerosToPlot=5)
 
 
-makeMotifByTypePlot(allCoefDF, cellTypes, nPerCelltype=5)
+# makeMotifByTypePlot(allCoefDF, cellTypes, nPerCelltype=3, minZerosToPlot=8)
+
+# makeMotifByTypePlot(allCoefDF, cellTypes)
 
 
-makeMotifByTypePlot(allCoefDF, cellTypes, definedMotifs=TRUE, motifsToUse=c("Smad2..Smad3_AllSeq", "SMAD2..SMAD3..SMAD4_AllSeq",
-                                        "SMAD3_AllSeq", "Smad4_AllSeq", "FOXH1_AllSeq",
-                                        "FOS_AllSeq", "FOS..JUN_AllSeq", "FOS..JUN.var.2._AllSeq",
-                                        "JUN_AllSeq", "SNAI1_AllSeq"), plotNote="TGFBeta_Set")
-
-makeMotifByTypePlot(allCoefDF, cellTypes, definedMotifs=TRUE, motifsToUse=c("GATA4_AllSeq", "GATA5_AllSeq", "GATA6_AllSeq", "MEF2_AllSeq",
-                                "FOXO_AllSeq", "NKX2.5_AllSeq", "YY1_AllSeq", "HEY2_AllSeq",
-                                "MITF_AllSeq"), plotNote="Hypertrophy_Set")
+# makeMotifByTypePlot(allCoefDF, cellTypes, nPerCelltype=5)
 
 
-makeMotifByTypePlot(allCoefDF, cellTypes, definedMotifs=TRUE, motifsToUse=c("CEBPA_AllSeq", "MEF2A_AllSeq",
-                                        "MEIS1_AllSeq", "ERG_AllSeq", "EBF2_AllSeq", "SPIB_AllSeq", 
-                                          "RUNX1_AllSeq", "CEBPA_AllSeq", "SOX10_AllSeq"), plotNote="HockerEtAl_MatchMotif_Set")
+# makeMotifByTypePlot(allCoefDF, cellTypes, definedMotifs=TRUE, motifsToUse=c("Smad2..Smad3_AllSeq", "SMAD2..SMAD3..SMAD4_AllSeq",
+#                                         "SMAD3_AllSeq", "Smad4_AllSeq", "FOXH1_AllSeq",
+#                                         "FOS_AllSeq", "FOS..JUN_AllSeq", "FOS..JUN.var.2._AllSeq",
+#                                         "JUN_AllSeq", "SNAI1_AllSeq"), plotNote="TGFBeta_Set")
+
+# makeMotifByTypePlot(allCoefDF, cellTypes, definedMotifs=TRUE, motifsToUse=c("GATA4_AllSeq", "GATA5_AllSeq", "GATA6_AllSeq", "MEF2_AllSeq",
+#                                 "FOXO_AllSeq", "NKX2.5_AllSeq", "YY1_AllSeq", "HEY2_AllSeq",
+#                                 "MITF_AllSeq"), plotNote="Hypertrophy_Set")
 
 
-makeMotifByTypePlot(allCoefDF, cellTypes, definedMotifs=TRUE, motifsToUse=c("SPI1_AllSeq", "SPIB_AllSeq", "GATA6_AllSeq",
-                                                    "GATA4_AllSeq", "GATA2_AllSeq", "GATA1_AllSeq", "ESRRG_AllSeq",
-                                                      "ESRRB_AllSeq", "ESRRA_AllSeq"), plotNote="HockerEtAl_Integrative_Set")
+# makeMotifByTypePlot(allCoefDF, cellTypes, definedMotifs=TRUE, motifsToUse=c("CEBPA_AllSeq", "MEF2A_AllSeq",
+#                                         "MEIS1_AllSeq", "ERG_AllSeq", "EBF2_AllSeq", "SPIB_AllSeq", 
+#                                           "RUNX1_AllSeq", "CEBPA_AllSeq", "SOX10_AllSeq"), plotNote="HockerEtAl_MatchMotif_Set")
 
 
-makeMotifByTypePlot(allCoefDF, cellTypes, definedMotifs=TRUE, motifsToUse=c("TEAD3_AllSeq", "MYF6_AllSeq", "NKX2.3_AllSeq", 
-                                                                          "AP4_AllSeq", "FOS..JUN_AllSeq", "SMAD3_AllSeq",
-                                                                            "EWS..ERG_AllSeq", "EBF_AllSeq", "SPIC_AllSeq",
-                                                                            "MEF2A_AllSeq", "GRE_AllSeq", "NF1_AllSeq", "CEBPA_AllSeq",
-                                                                            "AP1_AllSeq", "PGR_AllSeq", "ATF3_AllSeq", "ELF3_AllSeq"), 
-                                                                  plotNote="HockerEtAl_HeartFail_Set")
+# makeMotifByTypePlot(allCoefDF, cellTypes, definedMotifs=TRUE, motifsToUse=c("SPI1_AllSeq", "SPIB_AllSeq", "GATA6_AllSeq",
+#                                                     "GATA4_AllSeq", "GATA2_AllSeq", "GATA1_AllSeq", "ESRRG_AllSeq",
+#                                                       "ESRRB_AllSeq", "ESRRA_AllSeq"), plotNote="HockerEtAl_Integrative_Set")
 
 
-makeMotifByTypePlot(allCoefDF, cellTypes, definedMotifs=TRUE, motifsToUse=c("HEY2_AllSeq", # Should be encodardium and cardiomyocytes https://www.nature.com/articles/s41598-018-20917-w
-                                                                            "RORA_AllSeq", # A repressor https://www.pnas.org/content/116/42/21140
-                                                                            "RREB1_AllSeq", # Repressor or activator, y context https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7085234/
-                                                                            "BACH2_AllSeq", # Known repressor, matches hits in fetal atlas
-                                                                            "ERG_AllSeq", # Vascular endothelial hit in fetal atlas
-                                                                            "SRF_AllSeq", # hit in endocardium in fetal atlas
-                                                                            "ZBTB18_AllSeq" # hit in lymphatic endothelium in fetal atlas
-                                                                            ), plotNote="Fetal_and_Characterized_1_Set")
+# makeMotifByTypePlot(allCoefDF, cellTypes, definedMotifs=TRUE, motifsToUse=c("TEAD3_AllSeq", "MYF6_AllSeq", "NKX2.3_AllSeq", 
+#                                                                           "AP4_AllSeq", "FOS..JUN_AllSeq", "SMAD3_AllSeq",
+#                                                                             "EWS..ERG_AllSeq", "EBF_AllSeq", "SPIC_AllSeq",
+#                                                                             "MEF2A_AllSeq", "GRE_AllSeq", "NF1_AllSeq", "CEBPA_AllSeq",
+#                                                                             "AP1_AllSeq", "PGR_AllSeq", "ATF3_AllSeq", "ELF3_AllSeq"), 
+#                                                                   plotNote="HockerEtAl_HeartFail_Set")
 
 
-makeMotifByTypePlot(allCoefDF, cellTypes, definedMotifs=TRUE, motifsToUse=c("JUN_AllSeq", "SOX15_AllSeq", "BLHLHE23_AllSeq", "OLIG1_AllSeq", "OLIG2_AllSeq"  
-                                                                            ), plotNote="Fetal_Heart_wide_Set")
+# makeMotifByTypePlot(allCoefDF, cellTypes, definedMotifs=TRUE, motifsToUse=c("HEY2_AllSeq", # Should be encodardium and cardiomyocytes https://www.nature.com/articles/s41598-018-20917-w
+#                                                                             "RORA_AllSeq", # A repressor https://www.pnas.org/content/116/42/21140
+#                                                                             "RREB1_AllSeq", # Repressor or activator, y context https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7085234/
+#                                                                             "BACH2_AllSeq", # Known repressor, matches hits in fetal atlas
+#                                                                             "ERG_AllSeq", # Vascular endothelial hit in fetal atlas
+#                                                                             "SRF_AllSeq", # hit in endocardium in fetal atlas
+#                                                                             "ZBTB18_AllSeq" # hit in lymphatic endothelium in fetal atlas
+#                                                                             ), plotNote="Fetal_and_Characterized_1_Set")
 
 
-makeMotifByTypePlot(allCoefDF, cellTypes, definedMotifs=TRUE, motifsToUse=c("NFATC3_AllSeq", # Putative repressor in fetal atlas, in T cells
-                                                                            "FOXO3_AllSeq", # Ambiguous if activator or repressor
-                                                                            "REST_AllSeq", # Repress through non-chromatin mech https://www-science-org.offcampus.lib.washington.edu/doi/10.1126/science.aba7612
-                                                                            "MEF2B_AllSeq" # Cardiomyocyte hit
-                                                                            ), plotNote="Fetal_and_Characterized_2_Set")
+# makeMotifByTypePlot(allCoefDF, cellTypes, definedMotifs=TRUE, motifsToUse=c("JUN_AllSeq", "SOX15_AllSeq", "BLHLHE23_AllSeq", "OLIG1_AllSeq", "OLIG2_AllSeq"  
+#                                                                             ), plotNote="Fetal_Heart_wide_Set")
 
 
-makeMotifByTypePlot(allCoefDF, cellTypes, definedMotifs=TRUE, motifsToUse=c("MEF2B_AllSeq",# Supp file 3
-                                                                             "MEF2A_AllSeq",
-                                                                             "MEF2B_AllSeq",
-                                                                             "ESRRB_AllSeq",
-                                                                             "NFIC..TLX1_AllSeq",
-                                                                             "NR3C1_AllSeq", 
-                                                                             "ESRRG_AllSeq", 
-                                                                             "DUX4_AllSeq",
-                                                                             "NKX2.3_AllSeq", 
-                                                                             "HAND1..TCF3_AllSeq",
-                                                                             "PKNOX1_AllSeq", "TGIF2_AllSeq", "NR3C2_AllSeq", "MECOM_AllSeq", "RARB_AllSeq", "NFIC_AllSeq", "RORA_AllSeq",
-                                                                              "MAFB_AllSeq", "ESRRA_AllSeq", "GATA5_AllSeq", "GATA3_AllSeq", "NEUROG2_AllSeq", "NKX2.8_AllSeq", "GATA4_AllSeq"
-                                                                            ), plotNote="Fetal_atlas_cardiomyocytes_1_Set")
+# makeMotifByTypePlot(allCoefDF, cellTypes, definedMotifs=TRUE, motifsToUse=c("NFATC3_AllSeq", # Putative repressor in fetal atlas, in T cells
+#                                                                             "FOXO3_AllSeq", # Ambiguous if activator or repressor
+#                                                                             "REST_AllSeq", # Repress through non-chromatin mech https://www-science-org.offcampus.lib.washington.edu/doi/10.1126/science.aba7612
+#                                                                             "MEF2B_AllSeq" # Cardiomyocyte hit
+#                                                                             ), plotNote="Fetal_and_Characterized_2_Set")
 
 
-makeMotifByTypePlot(allCoefDF, cellTypes, definedMotifs=TRUE, motifsToUse=c("FOXO1_AllSeq", "IRF9_AllSeq", "SOX15_AllSeq", "TWIST1_AllSeq",
-                                                                            "RARA_AllSeq", # Var2?
-                                                                            "ZBTB18_AllSeq", "RELA_AllSeq", "SOX9_AllSeq", "STAT1_AllSeq", "IRF2_AllSeq", "SRF_AllSeq", 
-                                                                            "IRF3_AllSeq", "MEF2B_AllSeq", "CREB1_AllSeq", "SOX6_AllSeq", "SOX13_AllSeq", "IRF7_AllSeq",
-                                                                              "ETS1_AllSeq", "FLI1_AllSeq", "ERG_AllSeq", "GLI2_AllSeq", "MEF2A_AllSeq", "MEF2D_AllSeq", 
-                                                                              "JUND_AllSeq", "STAT4_AllSeq", "ETV6_AllSeq"
-                                                                            ), plotNote="Fetal_atlas_vascEndoth_1_Set")
+# makeMotifByTypePlot(allCoefDF, cellTypes, definedMotifs=TRUE, motifsToUse=c("MEF2B_AllSeq",# Supp file 3
+#                                                                              "MEF2A_AllSeq",
+#                                                                              "MEF2B_AllSeq",
+#                                                                              "ESRRB_AllSeq",
+#                                                                              "NFIC..TLX1_AllSeq",
+#                                                                              "NR3C1_AllSeq", 
+#                                                                              "ESRRG_AllSeq", 
+#                                                                              "DUX4_AllSeq",
+#                                                                              "NKX2.3_AllSeq", 
+#                                                                              "HAND1..TCF3_AllSeq",
+#                                                                              "PKNOX1_AllSeq", "TGIF2_AllSeq", "NR3C2_AllSeq", "MECOM_AllSeq", "RARB_AllSeq", "NFIC_AllSeq", "RORA_AllSeq",
+#                                                                               "MAFB_AllSeq", "ESRRA_AllSeq", "GATA5_AllSeq", "GATA3_AllSeq", "NEUROG2_AllSeq", "NKX2.8_AllSeq", "GATA4_AllSeq"
+#                                                                             ), plotNote="Fetal_atlas_cardiomyocytes_1_Set")
 
 
-
-makeMotifByTypePlot(allCoefDF, cellTypes, definedMotifs=TRUE, 
-                  motifsToUse=paste0(c("SOX15", "MEF2B", "Ddit3..Cebpa", "SPIB", "SPIC", "BACH1"), "_AllSeq"),
-                     plotNote= "Known_Plus_SPIC")
+# makeMotifByTypePlot(allCoefDF, cellTypes, definedMotifs=TRUE, motifsToUse=c("FOXO1_AllSeq", "IRF9_AllSeq", "SOX15_AllSeq", "TWIST1_AllSeq",
+#                                                                             "RARA_AllSeq", # Var2?
+#                                                                             "ZBTB18_AllSeq", "RELA_AllSeq", "SOX9_AllSeq", "STAT1_AllSeq", "IRF2_AllSeq", "SRF_AllSeq", 
+#                                                                             "IRF3_AllSeq", "MEF2B_AllSeq", "CREB1_AllSeq", "SOX6_AllSeq", "SOX13_AllSeq", "IRF7_AllSeq",
+#                                                                               "ETS1_AllSeq", "FLI1_AllSeq", "ERG_AllSeq", "GLI2_AllSeq", "MEF2A_AllSeq", "MEF2D_AllSeq", 
+#                                                                               "JUND_AllSeq", "STAT4_AllSeq", "ETV6_AllSeq"
+#                                                                             ), plotNote="Fetal_atlas_vascEndoth_1_Set")
 
 
 
-makeMotifByTypePlot(allCoefDF, cellTypes, nPerCelltype=30)
+# makeMotifByTypePlot(allCoefDF, cellTypes, definedMotifs=TRUE, 
+#                   motifsToUse=paste0(c("SOX15", "MEF2B", "Ddit3..Cebpa", "SPIB", "SPIC", "BACH1"), "_AllSeq"),
+#                      plotNote= "Known_Plus_SPIC")
 
 
-makeMotifByTypePlot(allCoefDF, cellTypes, definedMotifs=TRUE, 
-                  motifsToUse=paste0(c("SOX15", "MEF2B", "TEAD3", "SPIC"), "_AllSeq"),
-                     plotNote= "Knwon_TEAD3_SPIC")
+
+# makeMotifByTypePlot(allCoefDF, cellTypes, nPerCelltype=30)
+
+
+# makeMotifByTypePlot(allCoefDF, cellTypes, definedMotifs=TRUE, 
+#                   motifsToUse=paste0(c("SOX15", "MEF2B", "TEAD3", "SPIC"), "_AllSeq"),
+#                      plotNote= "Knwon_TEAD3_SPIC")
 
 
 

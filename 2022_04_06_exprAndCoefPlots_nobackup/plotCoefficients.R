@@ -39,6 +39,22 @@ option_list = list(
 opt_parser = OptionParser(option_list=option_list)
 opt = parse_args(opt_parser)
 
+
+monocle_theme_opts <- function()
+{
+  theme(strip.background = element_rect(colour = 'white', fill = 'white')) +
+    theme(panel.border = element_blank()) +
+    theme(axis.line.x = element_line(size=0.25, color="black")) +
+    theme(axis.line.y = element_line(size=0.25, color="black")) +
+    theme(panel.grid.minor.x = element_blank(),
+          panel.grid.minor.y = element_blank()) +
+    theme(panel.grid.major.x = element_blank(),
+          panel.grid.major.y = element_blank()) +
+    theme(panel.background = element_rect(fill='white')) +
+    theme(legend.key=element_blank())
+}
+
+
 getATACcoefs <- function(opt, cellTypes, covariatesToGet=c("SexM", "Age")){
 	# Set up the list to store the DFs
 	covariateList = vector(mode="list", length = length(covariatesToGet))
@@ -121,6 +137,7 @@ plotCoefBars <- function(coefList, cellTypes, opt, plotCovar="Age", geneSet = c(
 	myPlot = ggplot(plotDF, aes_string(x="gene", y="coefficientValue", fill="CellType")) + 
 			# geom_bar(position="dodge", stat="identity") + 
 			geom_col(width=0.5, position=position_dodge(0.5)) +
+			monocle_theme_opts() + 
 			#ggtitle(plotTitle) + 
 			 theme(text = element_text(size = 20))  + #ylab(paste0("Coefficient for ", covarName)) +
 			 ylab(yLabToUse) +
@@ -135,7 +152,7 @@ plotCoefBars <- function(coefList, cellTypes, opt, plotCovar="Age", geneSet = c(
 
 formatCellType <- function(inputColumn){
 	inputColumn = ifelse(inputColumn == "T_Cell", "T Cell", inputColumn)
-	inputColumn = ifelse(inputColumn == "VSM_and_Pericyte", "Perviascular Cell", inputColumn)
+	inputColumn = ifelse(inputColumn == "VSM_and_Pericyte", "Perivascular Cell", inputColumn)
 	inputColumn = ifelse(inputColumn == "Vascular_Endothelium", "Vascular Endothelium", inputColumn)
 
 	return(inputColumn)
@@ -154,8 +171,8 @@ for (eachCovar in names(atacResults)){
 }
 
 # Plot desired coefficients
-plotCoefBars(atacResults, cellTypes, opt, plotCovar="Age", geneSet = c("IRF7", "ATF7", "STAT1"), 
-				setLabel = "AgeTestSet")
+# plotCoefBars(atacResults, cellTypes, opt, plotCovar="Age", geneSet = c("IRF7", "ATF7", "STAT1"), 
+# 				setLabel = "AgeTestSet")
 
 
 # plotCoefBars(atacResults, cellTypes, opt, plotCovar="SexM", geneSet = c("Smad4", "JDP2", "SNAI2", "HIF1A", "ARNT::HIF1A", "RORA"), 

@@ -141,6 +141,7 @@ getBetaBinomialPropFits <- function(inputDF, modelFormula="countDF ~ Anatomical_
 	cellTypesToTest = as.character(unique(inputDF$Cell_Type))
 	inputDF$Cell_Type = as.character(inputDF$Cell_Type)
 	fitResList = vector(mode="list", length(cellTypesToTest))
+	origFitList = vector(mode="list", length(cellTypesToTest))
 	counter = 1
 	for (eachCelltype in cellTypesToTest){
 		print(paste0("Fitting ", eachCelltype))
@@ -152,17 +153,25 @@ getBetaBinomialPropFits <- function(inputDF, modelFormula="countDF ~ Anatomical_
 		fit_df = tidy.vglm(fit)
 		fit_df$Cell_Type = eachCelltype
 		fitResList[[counter]] = fit_df
+		origFitList[[counter]] = fit
 		counter = counter + 1
 	}
 
 	names(fitResList) = cellTypesToTest
+	names(origFitList) = cellTypesToTest
 
-	return(fitResList)
+	# return(fitResList)
+	return(list(fitResList, origFitList))
 }
 
 
 # Run the regression model on each
-betaBinomFits = getBetaBinomialPropFits(cellTypeRegressionDF)
+
+# betaBinomFits = getBetaBinomialPropFits(cellTypeRegressionDF)
+fullAndTidyFits = getBetaBinomialPropFits(cellTypeRegressionDF)
+betaBinomFits = fullAndTidyFits[[1]]
+fullFits = fullAndTidyFits[[2]]
+
 
 test_res = do.call(rbind, betaBinomFits)
 
@@ -306,50 +315,146 @@ getAdjustedProportions = function(inputPropDF, inputFits,
 
 
 
+# newDFmale = data.frame("Sex" = c("M", "M", "M"), "Anatomical_Site" = c("Apex", "Apex", "Apex"), "Age" = c(25, 45, 60))
+# newDFfemale = data.frame("Sex" = c("F", "F", "F"), "Anatomical_Site" = c("Apex", "Apex", "Apex"), "Age" = c(25, 45, 60))
+
+newDFfemale = data.frame("Sex" = rep("F", 36), "Anatomical_Site" = rep("Apex", 36), "Age" = 25:60)
+newDFmale = data.frame("Sex" = rep("M", 36), "Anatomical_Site" = rep("Apex", 36), "Age" = 25:60)
+
+
+darkPalette = brewer.pal(8, "Dark2")
+
+
 # Make age vs. adjusted proportion plots, regressing out sex + anatomical site
 
+# cellTypeRegressionDF$adjustedPropSexSite = getAdjustedProportions(cellTypeRegressionDF, test_res, 
+# 																regressOut=c("Sex", "Anatomical_Site"))
+
 cellTypeRegressionDF$adjustedPropSexSite = getAdjustedProportions(cellTypeRegressionDF, test_res, 
-																regressOut=c("Sex", "Anatomical_Site"))
+																regressOut=c( "Anatomical_Site"))
 
 # Format test_res to have cell type names match
 test_res$Cell_Type = formatCellType(test_res$Cell_Type)
+cellTypeRegressionDF$Cell_Type = formatCellType(cellTypeRegressionDF$Cell_Type)
 
 # Scatter plot for adjusted props in each cell type vs. age
 for (eachCelltype in cellTypesToTest){
 
 	subsetDF = cellTypeRegressionDF[cellTypeRegressionDF$Cell_Type == eachCelltype,]
 
+	malePred = predict(fullFits[[eachCelltype]], newdata = newDFmale, se=T)
+	# browser()
+	malePredDF = data.frame("logitlink_mu"=as.data.frame(malePred$fitted.values)[["logitlink(mu)"]], 
+							"se" = as.data.frame(malePred$se.fit)[["logitlink(mu)"]],
+							"adjustedPropSexSite" = exp(as.data.frame(malePred$fitted.values)[["logitlink(mu)"]]) / 
+											(1 + exp(as.data.frame(malePred$fitted.values)[["logitlink(mu)"]]))	,
+							   "Age" = newDFmale$Age)
+	maleColor = darkPalette[2]
+
+	femalePred = predict(fullFits[[eachCelltype]], newdata = newDFfemale, se=T)
+	# browser()
+	femalePredDF = data.frame("logitlink_mu"=as.data.frame(femalePred$fitted.values)[["logitlink(mu)"]], 
+							"se" = as.data.frame(femalePred$se.fit)[["logitlink(mu)"]],
+							"adjustedPropSexSite" = exp(as.data.frame(femalePred$fitted.values)[["logitlink(mu)"]]) / 
+											(1 + exp(as.data.frame(femalePred$fitted.values)[["logitlink(mu)"]]))	,
+							   "Age" = newDFfemale$Age)
+	femaleColor = darkPalette[1]
+
+	colnames(malePred$fitted.values)[1]
+
+	# Get the predictions
+
 	# Get the intercept and age coefficient for this cell type
 	cellTypeFits = test_res[test_res$Cell_Type == eachCelltype,]
 	cellTypeFitVec = cellTypeFits$estimate
+	cellTypeSEvec = cellTypeFits$std.error
 	names(cellTypeFitVec) = cellTypeFits$term
+	names(cellTypeSEvec) =  cellTypeFits$term
 	thisInt = cellTypeFitVec["(Intercept):1"]
 	ageCoef = cellTypeFitVec["Age"]
+	ageSE   = cellTypeSEvec["Age"]
+
+	# browser()
 
 	png(paste0(jitterDir, "Age_vs_adjustedProp_for_", eachCelltype, ".png"), 
 			res=200, height=1000,width=1200)
-	myPlot = ggplot(subsetDF, aes_string(x="Age", y="adjustedPropSexSite")) + 
+	myPlot = ggplot(data = subsetDF, aes_string(x="Age", y="adjustedPropSexSite")) + 
 			# geom_point()  +
 			 geom_point(aes(col=Sex)) +
 			 monocle_theme_opts() + 
 			theme(text=element_text(size=20)) + 
 			ylab(paste0(eachCelltype, " Adjusted Proportion")) +
 			# geom_smooth(method = "lm", se = FALSE, col="black")
-			geom_function(fun = function(x) exp(thisInt + ageCoef*x)/(1 + exp(thisInt + ageCoef*x)))+ 
+			# geom_function(fun = function(x) exp(thisInt + ageCoef*x)/(1 + exp(thisInt + ageCoef*x))) + 
+			# geom_ribbon(aes(ymin =(  exp(thisInt + (ageCoef - 2*ageSE)*Age)/(1 + exp(thisInt + (ageCoef - 2*ageSE)*Age)) ) ,
+			# 				ymax =(  exp(thisInt + (ageCoef + 2*ageSE)*Age)/(1 + exp(thisInt + (ageCoef + 2*ageSE)*Age)) ) ), fill="grey70", 
+			# 				alpha=.15 ) + 
+			# Male SE and predictions
+			geom_line(data=malePredDF, color=maleColor) + 
+			geom_ribbon(data=malePredDF,
+				aes(ymin =(          exp((logitlink_mu - 2*se))/(1 + exp( (logitlink_mu - 2*se))) ) ,
+							ymax =(  exp((logitlink_mu + 2*se))/(1 + exp( (logitlink_mu + 2*se))) ) ), fill=maleColor, 
+							alpha=.15 ) +
+			# ...and for female
+			geom_line(data=femalePredDF, color=femaleColor) + 
+			geom_ribbon(data=femalePredDF,
+				aes(ymin =(          exp((logitlink_mu - 2*se))/(1 + exp( (logitlink_mu - 2*se))) ) ,
+							ymax =(  exp((logitlink_mu + 2*se))/(1 + exp( (logitlink_mu + 2*se))) ) ), fill=femaleColor, 
+							alpha=.15 ) +
+
 			 scale_color_brewer(palette="Dark2")
-		  # stat_summary(fun.data= mean_cl_normal) + 
-		  #geom_smooth(method='lm')
-			# theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
-			# geom_jitter()
 	print(myPlot)
 	dev.off()
 
 	print(eachCelltype)
-	# print(cor(subsetDF$Age, subsetDF$Proportion))
-	# print(thisInt)
-	# print(ageCoef)
 
 }
+
+
+
+# Version getting CI based on predictions
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

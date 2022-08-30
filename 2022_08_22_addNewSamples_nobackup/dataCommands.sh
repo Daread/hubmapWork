@@ -1,0 +1,33 @@
+#! /bin/bash
+
+
+# Koenig et al
+curl https://ftp.ncbi.nlm.nih.gov/geo/series/GSE183nnn/GSE183852/suppl/GSE183852_DCM_Nuclei.Robj.gz > koenig_et_al_data/koenig_nuclei.Robj.gz
+zcat koenig_et_al_data/koenig_nuclei.Robj.gz > koenig_et_al_data/koenig_nuclei.Robj
+
+
+
+
+
+
+# Litvinukova et al
+curl "https://storage.googleapis.com/datarepo-7754d090-bucket/67d36a83-25f1-4e41-aaed-5727368f96b2/fae9e5c9-03c5-49d7-be7f-ed11cecdd5b5/hca_heart_global_ctl200723_freeze.h5ad?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=datarepo-jade-api%40terra-datarepo-production.iam.gserviceaccount.com%2F20220822%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20220822T212706Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=83069e1b9cffcb47c31e6d7f3b67cca15d5e97d654d574fda7dfc92be6c8659c2164c457986d1e45a94719e836e4d0e455ffe0f5f09bbb721ecc75c80c21a3d7b4f19a23b82af06c856ae5a64fae0f113ca0a137ef2b9bc978b6b3e5f75d25f6e69cc9f70e67ae292bf9bb07b9f6fa1ed2eed30947f27ecf2eb12d229017a869867cabd556cf291730c3765be979d5ad655340b466f8de3414cd220a92a48214871946f4b2d99d1af92d9916a09a569433e52235bccfb6c383123a3ca16c733c76500b456c9250cf82a1cb9005a83003e1e567709d62c244da0f962131254c7658af7bc253079e17ea24e7d10980f3b16eb13b5044f569e311f9c009dac2c772" > litvinukova_et_al_data/litvinukova_data.h5ad
+
+
+# Tucker et al
+# curl "https://singlecell.broadinstitute.org/single_cell/data/public/SCP498/transcriptional-and-cellular-diversity-of-the-human-heart?filename=healthy_human_4chamber_map_unnormalized_V4.h5ad" > tuckerEtAlData/tucker_V4.h5ad
+# wget --no-check-certificate "https://singlecell.broadinstitute.org/single_cell/data/public/SCP498/transcriptional-and-cellular-diversity-of-the-human-heart?filename=healthy_human_4chamber_map_unnormalized_V4.h5ad" > tuckerEtAlData/tucker_V4.h5ad
+
+# I hit errors using curl to download this data. Downloaded the V4 file at () and uplaoded using cyberduck
+
+
+
+
+# Reichart et al
+curl -o local.rds "https://corpora-data-prod.s3.amazonaws.com/65badd7a-9262-4fd1-9ce2-eb5dc0ca8039/local.rds?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIATLYQ5N5XW3AZIYE2%2F20220826%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20220826T182914Z&X-Amz-Expires=604800&X-Amz-SignedHeaders=host&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEGAaCXVzLXdlc3QtMiJHMEUCIAo6btsjeF99KJOskzbucRMG39OXerTBxSGZtXB3uzXCAiEA1XwsGAPuXrXAVRptd9zPxgxT6yLvM5tELzSzeizKw3cq9AMI2f%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARABGgwyMzE0MjY4NDY1NzUiDL3KBxJVZMqHj1VG9irIA%2BD70YXQLfsB7QhSojn6u4wuvr5j9iOO%2Ftl6s68cB%2B5PFpeoSIPGvIWe9e%2B%2FF26XT6068fX%2B65rCCLMpq2UxVC8LUXeiDWlzeujW37W4KX25kdKj4kqAarUNurllXNgvtDLttV7p18xrSeK7vnCJPR1EKJ3r7%2FTPqWdbekCTcY5bwdXvz3w6gOmGnl8Plvypl1FgXIPhRIyvHvjVtqi1aITJ3tib5oUjZjEoY2yfFnfJNLVfNdt4%2FAhO7XTtQ1PO8hN%2BsudPBrowa5mHTRVGH07bQIQxeUjNJVovRTyX%2Blq3FC8JgS0vfl63kHPyAhWlzJFFiart5Z5nFFYK1LcSE3gIt9yrGC%2BuNlTv9DwAdRwpyoMnQRPWzbUiAZDgxqU6fLk3k31vRacsJeQU48tOZQZ%2BcrbiqobIs7TRB8txUl6fWvFWrupCBsy7rS2MBNKaWanmCqab8SZ%2BawQ%2FPOwgmFWEOVj5ppv7SKLiBXBA1BKoonIDrH85HrBk0BraOf2j9tDobtTErKe%2FUqzf30%2Bn2WQvPYf3XHgCVzVO9B9gTs8T%2FD5o2qGzaUxDlFkRbbBM%2BG9K7VXYTm51YI9rWix3iiGDxU%2BzDljY5zDv4qOYBjqlAf1slQJxW7T%2BAkXvFh9tChLzXjBpKZz0QhjnlaT%2FMWpX9x6WaIRsg%2BzBCZLBwPewmcVgFE2%2ByfibjoAiUmaddFaRbogvbXJGeWTWyugMKlHeWkW32%2FwKcaQTLgFozfj8nQL4FaHYjP1sJesbJpQvATKIsiqLr4LaqhqcsMIz8AVyUVjtmEjI9bu3gjGx%2FjdyuQw4mEJYXQGaW5VVmojM9E6AwgbMDQ%3D%3D&X-Amz-Signature=74299d64ebd3b995b34a2ce2a741ce95398dc659b6e1de682e9611ca83e71904"
+mv local.rds reichartSeurat.rds
+
+
+
+
+

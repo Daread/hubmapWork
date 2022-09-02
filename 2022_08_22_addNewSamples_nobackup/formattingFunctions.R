@@ -22,6 +22,17 @@ getDataset <- function(datasetToGet, opt){
 		data = readRDS("./koenig_et_al_data/koenigNucleiCDS.rds")
 		return(data[,colData(data)$Condition == "Donor"])
 	}
+	# Chaffin
+	if (datasetToGet == "Chaffin"){
+		return(readRDS("./chaffin_et_al_data/chaffinDataCDS.rds"))
+	}
+}
+
+getGeneNameVec <- function(opt){
+	cds = getDataset("Read", opt)
+	geneVec = rowData(cds)$gene_short_name
+	names(geneVec) = rownames(cds)
+	return(geneVec)
 }
 
 ############################################################################### Read Begin
@@ -46,19 +57,25 @@ readLog10umi = function(x){
 }
 
 readAnatomical_Site = function(x){
-	return(x["Anatomical_Site"])
+	if (as.character(x["Anatomical_Site"]) == "Left_Vent"){
+		return("LV")
+	} else if (as.character(x["Anatomical_Site"]) == "Right_Vent"){
+		return("RV")
+	} else {
+		return(x["Anatomical_Site"])
+	}
 }
 
 diabetesList = as.character(readMeta$History.of.diabetes. )
-names(diabetesList) = readMeta$id
+names(diabetesList) = as.character(readMeta$id)
 readDiabetes = function(x, donorStatus = diabetesList){
-	return(ifelse(donorStatus[x["Donor"]] =="NO", 0, 1 ))
+	return(ifelse(donorStatus[as.character(x["Donor"])] =="NO", "N", "Y" ))
 }
 
 hypertensionList = as.character(readMeta$History.of.hypertension.)
-names(hypertensionList) = readMeta$id
+names(hypertensionList) = as.character(readMeta$id)
 readHypertension = function(x, donorStatus = hypertensionList){
-	return(ifelse(donorStatus[x["Donor"]] =="NO", 0, 1 ))
+	return(ifelse(donorStatus[as.character(x["Donor"])] =="NO", "N", "Y" ))
 }
 
 # # [1]                           
@@ -73,9 +90,13 @@ readCell_Shared_Label = function(x, cellLabels = readTypeVec){
 }
 
 bmiList = as.character(readMeta$Body.Mass.Index..BMI..)
-names(bmiList) = readMeta$id
+names(bmiList) = as.character(readMeta$id)
 readBMI = function(x, bmiLabels = bmiList){
-	return(as.numeric(strsplit(bmiLabels[x["Donor"]], " ", fixed=TRUE)[[1]][1]))
+	return(as.numeric(strsplit(bmiLabels[as.character(x["Donor"])], " ", fixed=TRUE)[[1]][1]))
+}
+
+readDatatype = function(x){
+	return("Nuclei")
 }
 
 getReadFormatting <- function(covarToSetup){
@@ -92,6 +113,7 @@ getReadFormatting <- function(covarToSetup){
 	thisList = c(thisList, "Hypertension" = readHypertension)
 	thisList = c(thisList, "Cell_Shared_Label" = readCell_Shared_Label)
 	thisList = c(thisList, "BMI" = readBMI)
+	thisList = c(thisList, "DataType" = readDatatype)
 
 	# Return this list
 	return(thisList)
@@ -132,13 +154,13 @@ litvAnatomical_Site = function(x){
 diabetesList = as.character(litvMeta$Diabetes)
 names(diabetesList) = litvMeta$Donor
 litvDiabetes = function(x, donorStatus = diabetesList){
-	return(ifelse(donorStatus[x["Donor"]] =="N", 0, 1 ))
+	return(ifelse(donorStatus[x["Donor"]] =="N", "N", "Y" ))
 }
 
 hypertensionList = as.character(litvMeta$Hypertension)
 names(hypertensionList) = litvMeta$Donor
 litvHypertension = function(x, donorStatus = hypertensionList){
-	return(ifelse(donorStatus[x["Donor"]] =="N", 0, 1 ))
+	return(ifelse(donorStatus[x["Donor"]] =="N", "N", "Y" ))
 }
 
 # No separate vascular or endocardium assignments here
@@ -161,8 +183,16 @@ litvCell_Shared_Label = function(x, litTypeMap=litTypeVec){
 bmiList = as.character(litvMeta$BMI)
 names(bmiList) = litvMeta$Donor
 litvBMI = function(x, donorBMI = bmiList ){
-	bmiHighLow = as.numeric(strsplit(donorBMI[x["Donor"]], "_", fixed=TRUE)[[1]])
+	bmiHighLow = as.numeric(strsplit(donorBMI[x["Donor"]], "-", fixed=TRUE)[[1]])
 	return((bmiHighLow[1] + bmiHighLow[2]) / 2.0)
+}
+
+litvDataType = function(x){
+	if (as.character(x["cell_source"]) %in% c("Harvard-Nuclei", "Sanger-Nuclei")){
+		return ("Nuclei")
+	} else {
+		return ("Cells")
+	}
 }
 
 getLitvFormatting <- function(covarToSetup){
@@ -178,6 +208,7 @@ getLitvFormatting <- function(covarToSetup){
 	thisList = c(thisList, "Hypertension" = litvHypertension)
 	thisList = c(thisList, "Cell_Shared_Label" = litvCell_Shared_Label)
 	thisList = c(thisList, "BMI" = litvBMI)
+	thisList = c(thisList, "DataType" = litvDataType)
 
 	# Return this list
 	return(thisList)
@@ -212,13 +243,13 @@ koenigAnatomical_Site = function(x){
 koenigDiabetesList = koenigMeta$Diabetes 
 names(koenigDiabetesList) = koenigMeta$Samples
 koenigDiabetes = function(x, diabetesList=koenigDiabetesList){
-	return(diabetesList[x["orig.ident"]])
+	return(ifelse(as.numeric(diabetesList[x["orig.ident"]]) == 0, "N", "Y" ))
 }
 
 koenigHypertensionList = koenigMeta$HTN
 names(koenigHypertensionList) = koenigMeta$Samples
 koenigHypertension = function(x, hyperList = koenigHypertensionList){
-	return(hyperList[x["orig.ident"]])
+	return(ifelse(as.numeric(hyperList[x["orig.ident"]]) == 0, "N", "Y" ))
 }
 
 koenigTypeVec =         c("Adipocytes", "Endothelium", "Fibroblast", "T_Cell",   "B_Cell",     "Myeloid", "Neuron", "Perivascular", "Perivascular",     "Atrial_Cardiomyocytes", "Ventricular_Cardiomyocytes", "Mast_Cells", "Endothelium", "Epicardium", "Myeloid", "Lymphatic_Endothelium")
@@ -239,6 +270,9 @@ koenigBMI = function(x, bmiList = koenigBMIlist){
 	return(as.numeric(bmiList[x["orig.ident"]]))
 }
 
+koenigDataType = function(x){
+	return("Nuclei")
+}
 
 getKoenigFormatting <- function(covarToSetup){
 	thisList = vector(mode="list", length = 0)
@@ -253,6 +287,7 @@ getKoenigFormatting <- function(covarToSetup){
 	thisList = c(thisList, "Hypertension" = koenigHypertension)
 	thisList = c(thisList, "Cell_Shared_Label" = koenigCell_Shared_Label)
 	thisList = c(thisList, "BMI" = koenigBMI)
+	thisList = c(thisList, "DataType" = koenigDataType)
 
 	# Return this list
 	return(thisList)
@@ -320,6 +355,10 @@ tuckerBMI = function(x, bmiList = tuckerBMIlist){
 	return(bmiList[x["Donor"]])
 }
 
+tuckerDataType = function(x){
+	return("Nuclei")
+}
+
 gettuckerFormatting <- function(covarToSetup){
 	thisList = vector(mode="list", length = 0)
 
@@ -333,6 +372,7 @@ gettuckerFormatting <- function(covarToSetup){
 	thisList = c(thisList, "Hypertension" = tuckerHypertension)
 	thisList = c(thisList, "Cell_Shared_Label" = tuckerCell_Shared_Label)
 	thisList = c(thisList, "BMI" = tuckerBMI)
+	thisList = c(thisList, "DataType" = tuckerDataType)
 
 	# Return this list
 	return(thisList)
@@ -369,13 +409,15 @@ reichartAnatomical_Site = function(x){
 reichartDiabetsList = reichartMeta$Diabetes 
 names(reichartDiabetsList) = reichartMeta$Donor
 reichartDiabetes = function(x, diabetesList = reichartDiabetsList){
-	return(diabetesList[as.character(x["Patient"])])
+	#return(diabetesList[as.character(x["Patient"])])
+	return("UNKNOWN")
 }
 
 reichartHypertensionList = reichartMeta$Hypertension
 names(reichartHypertensionList) = reichartMeta$Donor 
 reichartHypertension = function(x, hyperList = reichartHypertensionList){
-	return(hyperList[as.character(x["Patient"])])
+	# return(hyperList[as.character(x["Patient"])])
+	return("UNKNOWN")
 }
 
 
@@ -392,10 +434,15 @@ reichartCell_Shared_Label = function(x, celltypeVec = reichartTypeVec){
 	return(celltypeVec[as.character(x["cell_type"])])
 }
 
-reichartBMIlist = reichartMeta$BMI 
-names(reichartBMIlist) = reichartMeta$Donor 
-reichartBMI = function(x, bmiList = reichartBMIlist){
-	return(bmiList[as.character(x["Patient"])])
+# reichartBMIlist = as.numeric(reichartMeta$Weight_Kg) / ((as.numeric(reichartMeta$Height_cm) / 100.0)^2) 
+# names(reichartBMIlist) = reichartMeta$Donor 
+# reichartBMI = function(x, bmiList = reichartBMIlist){
+reichartBMI = function(x){
+	return(x["BMI"])
+}
+
+reichartDataType = function(x){
+	return("Nuclei")
 }
 
 getReichartFormatting <- function(covarToSetup){
@@ -411,6 +458,7 @@ getReichartFormatting <- function(covarToSetup){
 	thisList = c(thisList, "Hypertension" = reichartHypertension)
 	thisList = c(thisList, "Cell_Shared_Label" = reichartCell_Shared_Label)
 	thisList = c(thisList, "BMI" = reichartBMI)
+	thisList = c(thisList, "DataType" = reichartDataType)
 
 	# Return this list
 	return(thisList)
@@ -418,6 +466,91 @@ getReichartFormatting <- function(covarToSetup){
 
 
 ############################################################################### Reichart End
+
+############################################################################### Chaffin Start
+
+chaffinMetaFile = "./chaffin_et_al_data/Formatted_Chaffin_Control_Metadata.csv"
+chaffinMeta = read.csv(chaffinMetaFile)
+
+chaffinDonor = function(x){
+	return(as.character(x["donor_id"]))
+}
+
+chaffinAge = function(x){
+	return(x["age"])
+}
+
+chaffinSex = function(x){
+	return( toupper(substr(as.character(x["sex"]), 1, 1)) )
+}
+
+chaffinLog10umi = function(x){
+	return(log10(as.numeric(x["cellbender_ncount"])))
+}
+
+# Not in h5ad file, but all are LV samples
+chaffinAnatomical_Site = function(x){
+	return("LV")
+}
+
+chaffinDiabetes = function(x){
+	return("UNKNOWN")
+}
+
+chaffinHypertension = function(x){
+	return("UNKNOWN")
+}
+
+chaffinCelltypeList =        c("Adipocytes", "Endothelium",     "Endothelium",  "Endothelium",   "Endothelium",      "Fibroblast",   "Fibroblast",      "Fibroblast",   "Ventricular_Cardiomyocytes","Ventricular_Cardiomyocytes","Ventricular_Cardiomyocytes",  "Myeloid",           "Myeloid",              "T_Cell",    "Neuron", "Perivascular", "Perivascular", "Perivascular", "Mast_Cells", "Lymphatic_Endothelium", "Epicardial")
+names(chaffinCelltypeList) = c("Adipocyte",  "Endocardial", "Endothelial_I", "Endothelial_II", "Endothelial_III", "Fibroblast_I", "Fibroblast_II", "Activated_fibroblast", "Cardiomyocyte_I",           "Cardiomyocyte_II",           "Cardiomyocyte_III",       "Macrophage", "Proliferating_macrophage",  "Lymphocyte", "Neuronal", "Pericyte_I",  "Pericyte_II",      "VSMC",     "Mast_cell",  "Lymphatic_endothelial", "Epicardial"  )
+# [1] "Activated_fibroblast"     "Adipocyte"
+#  [3] "Cardiomyocyte_I"          "Cardiomyocyte_II"
+#  [5] "Cardiomyocyte_III"        "Endocardial"
+#  [7] "Endothelial_I"            "Endothelial_II"
+#  [9] "Endothelial_III"          "Epicardial"
+# [11] "Fibroblast_I"             "Fibroblast_II"
+# [13] "Lymphatic_endothelial"    "Lymphocyte"
+# [15] "Macrophage"               "Mast_cell"
+# [17] "Neuronal"                 "Pericyte_I"
+# [19] "Pericyte_II"              "Proliferating_macrophage"
+# [21] "VSMC"
+
+chaffinCell_Shared_Label = function(x, celltypeVec = chaffinCelltypeList){
+	return(celltypeVec[as.character(x["cell_type_leiden0.6"])])
+}
+
+chaffinBMIlist = chaffinMeta$BMI 
+names(chaffinBMIlist) = paste0("P", chaffinMeta$Individual)
+chaffinBMI = function(x, bmiList = chaffinBMIlist){
+	return(bmiList[as.character(x["donor_id"])])
+}
+
+chaffinDataType = function(x){
+	return("Nuclei")
+}
+
+
+getChaffinFormatting <- function(covarToSetup){
+	thisList = vector(mode="list", length = 0)
+
+	# Get all the setup with a list of functions
+	thisList = c(thisList, "Donor" = chaffinDonor)
+	thisList = c(thisList, "Age" = chaffinAge)
+	thisList = c(thisList, "Sex" = chaffinSex)
+	thisList = c(thisList, "log10_umi" = chaffinLog10umi)
+	thisList = c(thisList, "Anatomical_Site" = chaffinAnatomical_Site)
+	thisList = c(thisList, "Diabetes" = chaffinDiabetes)
+	thisList = c(thisList, "Hypertension" = chaffinHypertension)
+	thisList = c(thisList, "Cell_Shared_Label" = chaffinCell_Shared_Label)
+	thisList = c(thisList, "BMI" = chaffinBMI)
+	thisList = c(thisList, "DataType" = chaffinDataType)
+
+	# Return this list
+	return(thisList)
+}
+
+
+############################################################################### Chaffin End
 
 # Overall helper function to set up a list of lists, each of which contains named functions for helping
 #    format the cds coldata entries for each input dataset
@@ -432,6 +565,7 @@ getFormatterList <- function(datasetToSetup, covarToSetup){
 	formattingList$Koenig = getKoenigFormatting(covarToSetup)
 	formattingList$Tucker = gettuckerFormatting(covarToSetup)
 	formattingList$Reichart = getReichartFormatting(covarToSetup)
+	formattingList$Chaffin = getChaffinFormatting(covarToSetup)
 
 	# Return the ones we need for this use case
 	# return(formattingList[names(formattingList) %in% datasetToSetup])
@@ -440,14 +574,117 @@ getFormatterList <- function(datasetToSetup, covarToSetup){
 }
 
 
+formatRowdata <- function(inputCDS, datasetName, genesReadDataOrder){
+	# Read et al
+	if (datasetName == "Read"){
+		# Remove extra rows
+		rowData(inputCDS) = rowData(inputCDS)[c("gene_short_name")]
+		return(inputCDS)
+	} 
+	# Litvinukova
+	if (datasetName == "Litvinukova"){
+		# rowData(inputCDS)$gene_short_name = rownames(inputCDS)
+		rownames(inputCDS) = rowData(inputCDS)$gene_id
 
+		genesInDataset = genesReadDataOrder[names(genesReadDataOrder) %in% rownames(inputCDS)]
 
+		# Keep matching rows, in order matching Read et al
+		inputCDS = inputCDS[names(genesInDataset),]
 
+		# Get short names, matching the naming conventions used in the Read CDS
+		rowData(inputCDS)$gene_short_name = genesInDataset
+		
+		# Remove extra rows
+		rowData(inputCDS) = rowData(inputCDS)[c("gene_short_name")]
+		return(inputCDS)
+	}
+	# Tucker
+	if (datasetName == "Tucker"){
+		# rowData(inputCDS)$gene_short_name = rownames(inputCDS)
+		rownames(inputCDS) = rowData(inputCDS)$gene_id
 
+		genesInDataset = genesReadDataOrder[names(genesReadDataOrder) %in% rownames(inputCDS)]
 
+		# Keep matching rows, in order matching Read et al
+		inputCDS = inputCDS[names(genesInDataset),]
 
+		# Get short names, matching the naming conventions used in the Read CDS
+		rowData(inputCDS)$gene_short_name = genesInDataset
+		
+		# Remove extra rows
+		rowData(inputCDS) = rowData(inputCDS)[c("gene_short_name")]
+		return(inputCDS)
+	}
+	# Reichart
+	if (datasetName == "Reichart"){
+		# Assign as would for the rest:
+		# rownames(inputCDS) = rowData(inputCDS)$gene_id
 
+		genesInDataset = genesReadDataOrder[names(genesReadDataOrder) %in% rownames(inputCDS)]
 
+		# Keep matching rows, in order matching Read et al
+		inputCDS = inputCDS[names(genesInDataset),]
+
+		# Get short names, matching the naming conventions used in the Read CDS
+		rowData(inputCDS)$gene_short_name = genesInDataset
+		
+		# Remove extra rows
+		rowData(inputCDS) = rowData(inputCDS)[c("gene_short_name")]
+		return(inputCDS)
+	}
+	# Koenig
+	if (datasetName == "Koenig"){
+		# browser()
+		# First, need to use Tucker et al names to get a mapping of ensembl IDs for the short names in use here
+		tuckerTempCDS = getDataset("Tucker", "EMPTY_OPT")
+		tuckerShortNames = rowData(tuckerTempCDS)$gene_id
+		names(tuckerShortNames) = rownames(tuckerTempCDS)
+		tuckerTempCDS = NULL
+
+		# Only keep reichart entries that match a gene short name in tucker
+		inputCDS = inputCDS[rownames(inputCDS) %in% names(tuckerShortNames),]
+
+		tuckerNameMatch = tuckerShortNames[names(tuckerShortNames) %in% rownames(inputCDS)]
+
+		# Add a field with the ensembl IDs
+		inputCDS = inputCDS[names(tuckerNameMatch),]
+		rowData(inputCDS)$gene_id = tuckerNameMatch
+
+		# Add as would for the rest
+		rownames(inputCDS) = rowData(inputCDS)$gene_id
+		genesInDataset = genesReadDataOrder[names(genesReadDataOrder) %in% rownames(inputCDS)]
+
+		# Keep matching rows, in order matching Read et al
+		inputCDS = inputCDS[names(genesInDataset),]
+
+		# Get short names, matching the naming conventions used in the Read CDS
+		rowData(inputCDS)$gene_short_name = genesInDataset
+		
+		# Remove extra rows
+		rowData(inputCDS) = rowData(inputCDS)[c("gene_short_name")]
+		return(inputCDS)
+	}
+	# Chaffin
+	if (datasetName == "Chaffin"){
+		# rowData(inputCDS)$gene_short_name = rownames(inputCDS)
+		rownames(inputCDS) = rowData(inputCDS)$gene_id
+
+		genesInDataset = genesReadDataOrder[names(genesReadDataOrder) %in% rownames(inputCDS)]
+
+		# Keep matching rows, in order matching Read et al
+		inputCDS = inputCDS[names(genesInDataset),]
+
+		# Get short names, matching the naming conventions used in the Read CDS
+		rowData(inputCDS)$gene_short_name = genesInDataset
+		
+		# Remove extra rows
+		rowData(inputCDS) = rowData(inputCDS)[c("gene_short_name")]
+		return(inputCDS)
+	} else{
+		print("No row data conversion method found")
+		return(inputCDS)
+	}
+}
 
 
 

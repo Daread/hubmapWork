@@ -43,6 +43,10 @@ write.csv(formattedLitvDonorData, file=metadataOutput)
 colData(litvCDS)$Sex = colData(litvCDS)$gender
 colData(litvCDS)$Age = apply(as.data.frame(colData(litvCDS)), 1, getLitvAge)
 
+# Get gene IDs added
+rowData(litvCDS)$gene_id = litvSeurat$RNA@meta.features[["gene_ids-Harvard-Nuclei"]]
+
+
 # Save
 litvCDSout = "./litvinukova_et_al_data/Litv_CDS.rds"
 saveRDS(litvCDS, file=litvCDSout)
@@ -79,6 +83,16 @@ for (eachCol in colToAdd){
 	names(colData(tuckerCDS)[[eachCol]]) = NULL
 }
 
+# Get Gene names
+geneNameFile = "./tuckerEtAlData/genes_v2.tsv"
+geneNameDF = as.data.frame(read.table(geneNameFile, sep='\t', header=FALSE))
+
+colnames(geneNameDF) = c("Ensembl_ID", "Short_Name")
+nameToID = geneNameDF$Ensembl_ID
+names(nameToID) = geneNameDF$Short_Name
+
+rowData(tuckerCDS)$gene_id = nameToID[rownames(tuckerCDS)]
+names(rowData(tuckerCDS)$gene_id) = NULL
 
 formattedTuckerPath = "./tuckerEtAlData/tuckerFormattedCDS.rds"
 saveRDS(tuckerCDS, file = formattedTuckerPath)
@@ -99,9 +113,22 @@ chaffinSeurat = LoadH5Seurat(chaffinSeuratPath)
 # Get into a CDS
 chaffinCDS = as.cell_data_set(chaffinSeurat)
 
-# Get metadata and format it
+
+# Only keep the non-failing hearts
+colData(chaffinCDS)$disease = as.character(colData(chaffinCDS)$disease)
+chaffinCDS = chaffinCDS[,colData(chaffinCDS)$disease == "NF"]
 
 
+# Get Gene names
+geneNameFile = "./chaffin_et_al_data/DCM_HCM_Expression_Matrix_genes_V1.tsv"
+geneNameDF = as.data.frame(read.table(geneNameFile, sep='\t', header=FALSE))
+
+colnames(geneNameDF) = c("Ensembl_ID", "Short_Name")
+nameToID = geneNameDF$Ensembl_ID
+names(nameToID) = geneNameDF$Short_Name
+
+rowData(chaffinCDS)$gene_id = nameToID[rownames(chaffinCDS)]
+names(rowData(chaffinCDS)$gene_id) = NULL
 
 # Save the output
 chaffinOutPath = "./chaffin_et_al_data/chaffinDataCDS.rds"

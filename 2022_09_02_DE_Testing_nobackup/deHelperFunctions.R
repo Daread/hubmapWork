@@ -25,7 +25,7 @@ getPseudobulkData <- function(inputCDS, opt){
 
 	# Empty expression matrix
 	bulkExprs = matrix(NA, nrow = nrow(inputCDS), ncol = length(allSamples))
-	rownames(bulkExprs) = rownames(rowData(inputCDS)$gene_short_name)
+	rownames(bulkExprs) = paste0(rownames(inputCDS), "_", rowData(inputCDS)$gene_short_name)
 	colnames(bulkExprs) = allSamples
 
 	# Loop through and for each biological sample get:
@@ -47,9 +47,91 @@ getPseudobulkData <- function(inputCDS, opt){
 		bulkExprs[,eachBiolSample] = exprsVec
 	}
 
+	# Format the metadata to be numeric if needed
+	numericVars = c("Age", "BMI")
+	for (eachCol in colnames(metadataDF)){
+		if (eachCol %in% numericVars){
+			metadataDF[[eachCol]] = as.numeric(metadataDF[[eachCol]])
+		}
+	}
+
+	# Now only keep the entries in the exprs matrix that are above the minimum TPM value
+	tpmVec = rowSums(bulkExprs) * 1e6 / sum(bulkExprs)
+	# browser()
+	bulkExprs = bulkExprs[tpmVec > opt$minTPM,]
+
 	# Return a list
 	return(list(bulkExprs, metadataDF))
 }
+
+
+writeMetadata <- function(metadataDF, opt){
+	dir.create("./fileOutputs/")
+	outFile = paste0("./fileOutputs/", "AllSampleMetadata.csv" )
+	write.csv(metadataDF, file = outFile)
+}
+
+
+makeGeneAgeSexPlots <- function(pseudobulkList, genesToPlot, processingNote){
+	genePlotDir = "./plots/"
+	dir.create(genePlotDir)
+
+	# browser()
+	exprsMat = pseudobulkList[[1]]
+	rownames(exprsMat) = vapply(strsplit(rownames(exprsMat), "_"), "[", 2, FUN.VALUE=character(1)) #      strsplit(rownames(exprsMat), "_", fixed = TRUE)
+	metaDF = pseudobulkList[[2]]
+	# Loop and get a plot for each gene requested
+	for (eachGene in genesToPlot){
+		miniDF = metaDF
+		miniDF$expressionFrac = exprsMat[eachGene,] / colSums(exprsMat)
+		# Make a plot by age...
+
+		png(paste0(genePlotDir, processingNote, eachGene, "_vs_Age.png"))
+		myPlot = ggplot(miniDF, aes_string(x="Age", y="expressionFrac", col="DataSource")) +
+				geom_point()
+		print(myPlot)
+		dev.off()
+
+		# ... and by sex
+		png(paste0(genePlotDir, processingNote, eachGene, "_vs_Sex.png"))
+		myPlot = ggplot(miniDF, aes_string(x="Sex", y="expressionFrac")) +
+				 geom_boxplot() + geom_point()
+		print(myPlot)
+		dev.off()
+
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

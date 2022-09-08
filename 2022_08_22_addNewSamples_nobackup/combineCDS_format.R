@@ -64,12 +64,12 @@ for (eachDataset in datasetVec){
 # Get a combined CDS
 combinedCDS = combine_cds(cdsList)
 
+# Change name of the one donor that has an underscore
+colData(combinedCDS)$Donor = ifelse(colData(combinedCDS)$Donor == "H_ZC-11-292", "H-ZC-11-292", colData(combinedCDS)$Donor)
+
 # Save the combined output
 combinedOutfile = "./formattedData/allDatasetCDS.rds"
 saveRDS(combinedCDS, file=combinedOutfile)
-
-
-
 
 
 
@@ -98,6 +98,28 @@ saveRDS(geneUseCount, file=geneUseFile)
 
 
 
+
+combinedCDS = readRDS(combinedOutfile)
+
+geneUseCount = readRDS(geneUseFile)
+
+
+genesInAll = geneUseCount[geneUseCount == 6]
+
+
+# Get a CDS with only nuclei and with genes appearing in every dataset
+testingCDS = combinedCDS[rownames(combinedCDS) %in% names(genesInAll),(colData(combinedCDS)$DataType == "Nuclei")]
+
+# Merge T and B cells given that they don't separate in a UMAP of all samples
+colData(testingCDS)$Cell_Shared_Label = ifelse(colData(testingCDS)$Cell_Shared_Label %in% c("T_Cell", "B_Cell"), "Lymphocyte" , colData(testingCDS)$Cell_Shared_Label)
+
+typesToNotTest = c("Doublets", "Native_Cell", "Unassigned")
+testingCDS = testingCDS[,!(colData(testingCDS)$Cell_Shared_Label %in% typesToNotTest)]
+
+
+testingFile = "./formattedData/NucleiOnlySharedGenesCDS.rds"
+
+saveRDS(testingCDS, file = testingFile)
 
 
 

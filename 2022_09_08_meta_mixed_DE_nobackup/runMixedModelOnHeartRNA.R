@@ -5,11 +5,14 @@
 # Load relevant packages
 source("/net/trapnell/vol1/home/readdf/trapLabDir/sharedProjectCode/utility/singleCellUtilFuncs.R")
 library(monocle3)
-print(modStatus)
+# print(modStatus)
 library("optparse")
-library("lme4")
+
+library("nebula")
+
+# library("lme4")
 # Source the draft code for mixed model fitting
-source("/net/trapnell/vol1/home/readdf/trapLabDir/sharedProjectCode/DE_Code/mixedModelFittingMonocle3Style.R")
+# source("/net/trapnell/vol1/home/readdf/trapLabDir/sharedProjectCode/DE_Code/mixedModelFittingMonocle3Style.R")
 
 filterByCellsExpressed = function(inputCDS, cellPropMin){
 	rowData(inputCDS)$fracCellsExpr = (rowSums(exprs(inputCDS) != 0) /
@@ -31,19 +34,33 @@ getMixedModelFormula = function(inputFixedEffects, inputRandomEffects){
 	return(fullFormula)
 }
 
+fit_nebula <- function(inputCDS, modelFormula, fixedEffectVec){
+  # Requires cells to be ordered by individual
+  inputCDS = inputCDS[,order(colData(inputCDS)$Donor)]
+  # Get design matrix to input to nebula
+  nebulaDF = model.matrix(as.formula(paste0("~", paste(fixedEffectVec, collapse = "+"))), data = as.data.frame(colData(inputCDS)))
+  offsetVal = colData(inputCDS)$size_factor 
+
+  print(str(nebulaDF))
+  print(str(offsetVal))
+
+  nebRes = nebula(exprs(inputCDS), colData(inputCDS)$Donor, pred=nebulaDF, offset = (1.0/colData(inputCDS)$Size_Factor))
+  return(nebRes)
+}
+
 # Get the passed parameters
 option_list = list(
   make_option(c("-p", "--processingNote"), type="character", 
   			default="NucleiOnlySharedGenesCDS", 
               help="Processing note from upstream CDS", metavar="character"),
     make_option(c("-c", "--cellType"), type="character", 
-               default="Ventricular_Cardiomyocytes", #  default="Adipocytes", #default="Endocardium", 
+               default="Adipocytes", #"Ventricular_Cardiomyocytes", #  default="Adipocytes", #default="Endocardium", 
               help="Cell Type to subset for testing", metavar="character"),
-    make_option(c("-r", "--randomEffects"), type="character", default="Donor,DataSource",  # Syntax would be "Donor,Batch" if including multiple
+    make_option(c("-r", "--randomEffects"), type="character", default="Donor",  # Syntax would be "Donor,Batch" if including multiple
               help="Comma-separated string of variables to model with random effects", metavar="character"),
     make_option(c("-f", "--fixedEffects"), type="character",
                # default="Anatomical_Site", # Syntax would be "Anatomical_Site,Age" if including multiple
-              default="Anatomical_Site,Age,Sex",
+              default="Anatomical_Site,Age,Sex,DataSource,log10_umi",
               help="Comma-separated string of variables to model with fixed effects", metavar="character"),
     make_option(c("-g", "--groupColumn"), type="character", default="Cell_Shared_Label", 
               help="column in colData that cellType uses to select", metavar="character"),
@@ -74,6 +91,7 @@ oldProcNote = opt$processingNote
 allCellCDS = readRDS(paste0(rdsPath, oldProcNote, ".rds"))
 print("Read in CDS")
 
+colData(allCellCDS)$Age = as.numeric(colData(allCellCDS)$Age)
 
 # Filter down to the cell type being tested here
 testCDS = allCellCDS[,colData(allCellCDS)[[opt$groupColumn]] == opt$cellType]
@@ -104,6 +122,7 @@ if (!(opt$cellType %in% abundantCellTypes)){
 
 # Re-estimate size factors for this subset, in case there is some odd UMI distribution behavior specific to a cell type/subset
 testCDS = estimate_size_factors(testCDS)
+colData(testCDS)$Size_Factor = size_factors(testCDS)
 
 # Relevel so LV (most common) is baseline
 colData(testCDS)$Anatomical_Site = relevel(as.factor(colData(testCDS)$Anatomical_Site), ref="LV")
@@ -114,24 +133,31 @@ processingNote = paste0(processingNote, "miniTest")
 testCDS = testCDS[1:20,]
 # # ###################################################################################
 
-source("/net/trapnell/vol1/home/readdf/trapLabDir/sharedProjectCode/DE_Code/utils-MM.R")
-source("/net/trapnell/vol1/home/readdf/trapLabDir/sharedProjectCode/DE_Code/expr_models-MM.R")
-source("/net/trapnell/vol1/home/readdf/trapLabDir/sharedProjectCode/DE_Code/mixedModelFittingMonocle3Style.R")
+colData(testCDS)$Donor = paste0(colData(testCDS)$Donor, "_", colData(testCDS)$DataSource)
+
+# source("/net/trapnell/vol1/home/readdf/trapLabDir/sharedProjectCode/DE_Code/utils-MM.R")
+# source("/net/trapnell/vol1/home/readdf/trapLabDir/sharedProjectCode/DE_Code/expr_models-MM.R")
+# source("/net/trapnell/vol1/home/readdf/trapLabDir/sharedProjectCode/DE_Code/mixedModelFittingMonocle3Style.R")
 
 startTime = Sys.time()
 # Now test for these genes
 print("Fitting Models Now")
-mixedTestRes = fit_mixed_models(testCDS, modelFormula, #c(fixedEffectVec, randomEffectVec),
-                            expression_family="mixed-negbinomial", clean_model=T)
+# mixedTestRes = fit_mixed_models(testCDS, modelFormula, #c(fixedEffectVec, randomEffectVec),
+#                             expression_family="mixed-negbinomial", clean_model=T)
+mixedTestRes = fit_nebula(testCDS, modelFormula, fixedEffectVec)
 endTime = Sys.time()
-print(Sys.time(paste0(round(as.numeric(difftime(time1 = endTime, time2 = startTime, units = "secs")), 3), " Seconds")))
+
+print(endTime - startTime)
+
+
 
 testResDF = as.data.frame(mixedTestRes)
 testResDF = testResDF[, !(names(testResDF) %in% c("model"))]
 
 # Save the output
-dir.create(paste0("./rdsOutput/mixedModels/"))
-outPath = paste0("./rdsOutput/mixedModels/", processingNote, "_MMresult")
+dir.create("./rdsOutput/")
+dir.create(paste0("./rdsOutput/nebulaFits/"))
+outPath = paste0("./rdsOutput/nebulaFits/", processingNote, "_MMresult")
 
 
 

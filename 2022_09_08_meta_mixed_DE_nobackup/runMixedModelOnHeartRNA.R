@@ -1,6 +1,6 @@
 
 
-
+setwd("/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2022_09_08_meta_mixed_DE_nobackup")
 ###########################################################################################
 # Load relevant packages
 source("/net/trapnell/vol1/home/readdf/trapLabDir/sharedProjectCode/utility/singleCellUtilFuncs.R")
@@ -14,14 +14,14 @@ library("nebula")
 # Source the draft code for mixed model fitting
 # source("/net/trapnell/vol1/home/readdf/trapLabDir/sharedProjectCode/DE_Code/mixedModelFittingMonocle3Style.R")
 
-filterByCellsExpressed = function(inputCDS, cellPropMin){
+filterByCellsExpressed <- function(inputCDS, cellPropMin){
 	rowData(inputCDS)$fracCellsExpr = (rowSums(exprs(inputCDS) != 0) /
 								nrow(colData(inputCDS)) )
 	inputCDS = inputCDS[rowData(inputCDS)$fracCellsExpr > cellPropMin,]
 	return(inputCDS)
 }
 
-getMixedModelFormula = function(inputFixedEffects, inputRandomEffects){
+getMixedModelFormula <- function(inputFixedEffects, inputRandomEffects){
 	# Formatted Random Effects
 	fixedFormulaPart = paste(inputFixedEffects, collapse = " + ")
 
@@ -32,6 +32,13 @@ getMixedModelFormula = function(inputFixedEffects, inputRandomEffects){
 
 	fullFormula = paste0("~", fixedFormulaPart, " + ", randomFormulaPart)
 	return(fullFormula)
+}
+
+getGeneSubsetCDS <- function(inputCDS, opt){
+  nGenes = nrow(inputCDS)
+  lowerGeneCount = as.integer((nGenes * ((opt$split -  1) / opt$nSplits)) + 1)
+  upperGeneCount = as.integer(nGenes * ((opt$split) / opt$nSplits))
+  return(inputCDS[lowerGeneCount:upperGeneCount,])
 }
 
 fit_nebula <- function(inputCDS, modelFormula, fixedEffectVec){
@@ -48,13 +55,21 @@ fit_nebula <- function(inputCDS, modelFormula, fixedEffectVec){
   return(nebRes)
 }
 
+addShortNames <- function(mixedTestRes, inputCDS){
+  shortNames = rowData(inputCDS)$gene_short_name
+  names(shortNames) = rownames(rowData(inputCDS))
+  mixedTestRes[[1]]["gene_short_name"] = shortNames[mixedTestRes[[1]][["gene"]]]
+  return(mixedTestRes)
+}
+
+set.seed(7)
 # Get the passed parameters
 option_list = list(
   make_option(c("-p", "--processingNote"), type="character", 
   			default="NucleiOnlySharedGenesCDS", 
               help="Processing note from upstream CDS", metavar="character"),
     make_option(c("-c", "--cellType"), type="character", 
-               default="Adipocytes", #"Ventricular_Cardiomyocytes", #  default="Adipocytes", #default="Endocardium", 
+               default="Endothelium",  #"Adipocytes", #"Ventricular_Cardiomyocytes", #  default="Adipocytes", #default="Endocardium", 
               help="Cell Type to subset for testing", metavar="character"),
     make_option(c("-r", "--randomEffects"), type="character", default="Donor",  # Syntax would be "Donor,Batch" if including multiple
               help="Comma-separated string of variables to model with random effects", metavar="character"),
@@ -67,7 +82,11 @@ option_list = list(
     make_option(c("-m", "--minGeneExprPercent"), type="numeric", default=.01, 
               help="Proportion of cells that must express a gene for it to be tested", metavar="numeric"),
     make_option(c("-a", "--noAtrium"), type="logical", default = TRUE,
-              help="Exclude samples from atrium", metavar="logical")
+              help="Exclude samples from atrium", metavar="logical"),
+    make_option(c("-n", "--nSplits"), type="numeric", default = 10,
+              help="Number of sub-jobs to split the DE testing task into", metavar="numeric"),
+    make_option(c("-k", "--split"), type="numeric", default=1,
+              help="Number of total splits to be run here", metavar="numeric")
 )
 opt_parser = OptionParser(option_list=option_list)
 opt = parse_args(opt_parser)
@@ -127,17 +146,16 @@ colData(testCDS)$Size_Factor = size_factors(testCDS)
 # Relevel so LV (most common) is baseline
 colData(testCDS)$Anatomical_Site = relevel(as.factor(colData(testCDS)$Anatomical_Site), ref="LV")
 
-# # # Make this a mini run to test
-# # ############################################################## Testing only 7-19-21
-processingNote = paste0(processingNote, "miniTest")
-testCDS = testCDS[1:20,]
-# # ###################################################################################
+# # # # Make this a mini run to test
+# # # ############################################################## Testing only 7-19-21
+# processingNote = paste0(processingNote, "miniTest")
+# testCDS = testCDS[1:200,]
+# # # ###################################################################################
 
 colData(testCDS)$Donor = paste0(colData(testCDS)$Donor, "_", colData(testCDS)$DataSource)
 
-# source("/net/trapnell/vol1/home/readdf/trapLabDir/sharedProjectCode/DE_Code/utils-MM.R")
-# source("/net/trapnell/vol1/home/readdf/trapLabDir/sharedProjectCode/DE_Code/expr_models-MM.R")
-# source("/net/trapnell/vol1/home/readdf/trapLabDir/sharedProjectCode/DE_Code/mixedModelFittingMonocle3Style.R")
+# Format so that only testing the desired subset of data
+testCDS = getGeneSubsetCDS(testCDS, opt)
 
 startTime = Sys.time()
 # Now test for these genes
@@ -146,24 +164,26 @@ print("Fitting Models Now")
 #                             expression_family="mixed-negbinomial", clean_model=T)
 mixedTestRes = fit_nebula(testCDS, modelFormula, fixedEffectVec)
 endTime = Sys.time()
-
+print("Run time:")
 print(endTime - startTime)
 
+mixedTestRes = addShortNames(mixedTestRes, testCDS)
 
 
-testResDF = as.data.frame(mixedTestRes)
-testResDF = testResDF[, !(names(testResDF) %in% c("model"))]
+# testResDF = as.data.frame(mixedTestRes)
+# testResDF = testResDF[, !(names(testResDF) %in% c("model"))]
 
 # Save the output
 dir.create("./rdsOutput/")
 dir.create(paste0("./rdsOutput/nebulaFits/"))
-outPath = paste0("./rdsOutput/nebulaFits/", processingNote, "_MMresult")
+
+# Update processing note with sub-job info
+processingNote = paste0(processingNote, "_", as.character(opt$split), "of", as.character(opt$nSplits))
+outPath = paste0("./rdsOutput/nebulaFits/", processingNote, "_MMresult.rds")
 
 
 
-
-
-saveRDS(testResDF, outPath)
+saveRDS(mixedTestRes, outPath)
 
 print("All Done")
 

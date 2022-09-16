@@ -4,21 +4,35 @@ library(dplyr)
 library("optparse")
 library(stringr)
 
-
 print("Libraries loaded, starting now")
 
+getFitResults <- function(opt){
+	rdsPath = "./rdsOutput/nebulaFits/"
+
+	# Loop through each of the splits
+	resultDF = data.frame()
+	for (eachSplit in 1:(opt$nSplits)){
+		inFile = paste0(rdsPath, opt$cellType, opt$modelNotes, as.character(eachSplit), "of", as.character(opt$nSplits), "_MMresult.rds")
+		thisRes = readRDS(inFile)
+		# Get the first list entry, holding model coefficients/pvalues
+		resultDF = rbind(resultDF, thisRes[[1]])
+	}
+	return(resultDF)
+}
 
 # Get the passed parameters
 option_list = list(
   make_option(c("-m", "--modelNotes"), type="character", 
   			# default="_fix_Anatomical_Site_rand_Donor_HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40addAllTypes_MMresult", 
-  			default="_fix_Anatomical_Site,Age,Sex_rand_Donor_HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40addAllTypes_MMresult",
+  			default="_fix_Anatomical_Site,Age,Sex,DataSource,log10_umi_rand_Donor_NucleiOnlySharedGenesCDS_noAtr_",
               help="Processing note from model fitting", metavar="character"),
   make_option(c("-c", "--cellType"), type="character", 
   			# default="Endocardium", 
-  			default="Vascular_Endothelium",
-              help="Cell type for which the model was fit", metavar="character")
-)
+  			default="Endothelium",
+              help="Cell type for which the model was fit", metavar="character"),
+    make_option(c("-n", "--nSplits"), type="numeric", default = 10,
+              help="Number of sub-jobs to split the DE testing task into", metavar="numeric")
+    )
 opt_parser = OptionParser(option_list=option_list)
 opt = parse_args(opt_parser)
 
@@ -26,8 +40,8 @@ cellType = opt$cellType
 modelFitDescription = opt$modelNotes
 
 # Read in the fit
-rdsPath = "./rdsOutput/mixedModels/"
-fitResults = readRDS(paste0(rdsPath, cellType, modelFitDescription))
+
+fitResults = getFitResults(opt)
 
 # Get the coefficients and p-values for all the fixed effects
 fixedCoefsToGet = rownames(fitResults[1,"model_summary"][[1]]$coefficients)

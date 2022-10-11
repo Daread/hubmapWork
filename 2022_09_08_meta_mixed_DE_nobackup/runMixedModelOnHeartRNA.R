@@ -51,7 +51,7 @@ fit_nebula <- function(inputCDS, modelFormula, fixedEffectVec){
   print(str(nebulaDF))
   print(str(offsetVal))
 
-  nebRes = nebula(exprs(inputCDS), colData(inputCDS)$Donor, pred=nebulaDF, offset = (1.0/colData(inputCDS)$Size_Factor))
+  nebRes = nebula(exprs(inputCDS), colData(inputCDS)$Donor, pred=nebulaDF, offset = colData(inputCDS)$umi)
   return(nebRes)
 }
 
@@ -142,6 +142,12 @@ if (!(opt$cellType %in% abundantCellTypes)){
 # Re-estimate size factors for this subset, in case there is some odd UMI distribution behavior specific to a cell type/subset
 testCDS = estimate_size_factors(testCDS)
 colData(testCDS)$Size_Factor = size_factors(testCDS)
+# Re-set UMIs, as some genes may have been dropped when merging datasets
+colData(testCDS)$umi = colSums(exprs(testCDS))
+colData(testCDS)$log10_umi = log10(colData(testCDS)$umi)
+names(colData(testCDS)$umi) = NULL
+names(colData(testCDS)$log10_umi) = NULL
+names(colData(testCDS)$Size_Factor) = NULL
 
 # Relevel so LV (most common) is baseline
 colData(testCDS)$Anatomical_Site = relevel(as.factor(colData(testCDS)$Anatomical_Site), ref="LV")

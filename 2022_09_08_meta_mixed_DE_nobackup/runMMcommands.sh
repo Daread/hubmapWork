@@ -14,3 +14,18 @@ done
 
 
 
+
+for eachType in Endothelium Fibroblast Lymphocyte Myeloid Perivascular Ventricular_Cardiomyocytes Neuron Adipocytes
+do
+	Rscript plotOutputs.R --cellType $eachType
+done
+
+
+for eachType in Endothelium Fibroblast Lymphocyte Myeloid Perivascular Ventricular_Cardiomyocytes Neuron Adipocytes
+do
+	Rscript gseaAnalysis.R --cellType $eachType
+done
+
+
+
+

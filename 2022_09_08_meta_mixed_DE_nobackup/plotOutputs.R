@@ -31,7 +31,11 @@ option_list = list(
   			default="Endothelium",
               help="Cell type for which the model was fit", metavar="character"),
     make_option(c("-n", "--nSplits"), type="numeric", default = 10,
-              help="Number of sub-jobs to split the DE testing task into", metavar="numeric")
+              help="Number of sub-jobs to split the DE testing task into", metavar="numeric"),
+    make_option(c("-v", "--covariates"), type="character", 
+  			# default="Endocardium", 
+  			default="SexM,Age",
+              help="Covariates to summarize", metavar="character")
     )
 opt_parser = OptionParser(option_list=option_list)
 opt = parse_args(opt_parser)
@@ -40,12 +44,18 @@ cellType = opt$cellType
 modelFitDescription = opt$modelNotes
 
 # Read in the fit
-
 fitResults = getFitResults(opt)
 
-# Get the coefficients and p-values for all the fixed effects
-fixedCoefsToGet = rownames(fitResults[1,"model_summary"][[1]]$coefficients)
-fixedCoefsToGet = fixedCoefsToGet[!(fixedCoefsToGet %in% c("(Intercept)"))]
+
+
+
+
+
+# # Get the coefficients and p-values for all the fixed effects
+# fixedCoefsToGet = rownames(fitResults[1,"model_summary"][[1]]$coefficients)
+# fixedCoefsToGet = fixedCoefsToGet[!(fixedCoefsToGet %in% c("(Intercept)"))]
+
+fixedCoefsToGet = strsplit(opt$covariates, ",", fixed=TRUE)[[1]]
 
 # Store the fits for different fixed effects as separate DFs, for now
 fixedEffectDFlist = vector(mode="list", length=length(fixedCoefsToGet))
@@ -58,26 +68,31 @@ for (eachCoef in fixedCoefsToGet){
 	thisDF = as.data.frame(thisDF)
 	thisDF$coefficientName = eachCoef
 
-	# Loop through and get the relevant coefficients and p values
-	for (eachInd in 1:nrow(fitResults)){
+	# # Loop through and get the relevant coefficients and p values
+	# for (eachInd in 1:nrow(fitResults)){
+	# 	thisDF[eachInd,"coefficientValue"] = (
+	# 		fitResults[["model_summary"]][[eachInd]]$coefficients[eachCoef,"Estimate"])
+	# 	thisDF[eachInd,"pval"] = (
+	# 		fitResults[["model_summary"]][[eachInd]]$coefficients[eachCoef,"Pr(>|z|)"])
+	# 	thisDF[eachInd,"z_value"] = (
+	# 		fitResults[["model_summary"]][[eachInd]]$coefficients[eachCoef,"z value"])
+	# 	thisDF[eachInd,"coef_std_error"] = (
+	# 		fitResults[["model_summary"]][[eachInd]]$coefficients[eachCoef,"Std. Error"])
+	# 	thisDF[eachInd,"negLog10Pval"] = -log10(thisDF[eachInd,"pval"])
+	# 	thisDF[eachInd, "Donor_Stddev"] = attr(fitResults[["model_summary"]][[eachInd]]$varcor[["Donor"]], "stddev")
 
-		thisDF[eachInd,"coefficientValue"] = (
-			fitResults[["model_summary"]][[eachInd]]$coefficients[eachCoef,"Estimate"])
-		thisDF[eachInd,"pval"] = (
-			fitResults[["model_summary"]][[eachInd]]$coefficients[eachCoef,"Pr(>|z|)"])
-		thisDF[eachInd,"z_value"] = (
-			fitResults[["model_summary"]][[eachInd]]$coefficients[eachCoef,"z value"])
-		thisDF[eachInd,"coef_std_error"] = (
-			fitResults[["model_summary"]][[eachInd]]$coefficients[eachCoef,"Std. Error"])
-		thisDF[eachInd,"negLog10Pval"] = -log10(thisDF[eachInd,"pval"])
-		thisDF[eachInd, "Donor_Stddev"] = attr(fitResults[["model_summary"]][[eachInd]]$varcor[["Donor"]], "stddev")
-
-		# 8-9-21 addition
-		thisDF[eachInd, "overDispersion"] = as.numeric(
-			str_match_all(fitResults[["model_summary"]][[eachInd]]$family, "(?<=\\().+?(?=\\))")[[1]][1,1])
-		thisDF[eachInd, "fracCellsExpr"] = fitResults[["fracCellsExpr"]][[eachInd]]
+	# 	# 8-9-21 addition
+	# 	thisDF[eachInd, "overDispersion"] = as.numeric(
+	# 		str_match_all(fitResults[["model_summary"]][[eachInd]]$family, "(?<=\\().+?(?=\\))")[[1]][1,1])
+	# 	thisDF[eachInd, "fracCellsExpr"] = fitResults[["fracCellsExpr"]][[eachInd]]
 			
-	}
+	# }
+
+	thisDF["coefficientValue"] = fitResults[[paste0("logFC_", eachCoef)]]
+	thisDF["pval"]             = fitResults[[paste0("p_", eachCoef)]]
+	thisDF["coef_std_error"]   = fitResults[[paste0("se_", eachCoef)]]
+	thisDF["z_value"]          = thisDF$coefficientValue / thisDF$coef_std_error
+	thisDF["negLog10Pval"]     = -log10(thisDF$pval)
 
 	# Also get the adjust p values by benjamini hochberg
 	thisDF$q_val = p.adjust(thisDF$pval, method = "BH")
@@ -89,6 +104,7 @@ for (eachCoef in fixedCoefsToGet){
 names(fixedEffectDFlist) = fixedCoefsToGet
 
 
+dir.create("./plots/")
 outputDir = paste0("./plots/", cellType, modelFitDescription, "/")
 dir.create(outputDir)
 
@@ -142,16 +158,16 @@ for (eachCoef in fixedCoefsToGet){
 
 # Histogram of overdispersion estimates
 # Clip to be in the 0-2 range
-overdisperseMax = 2.0
-dfHere$overDispersion = ifelse(dfHere$overDispersion > overdisperseMax, overdisperseMax, dfHere$overDispersion )
+# overdisperseMax = 2.0
+# dfHere$overDispersion = ifelse(dfHere$overDispersion > overdisperseMax, overdisperseMax, dfHere$overDispersion )
 
-png(paste0(outputDir, cellType, "_NB_Overdispersion.png"))
-myPlot = ggplot(dfHere, 
-	aes_string("overDispersion")) + geom_histogram() + 
-	xlab("Overdispersion from NB Fitting") +
-	ggtitle(paste0("Gene overdispersion in ", cellType))
-print(myPlot)
-dev.off()
+# png(paste0(outputDir, cellType, "_NB_Overdispersion.png"))
+# myPlot = ggplot(dfHere, 
+# 	aes_string("overDispersion")) + geom_histogram() + 
+# 	xlab("Overdispersion from NB Fitting") +
+# 	ggtitle(paste0("Gene overdispersion in ", cellType))
+# print(myPlot)
+# dev.off()
 
 
 print("All Done")

@@ -14,7 +14,7 @@ print("Libraries loaded, starting now")
 # Get the passed parameters
 option_list = list(
   make_option(c("-m", "--modelNotes"), type="character", 
-  			default="_fix_Anatomical_Site,Age,Sex_rand_Donor_HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40addAllTypes_MMresult",
+  			default="_fix_Anatomical_Site,Age,Sex,DataSource,log10_umi_rand_Donor_NucleiOnlySharedGenesCDS_noAtr_",
               help="Processing note from model fitting", metavar="character"),
   make_option(c("-b", "--covariate"), type="character", 
   			default=     "Age",   #"Age", # "SexM"
@@ -29,7 +29,7 @@ option_list = list(
 opt_parser = OptionParser(option_list=option_list)
 opt = parse_args(opt_parser)
 
-cellTypes = c("Vascular_Endothelium", "Cardiomyocyte", "Macrophage", "T_Cell", "VSM_and_Pericyte", "Fibroblast", "Endocardium")
+cellTypes = c("Endothelium", "Fibroblast", "Lymphocyte", "Myeloid", "Perivascular", "Ventricular_Cardiomyocytes", "Neuron", "Adipocytes")
 
 
 monocle_theme_opts <- function()
@@ -94,7 +94,7 @@ getFormattedEffectDirection <- function(combinedCSV, opt){
 		combinedCSV$Effect_Direction = ifelse(combinedCSV$Effect_Direction == "Positive", "Higher in Age", 
 																				"Lower in Age")
 	}
-
+ 
 	return(combinedCSV)
 }
 
@@ -116,10 +116,10 @@ outDir = "./plots/GSEA_Summaries/"
 dir.create(outDir)
 
 if (opt$covariate == "SexM"){
-	figWidth = 1800
+	figWidth = 2400
 	colorPaletteToUse = "Dark2"
 } else{
-	figWidth = 2200
+	figWidth = 3200
 	colorPaletteToUse = "Set1"
 }
 

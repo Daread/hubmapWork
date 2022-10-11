@@ -1,2 +1,0 @@
-#!/bin/bash -ue
-bcl2fastq --runfolder-dir      /net/shendure/vol9/seq/NOVASEQ/210111_Riza_sciATAC3/nobackup/210112_GRC46NS_0339_A_HTWVLDSXY               --output-dir         .               --interop-dir        .               --sample-sheet       SampleSheet.csv               --loading-threads    3               --processing-threads 6                --writing-threads    3               --ignore-missing-positions               --ignore-missing-controls               --ignore-missing-filter               --ignore-missing-bcls

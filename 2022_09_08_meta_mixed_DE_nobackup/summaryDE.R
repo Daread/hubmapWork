@@ -74,23 +74,21 @@ getCombinedCSV <- function(opt, inputCelltypes, inputCovariateList){
 # Get the passed parameters
 option_list = list(
   make_option(c("-m", "--modelNotes"), type="character", 
-  			default="_fix_Anatomical_Site,Age,Sex_rand_Donor_HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40addAllTypes_MMresult",
+  			default="_fix_Anatomical_Site,Age,Sex,DataSource,log10_umi_rand_Donor_NucleiOnlySharedGenesCDS_noAtr_",
               help="Processing note from model fitting", metavar="character"),
   # make_option(c("-b", "--covariate"), type="character", 
   # 			default="SexM",   #"Age", # "SexM"
   #             help="Covariate to plot GSEA summary plot", metavar="character"),
   make_option(c("-p", "--padjCutoff"), type="numeric", 
   			default=0.1,
-              help="Max padj value to plot as significant", metavar="numeric"),
-  make_option(c("-c", "--cellType"), type="character", 
-  			default="Vascular_Endothelium",
-              help="Cell type for which the model was fit", metavar="character")
+              help="Max padj value to plot as significant", metavar="numeric")
 )
 opt_parser = OptionParser(option_list=option_list)
 opt = parse_args(opt_parser)
 
 # cellTypes = c("Vascular_Endothelium", "Cardiomyocyte", "Macrophage", "T_Cell", "VSM_and_Pericyte", "Fibroblast", "Endocardium")
-cellTypes = c("Vascular_Endothelium", "Cardiomyocyte", "Macrophage", "T_Cell", "VSM_and_Pericyte", "Fibroblast", "Endocardium", "Mast_Cell", "Adipocytes", "Lymphatic_Endothelium", "B_Cell", "Neuronal")
+cellTypes = c("Endothelium", "Fibroblast", "Lymphocyte", "Myeloid", "Perivascular", "Ventricular_Cardiomyocytes", "Neuron", "Adipocytes")
+
 
 covariatesToPlot = c("SexM", "Age")
 covariateCSVs = vector(mode='list', length=length(covariatesToPlot))

@@ -225,24 +225,32 @@ getMixedBetaBinomialPropFits <- function(inputDF, modelFormula="Count ~ Anatomic
 
 
 
+excludeAtrium = TRUE
+if (excludeAtrium){
+	cellTypeRegressionDF = cellTypeRegressionDF[!(cellTypeRegressionDF$Anatomical_Site %in% c("LA", "RA")),]
+	siteNote = "No_Atrium_"
+	cellTypeRegressionDF$Sample = as.factor(as.character(cellTypeRegressionDF$Sample))
+} else{
+	siteNote = "All_Sites_"
+}
 
 
 # betaBinomFits = getBetaBinomialPropFits(cellTypeRegressionDF)
 
 lvOnly = FALSE
 if (lvOnly){
-	lvNote = "LVonly_"
+	siteNote = "LVonly_"
 	cellTypeRegressionDF = cellTypeRegressionDF[cellTypeRegressionDF$Anatomical_Site == "LV",]
-	modelForm = "countDF ~ Sex + Age"
+	modelFormFixed = "countDF ~ Sex + Age"
 	useMixed = FALSE
 } else{
-	lvNote = "All_Sites_"
-	modelForm = "countDF ~ Anatomical_Site + Sex + Age"
+	#siteNote = "All_Sites_"
+	modelFormFixed = "countDF ~ Anatomical_Site + Sex + Age"
 	useMixed = TRUE
 }
 
 if (!useMixed){
-	fullAndTidyFits = getBetaBinomialPropFits(cellTypeRegressionDF, modelFormula = modelForm)
+	fullAndTidyFits = getBetaBinomialPropFits(cellTypeRegressionDF, modelFormula = modelFormFixed)
 	betaBinomFits = fullAndTidyFits[[1]]
 	fullFits = fullAndTidyFits[[2]]
 
@@ -258,7 +266,7 @@ if (!useMixed){
 	# nonCoefRes[1] = NULL
 	rownames(nonCoefRes) = NULL
 	dir.create("./fileOutputs/")
-	testResultOutfile = paste0("./fileOutputs/", lvNote, "betaBinomFitting.csv")
+	testResultOutfile = paste0("./fileOutputs/", siteNote, "betaBinomFitting.csv")
 	write.csv(nonCoefRes, testResultOutfile)
 } else {
 	print("Fitting Mixed Model")
@@ -281,8 +289,15 @@ if (!useMixed){
 	# Save the results
 	# nonCoefRes[1] = NULL
 	rownames(nonCoefRes) = NULL
-	testResultOutfile = paste0("./fileOutputs/", lvNote, "betaBinomFittingMixed.csv")
+	testResultOutfile = paste0("./fileOutputs/", siteNote, "betaBinomFittingMixed.csv")
 	write.csv(nonCoefRes, testResultOutfile)
+
+	# Age and sex only output
+	ageSexOnly = nonCoefRes[nonCoefRes$Term %in% c("SexM", "Age")]
+	ageSexOnly$q_value = p.adjust(ageSexOnly$p.value, method = "BH")
+	rownames(ageSexOnly) = NULL
+	testResultOutfile = paste0("./fileOutputs/AgeSexOnly_", siteNote, "betaBinomFittingMixed.csv")
+	write.csv(ageSexOnly, testResultOutfile)
 
 }
 
@@ -329,17 +344,17 @@ cellTypeRegressionDF$Proportion = (cellTypeRegressionDF$Count / cellTypeRegressi
 
 lvOnly = "TRUE"
 if (lvOnly){
-	lvNote = "LVonly_"
+	siteNote = "LVonly_"
 	cellTypeRegressionDF = cellTypeRegressionDF[cellTypeRegressionDF$Anatomical_Site == "LV",]
 } else{
-	lvNote = "All_Sites_"
+	siteNote = "All_Sites_"
 }
 
 # For every cell type, plot by age/sex/site
 for (categoricalVar in c("Sex", "Anatomical_Site")){
 	# for (eachCelltype in cellTypesToTest){
 		# Make a box plot
-		png(paste0(jitterDir, lvNote, "Proportions_grouped_by_", categoricalVar, ".png"), 
+		png(paste0(jitterDir, siteNote, "Proportions_grouped_by_", categoricalVar, ".png"), 
 				res=300, height=1800,width=2700)
 		myPlot = ggplot(cellTypeRegressionDF, aes_string(x="Cell_Type", y="Proportion",
 					# col=categoricalVar, 
@@ -362,7 +377,7 @@ for (eachCelltype in cellTypesToTest){
 
 	subsetDF = cellTypeRegressionDF[cellTypeRegressionDF$Cell_Type == eachCelltype,]
 
-	png(paste0(jitterDir, lvNote, "Age_vs_prop_for_", eachCelltype, ".png"), 
+	png(paste0(jitterDir, siteNote, "Age_vs_prop_for_", eachCelltype, ".png"), 
 			res=200, height=1000,width=1200)
 	myPlot = ggplot(subsetDF, aes_string(x="Age", y="Proportion", col="Sex")) + 
 			# geom_point()  +

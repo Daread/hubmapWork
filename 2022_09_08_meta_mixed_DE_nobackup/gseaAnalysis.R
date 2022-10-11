@@ -14,11 +14,11 @@ print("Libraries loaded, starting now")
 option_list = list(
   make_option(c("-m", "--modelNotes"), type="character", 
   			# default="_fix_Anatomical_Site_rand_Donor_HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40addAllTypes_MMresult", 
-  			default="_fix_Anatomical_Site,Age,Sex_rand_Donor_HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40addAllTypes_MMresult",
+  			default="_fix_Anatomical_Site,Age,Sex,DataSource,log10_umi_rand_Donor_NucleiOnlySharedGenesCDS_noAtr_",
               help="Processing note from model fitting", metavar="character"),
   make_option(c("-c", "--cellType"), type="character", 
   			# default="Endocardium", 
-  			default="Vascular_Endothelium",
+  			default="Fibroblast",
               help="Cell type for which the model was fit", metavar="character")
 )
 opt_parser = OptionParser(option_list=option_list)
@@ -28,11 +28,9 @@ cellType = opt$cellType
 modelFitDescription = opt$modelNotes
 
 # Read in the fit
-rdsPath = "./rdsOutput/mixedModels/"
 outputDir = paste0("./plots/", cellType, modelFitDescription, "/")
 
-fixedCoefsToGet = c("SexM", "Age", "Anatomical_SiteRight_Vent", 
-					"Anatomical_SiteApex", "Anatomical_SiteSeptum" )
+fixedCoefsToGet = c("SexM", "Age" )
 
 msigdbr_df = msigdbr(species = "Homo sapiens", category = "H")
 msigdbr_list = split(x = msigdbr_df$gene_symbol, f = msigdbr_df$gs_name)

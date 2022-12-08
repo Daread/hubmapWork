@@ -1,6 +1,9 @@
 
 
 ###########################################################################################
+
+# library(glmmTMB)
+
 # Load relevant packages
 source("/net/trapnell/vol1/home/readdf/trapLabDir/sharedProjectCode/utility/singleCellUtilFuncs.R")
 # modStatus <- loadMonoclePackages()
@@ -19,6 +22,18 @@ library(RColorBrewer)
 library(stringr)
 library(PROreg)
 
+#11-15-22: Trying glmmTMB for fitting
+
+
+
+
+formatCDS = function(inputCDS){
+	# Make sure to remove any diseased hearts from the chaffin dataset
+	chaffinControl = c("1515","1516","1539","1540","1547","1549","1558","1561","1582","1600","1603","1610","1622","1678","1702","1718")
+	inputCDS = inputCDS[,(colData(inputCDS)$Donor %in% paste0("Chaffin_P", chaffinControl )) | !(colData(inputCDS)$DataSource == "Chaffin")]
+
+	return(inputCDS)
+}
 
 # Get the passed parameters
 library("optparse")
@@ -37,10 +52,22 @@ processingNote = paste0(opt$name, "_by_", opt$colToUse)
 # With arguments, read in data
 rdsPath = "../2022_08_22_addNewSamples_nobackup/formattedData/"
 oldProcNote = "NucleiOnlySharedGenesCDS"
+
 allCellCDS = readRDS(paste0(rdsPath, oldProcNote, ".rds"))
 
 # Assign the subtypes
 colData(allCellCDS)$sample = paste0(colData(allCellCDS)$Donor, "_", colData(allCellCDS)$Anatomical_Site )
+
+colData(allCellCDS)$Donor = paste0(colData(allCellCDS)$DataSource, "_", colData(allCellCDS)$Donor )
+
+allCellCDS = formatCDS(allCellCDS)
+
+
+
+
+
+# sexGrouping = (as.data.frame(colData(allCellCDS)) %>% group_by(Donor, Sex) %>% tally())
+
 
 # Based off of this original CDS name, make a new directory for outputs
 # oldCDS_Path = paste0("/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_14_cellTypeProportions_nobackup/plots/", oldProcNote, "/")
@@ -59,7 +86,6 @@ for (eachGroup in as.character(levels(as.factor(colData(allCellCDS)[[opt$colToUs
 	makeFacetedProportionPlot_withFill(allCellCDS, paste0(processingNote, "_", eachGroup), "sample", opt$colToUse, 
             fillCol = "Donor", subsetPropsToShow=c(eachGroup), colorCol="Anatomical_Site",
             outputPath=outputPath )
-	
 }
 
 # Next, look and see if there are obvious trends in cell composition
@@ -97,17 +123,34 @@ monocle_theme_opts <- function()
  	inputDF$Cell_Type = as.factor(as.character(inputDF$Cell_Type))
 
  	metadataDF = read.csv("../2022_09_02_DE_Testing_nobackup/fileOutputs/AllSampleMetadata.csv")
- 	metadataDF$Site_Donor = rownames(metadataDF)
- 	sexVec = metadataDF$Sex
- 	names(sexVec) = metadataDF$Site_Donor
- 	inputDF$Sex = sexVec[inputDF$Sample]
- 	ageVec = metadataDF$Age 
- 	names(ageVec) = metadataDF$Site_Donor
- 	inputDF$Age = as.numeric(ageVec[inputDF$Sample])
+ 	metadataDF = tidyr::separate(metadataDF, col="X", into=c( "Study", "Donor", "Anatomical_Site"), 
+ 					remove=FALSE, extra="merge", sep="_")
+ 	metadataDF$Sample = paste0(metadataDF$Donor, "_", metadataDF$Anatomical_Site)
+ 	
+ 	# metadataDF$Site_Donor = rownames(metadataDF)
+ 	# sexVec = metadataDF$Sex
+ 	# names(sexVec) = metadataDF$Site_Donor
+ 	# inputDF$Sex = sexVec[inputDF$Sample]
+ 	# ageVec = metadataDF$Age 
+ 	# names(ageVec) = metadataDF$Site_Donor
+ 	# inputDF$Age = as.numeric(ageVec[inputDF$Sample])
+ 	# inputDF$Log10Age = log10(inputDF$Age)
+ 	# sourceVec = metadataDF$DataSource 
+ 	# names(sourceVec) = metadataDF$Site_Donor
+ 	# inputDF$DataSource = (sourceVec[inputDF$Sample])
+
+
+ 	colToAdd = c("Sex", "Age", "DataSource")
+ 	for (eachCol in colToAdd){
+ 		# browser()
+ 		thisCol = metadataDF[[eachCol]]
+ 		names(thisCol) = metadataDF$Sample 
+ 		inputDF[eachCol] = thisCol[as.character(inputDF$Sample)]
+ 	}
+
  	inputDF$Log10Age = log10(inputDF$Age)
- 	sourceVec = metadataDF$DataSource 
- 	names(sourceVec) = metadataDF$Site_Donor
- 	inputDF$DataSource = (sourceVec[inputDF$Sample])
+
+ 	# browser()
 
  	 	# Add info on anatomical site
  	inputDF = tidyr::separate(inputDF, col="Sample", into=c( "Donor", "Anatomical_Site"), 
@@ -131,6 +174,7 @@ monocle_theme_opts <- function()
 
 # Format the dataframe to contain counts alongside information on anatomical site, age, and sex
 countDF = melt(countTable)
+
 cellTypeRegressionDF = getFormattedCountDF(countDF)
 
 
@@ -185,9 +229,12 @@ getBetaBinomialPropFits <- function(inputDF, modelFormula="countDF ~ Anatomical_
 ##### 8-30-2022: Mixed modeling
 # install.packages("PROreg")
 
-getMixedBetaBinomialPropFits <- function(inputDF, modelFormula="Count ~ Anatomical_Site + Sex + Age", randomFormula = "~Donor + DataSource"){
+getMixedBetaBinomialPropFits <- function(inputDF, modelFormula="Count ~ Anatomical_Site + Sex + Age + DataSource", randomFormula = "~Donor"){
+# getMixedBetaBinomialPropFits <- function(inputDF, modelFormula="Count ~ Anatomical_Site + Sex + Age", randomFormula = "~Donor + DataSource"){
 	# Loop and fit a model per cell type
-	cellTypesToTest = as.character(unique(inputDF$Cell_Type))
+	# cellTypesToTest = as.character(unique(inputDF$Cell_Type))
+	cellTypesToTest = c("Ventricular_Cardiomyocytes", "Fibroblast", "Adipocytes", "Endothelium", "Lymphocyte", "Neuron", "Myeloid", "Perivascular")
+
 	inputDF$Cell_Type = as.character(inputDF$Cell_Type)
 	fitResList = vector(mode="list", length(cellTypesToTest))
 	origFitList = vector(mode="list", length(cellTypesToTest))
@@ -200,16 +247,28 @@ getMixedBetaBinomialPropFits <- function(inputDF, modelFormula="Count ~ Anatomic
 		# browser()
 		# fit =  vglm(as.formula(modelFormula), betabinomial, data = subsetDF, trace = TRUE)
 		# browser()
-		fit = BBmm(fixed.formula = as.formula(modelFormula), random.formula = as.formula(randomFormula), m = subsetDF$TotalCellsPerSample, data=subsetDF)
+		fit = BBmm(fixed.formula = as.formula(modelFormula), 
+			random.formula = as.formula(randomFormula), 
+			m = subsetDF$TotalCellsPerSample, data=subsetDF, show=TRUE)
+
+		# Trying alt fitting strategy for convergence issues hit with "NR", the default
+		# fit = BBmm(fixed.formula = as.formula(modelFormula), 
+		# 	random.formula = as.formula(randomFormula), 
+		# 	m = subsetDF$TotalCellsPerSample, data=subsetDF,
+		# 	method="Delta")
+		coef = fit$fixed.coef
 		coef = fit$fixed.coef
 
 		fitSummary = summary(fit)
 		fit_df = data.frame(fitSummary$fixed.coefficients)
 
+		# browser()
+
 		fit_df$Cell_Type = eachCelltype
 		fitResList[[counter]] = fit_df
 		origFitList[[counter]] = fit
 		counter = counter + 1
+
 	}
 
 	names(fitResList) = cellTypesToTest
@@ -222,6 +281,13 @@ getMixedBetaBinomialPropFits <- function(inputDF, modelFormula="Count ~ Anatomic
 
 
 ######################################### End mixed modeling 8-30-22 addition
+
+
+sexGrouping = (as.data.frame((cellTypeRegressionDF)) %>% group_by(DataSource, Sex, Anatomical_Site) %>% tally())
+
+
+
+
 
 
 
@@ -293,13 +359,125 @@ if (!useMixed){
 	write.csv(nonCoefRes, testResultOutfile)
 
 	# Age and sex only output
-	ageSexOnly = nonCoefRes[nonCoefRes$Term %in% c("SexM", "Age")]
+	ageSexOnly = nonCoefRes[nonCoefRes$Term %in% c("SexM", "Age"),]
 	ageSexOnly$q_value = p.adjust(ageSexOnly$p.value, method = "BH")
 	rownames(ageSexOnly) = NULL
 	testResultOutfile = paste0("./fileOutputs/AgeSexOnly_", siteNote, "betaBinomFittingMixed.csv")
 	write.csv(ageSexOnly, testResultOutfile)
 
 }
+
+
+
+
+
+
+############# 12-5-22
+# Get the number of duplicated rows among the fixed effect predictors
+cellTypesToTest = c("Ventricular_Cardiomyocytes", "Fibroblast", "Adipocytes", "Endothelium", "Lymphocyte", "Neuron", "Myeloid", "Perivascular")
+
+for (eachType in cellTypesToTest){
+	print(paste0("Working on ", eachType))
+	cellTypeRegressionDF$Cell_Type = as.character(cellTypeRegressionDF$Cell_Type)
+	subsetDF = cellTypeRegressionDF[cellTypeRegressionDF$Cell_Type == eachType,]
+
+	
+	# Only fixed effect rows
+	subsetDF = subsetDF[c("Age", "Sex", "Anatomical_Site", "Count")]
+
+	summaryDF = (subsetDF %>% group_by_all() %>% summarise(DUPCOUNT = n()))
+
+	print(summaryDF$DUPCOUNT)
+}
+
+
+
+############# 12-5-22
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# getMixedBetaBinomialPropFits <- function(inputDF, modelFormula="Count ~ Anatomical_Site + Sex + Age + DataSource", randomFormula = "~Donor"){
+getMixedBetaBinomialPropFitsGLMMTMB <- function(inputDF, modelFormula="Count ~ Anatomical_Site + Sex + Age", randomFormula = "~Donor + DataSource"){
+	# Loop and fit a model per cell type
+	# cellTypesToTest = as.character(unique(inputDF$Cell_Type))
+	cellTypesToTest = c("Fibroblast", "Adipocytes", "Endothelium", "Lymphocyte", "Neuron", "Myeloid", "Perivascular", "Ventricular_Cardiomyocytes")
+
+	inputDF$Cell_Type = as.character(inputDF$Cell_Type)
+	fitResList = vector(mode="list", length(cellTypesToTest))
+	origFitList = vector(mode="list", length(cellTypesToTest))
+	counter = 1
+	for (eachCelltype in cellTypesToTest){
+		print(paste0("Fitting ", eachCelltype))
+		subsetDF = inputDF[inputDF$Cell_Type == eachCelltype,]
+		# Get the fit
+		countDF = cbind(subsetDF$Count, subsetDF$TotalCellsPerSample - subsetDF$Count)
+		# browser()
+		# fit =  vglm(as.formula(modelFormula), betabinomial, data = subsetDF, trace = TRUE)
+		# browser()
+		fit = BBmm(fixed.formula = as.formula(modelFormula), 
+			random.formula = as.formula(randomFormula), 
+			m = subsetDF$TotalCellsPerSample, data=subsetDF)
+
+		# Trying alt fitting strategy for convergence issues hit with "NR", the default
+		# fit = BBmm(fixed.formula = as.formula(modelFormula), 
+		# 	random.formula = as.formula(randomFormula), 
+		# 	m = subsetDF$TotalCellsPerSample, data=subsetDF,
+		# 	method="Delta")
+		coef = fit$fixed.coef
+		coef = fit$fixed.coef
+
+		fitSummary = summary(fit)
+		fit_df = data.frame(fitSummary$fixed.coefficients)
+
+		browser()
+
+		fit_df$Cell_Type = eachCelltype
+		fitResList[[counter]] = fit_df
+		origFitList[[counter]] = fit
+		counter = counter + 1
+
+	}
+
+	names(fitResList) = cellTypesToTest
+	names(origFitList) = cellTypesToTest
+
+	# return(fitResList)
+	return(list(fitResList, origFitList))
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

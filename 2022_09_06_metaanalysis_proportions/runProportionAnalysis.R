@@ -315,6 +315,9 @@ if (lvOnly){
 	useMixed = TRUE
 }
 
+# Save the proportion dataframe here
+write.csv(cellTypeRegressionDF, paste0("./fileOutputs/CellProportions_", siteNote, ".csv" ))
+
 if (!useMixed){
 	fullAndTidyFits = getBetaBinomialPropFits(cellTypeRegressionDF, modelFormula = modelFormFixed)
 	betaBinomFits = fullAndTidyFits[[1]]
@@ -347,7 +350,8 @@ if (!useMixed){
 
 	test_res = tidyr::separate(test_res, term, into = c("Cell_Type", "Term"), sep="[.]", remove=TRUE, extra="merge")
 
-	nonCoefRes = test_res[!(test_res$Term %in% c("(Intercept)")),]
+	#nonCoefRes = test_res[!(test_res$Term %in% c("(Intercept)")),]
+	nonCoefRes = test_res
 	nonCoefRes = nonCoefRes[order(nonCoefRes$p.value),]
 
 	nonCoefRes$q_value = p.adjust(nonCoefRes$p.value, method = "BH")

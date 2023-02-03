@@ -59,7 +59,8 @@ adjustProportions = function(thisPropDF, fitInput){
 }
 
 
-plotProportionAgeFit = function(eachType, fitInput, propInput, opt, adjustProps = TRUE){
+plotProportionAgeFit = function(eachType, fitInput, propInput, opt, adjustProps = TRUE,
+								pointColor = "DataSource"){
 	# browser()
 	# Get the data from this celltype
 	thisPropDF = propInput[propInput$Cell_Type == eachType,]
@@ -93,13 +94,16 @@ plotProportionAgeFit = function(eachType, fitInput, propInput, opt, adjustProps 
 	outDir = paste0("./plots/Proportions/")
 	dir.create(outDir)
 
+	# browser()
+
 	# Make the plot
-	png(paste0(outDir, eachType, "_Age_Vs_", adjNote, ".png"), res=200, height=1400, width=1400)
-	myPlot = ggplot(thisPropDF, aes_string(x="Age", y="Proportion", color="DataSource")) + 
-				geom_point() + 
-				geom_line(data=curveDF) + 
+	png(paste0(outDir, eachType, "_Age_Vs_", adjNote, "ColorBy_", pointColor, ".png"), res=200, height=1400, width=1400)
+	myPlot = ggplot() + 
+				geom_point(data=thisPropDF, aes_string(x="Age", y="Proportion", color=pointColor)) + 
+				geom_line(data=curveDF, aes_string(x="Age", y="Proportion")) + 
 				geom_ribbon(data=curveDF,
-					aes(ymin = (exp((logitProp - 2*se*Age))/(1 + exp( (logitProp - 2*se*Age))) ),
+					aes(x=Age,
+						 ymin = (exp((logitProp - 2*se*Age))/(1 + exp( (logitProp - 2*se*Age))) ),
 						ymax = (  exp((logitProp + 2*se*Age))/(1 + exp( (logitProp + 2*se*Age))) ) ),
 						 fill = "blue", alpha=.15) + 
 				xlab(paste0(eachType, " Proportion"))

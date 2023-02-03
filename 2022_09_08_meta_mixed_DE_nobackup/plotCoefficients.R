@@ -11,15 +11,20 @@ plotCoefs = function(inputDF, genesToPlot, opt){
 	plotDF$CI_Upper = plotDF$coefficientValue + 1.96 * plotDF$coef_std_error
 	plotDF$CI_Lower = plotDF$coefficientValue - 1.96 * plotDF$coef_std_error
 
+	# Add column for annotating q values
+	# plotDF$Q_Annot = paste0("q=", as.character(format(round(plotDF$q_val, 2), nsmall = 2 )))
+	plotDF$Q_Annot = paste0("q=", as.character(signif(plotDF$q_val, 3)))
+
 	# Plot the desired coefficients with standard errors
 	plotDir = "./plots/CoefficientPlots/"
 	dir.create(plotDir)
 
 	# Plot with ggplot
 	png(paste0(plotDir, opt$cellType, "_Coef_", opt$genes, ".png"), res=300, height = 1500, width=1500)
-	myPlot = ggplot(plotDF, aes_string(x="coefficientValue", y = "gene")) + 
+	myPlot = ggplot(plotDF, aes_string(x="coefficientValue", y = "gene", label="Q_Annot")) + 
 				geom_point() + 
-				geom_errorbar(aes_string(xmin = "CI_Lower", xmax = "CI_Upper"))
+				geom_text(vjust=0, nudge_y=.1) +
+				geom_errorbar(aes_string(xmin = "CI_Lower", xmax = "CI_Upper"), width = .1)
 
 	print(myPlot)
 	dev.off()

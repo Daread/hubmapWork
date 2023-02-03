@@ -189,6 +189,8 @@ formatCellType <- function(inputColumn){
   inputColumn = ifelse(inputColumn == "Mast_Cell", "Mast Cell", inputColumn)
   inputColumn = ifelse(inputColumn == "B_Cell", "B Cell", inputColumn)
 
+  inputColumn = ifelse(inputColumn == "Ventricular_Cardiomyocytes", "Ventricular Cardiomyocytes", inputColumn)
+
   return(inputColumn)
 }
 
@@ -371,28 +373,33 @@ if (!useMixed){
 
 }
 
+# Save an RDS with raw fits
+rawFitFile = paste0("./fileOutputs/", siteNote, "betaBinomFits.rds")
+saveRDS(fullFitsMixed, file=rawFitFile)
 
+
+# testPred = predict(fullFitsMixed[[1]], interval = "confidence")
 
 
 
 
 ############# 12-5-22
 # Get the number of duplicated rows among the fixed effect predictors
-cellTypesToTest = c("Ventricular_Cardiomyocytes", "Fibroblast", "Adipocytes", "Endothelium", "Lymphocyte", "Neuron", "Myeloid", "Perivascular")
+# cellTypesToTest = c("Ventricular_Cardiomyocytes", "Fibroblast", "Adipocytes", "Endothelium", "Lymphocyte", "Neuron", "Myeloid", "Perivascular")
 
-for (eachType in cellTypesToTest){
-	print(paste0("Working on ", eachType))
-	cellTypeRegressionDF$Cell_Type = as.character(cellTypeRegressionDF$Cell_Type)
-	subsetDF = cellTypeRegressionDF[cellTypeRegressionDF$Cell_Type == eachType,]
+# for (eachType in cellTypesToTest){
+# 	print(paste0("Working on ", eachType))
+# 	cellTypeRegressionDF$Cell_Type = as.character(cellTypeRegressionDF$Cell_Type)
+# 	subsetDF = cellTypeRegressionDF[cellTypeRegressionDF$Cell_Type == eachType,]
 
 	
-	# Only fixed effect rows
-	subsetDF = subsetDF[c("Age", "Sex", "Anatomical_Site", "Count")]
+# 	# Only fixed effect rows
+# 	subsetDF = subsetDF[c("Age", "Sex", "Anatomical_Site", "Count")]
 
-	summaryDF = (subsetDF %>% group_by_all() %>% summarise(DUPCOUNT = n()))
+# 	summaryDF = (subsetDF %>% group_by_all() %>% summarise(DUPCOUNT = n()))
 
-	print(summaryDF$DUPCOUNT)
-}
+# 	print(summaryDF$DUPCOUNT)
+# }
 
 
 
@@ -413,56 +420,54 @@ for (eachType in cellTypesToTest){
 
 
 
-# getMixedBetaBinomialPropFits <- function(inputDF, modelFormula="Count ~ Anatomical_Site + Sex + Age + DataSource", randomFormula = "~Donor"){
-getMixedBetaBinomialPropFitsGLMMTMB <- function(inputDF, modelFormula="Count ~ Anatomical_Site + Sex + Age", randomFormula = "~Donor + DataSource"){
-	# Loop and fit a model per cell type
-	# cellTypesToTest = as.character(unique(inputDF$Cell_Type))
-	cellTypesToTest = c("Fibroblast", "Adipocytes", "Endothelium", "Lymphocyte", "Neuron", "Myeloid", "Perivascular", "Ventricular_Cardiomyocytes")
+# # getMixedBetaBinomialPropFits <- function(inputDF, modelFormula="Count ~ Anatomical_Site + Sex + Age + DataSource", randomFormula = "~Donor"){
+# getMixedBetaBinomialPropFitsGLMMTMB <- function(inputDF, modelFormula="Count ~ Anatomical_Site + Sex + Age", randomFormula = "~Donor + DataSource"){
+# 	# Loop and fit a model per cell type
+# 	# cellTypesToTest = as.character(unique(inputDF$Cell_Type))
+# 	cellTypesToTest = c("Fibroblast", "Adipocytes", "Endothelium", "Lymphocyte", "Neuron", "Myeloid", "Perivascular", "Ventricular_Cardiomyocytes")
 
-	inputDF$Cell_Type = as.character(inputDF$Cell_Type)
-	fitResList = vector(mode="list", length(cellTypesToTest))
-	origFitList = vector(mode="list", length(cellTypesToTest))
-	counter = 1
-	for (eachCelltype in cellTypesToTest){
-		print(paste0("Fitting ", eachCelltype))
-		subsetDF = inputDF[inputDF$Cell_Type == eachCelltype,]
-		# Get the fit
-		countDF = cbind(subsetDF$Count, subsetDF$TotalCellsPerSample - subsetDF$Count)
-		# browser()
-		# fit =  vglm(as.formula(modelFormula), betabinomial, data = subsetDF, trace = TRUE)
-		# browser()
-		fit = BBmm(fixed.formula = as.formula(modelFormula), 
-			random.formula = as.formula(randomFormula), 
-			m = subsetDF$TotalCellsPerSample, data=subsetDF)
+# 	inputDF$Cell_Type = as.character(inputDF$Cell_Type)
+# 	fitResList = vector(mode="list", length(cellTypesToTest))
+# 	origFitList = vector(mode="list", length(cellTypesToTest))
+# 	counter = 1
+# 	for (eachCelltype in cellTypesToTest){
+# 		print(paste0("Fitting ", eachCelltype))
+# 		subsetDF = inputDF[inputDF$Cell_Type == eachCelltype,]
+# 		# Get the fit
+# 		countDF = cbind(subsetDF$Count, subsetDF$TotalCellsPerSample - subsetDF$Count)
+# 		# browser()
+# 		# fit =  vglm(as.formula(modelFormula), betabinomial, data = subsetDF, trace = TRUE)
+# 		# browser()
+# 		fit = BBmm(fixed.formula = as.formula(modelFormula), 
+# 			random.formula = as.formula(randomFormula), 
+# 			m = subsetDF$TotalCellsPerSample, data=subsetDF)
 
-		# Trying alt fitting strategy for convergence issues hit with "NR", the default
-		# fit = BBmm(fixed.formula = as.formula(modelFormula), 
-		# 	random.formula = as.formula(randomFormula), 
-		# 	m = subsetDF$TotalCellsPerSample, data=subsetDF,
-		# 	method="Delta")
-		coef = fit$fixed.coef
-		coef = fit$fixed.coef
+# 		# Trying alt fitting strategy for convergence issues hit with "NR", the default
+# 		# fit = BBmm(fixed.formula = as.formula(modelFormula), 
+# 		# 	random.formula = as.formula(randomFormula), 
+# 		# 	m = subsetDF$TotalCellsPerSample, data=subsetDF,
+# 		# 	method="Delta")
+# 		coef = fit$fixed.coef
+# 		coef = fit$fixed.coef
 
-		fitSummary = summary(fit)
-		fit_df = data.frame(fitSummary$fixed.coefficients)
+# 		fitSummary = summary(fit)
+# 		fit_df = data.frame(fitSummary$fixed.coefficients)
 
-		browser()
+# 		browser()
 
-		fit_df$Cell_Type = eachCelltype
-		fitResList[[counter]] = fit_df
-		origFitList[[counter]] = fit
-		counter = counter + 1
+# 		fit_df$Cell_Type = eachCelltype
+# 		fitResList[[counter]] = fit_df
+# 		origFitList[[counter]] = fit
+# 		counter = counter + 1
 
-	}
+# 	}
 
-	names(fitResList) = cellTypesToTest
-	names(origFitList) = cellTypesToTest
+# 	names(fitResList) = cellTypesToTest
+# 	names(origFitList) = cellTypesToTest
 
-	# return(fitResList)
-	return(list(fitResList, origFitList))
-}
-
-
+# 	# return(fitResList)
+# 	return(list(fitResList, origFitList))
+# }
 
 
 
@@ -509,6 +514,9 @@ getMixedBetaBinomialPropFitsGLMMTMB <- function(inputDF, modelFormula="Count ~ A
 
 
 
+
+
+cellTypesToTest = c("Ventricular_Cardiomyocytes", "Fibroblast", "Adipocytes", "Endothelium", "Lymphocyte", "Neuron", "Myeloid", "Perivascular")
 
 
 
@@ -524,13 +532,13 @@ cellTypesToTest = as.character(unique(cellTypeRegressionDF$Cell_Type))
 
 cellTypeRegressionDF$Proportion = (cellTypeRegressionDF$Count / cellTypeRegressionDF$TotalCellsPerSample)
 
-lvOnly = "TRUE"
-if (lvOnly){
-	siteNote = "LVonly_"
-	cellTypeRegressionDF = cellTypeRegressionDF[cellTypeRegressionDF$Anatomical_Site == "LV",]
-} else{
-	siteNote = "All_Sites_"
-}
+# lvOnly = "TRUE"
+# if (lvOnly){
+# 	siteNote = "LVonly_"
+# 	cellTypeRegressionDF = cellTypeRegressionDF[cellTypeRegressionDF$Anatomical_Site == "LV",]
+# } else{
+# 	siteNote = "All_Sites_"
+# }
 
 # For every cell type, plot by age/sex/site
 for (categoricalVar in c("Sex", "Anatomical_Site")){
@@ -543,7 +551,7 @@ for (categoricalVar in c("Sex", "Anatomical_Site")){
 					fill=categoricalVar)) + 
 				geom_boxplot(outlier.shape=NA) + 
 				monocle_theme_opts() + 
-				geom_point(position=position_jitterdodge()) +
+				geom_point(position=position_jitterdodge(), alpha=.5) +
 				theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) + 
 				theme(text=element_text(size=24)) + 
 				xlab("Cell Type") + 

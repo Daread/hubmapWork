@@ -9,7 +9,7 @@ library("optparse")
 option_list = list(
 
   make_option(c("-f", "--featureSelection"), type="character", 
-        default="Binary_Combined_Motif_Counts", # "Binary_Combined_Motif_Counts", "Binary_PromOnly_Motif_Counts"
+        default= "Binary_Combined_Motif_Counts", #"Binary_PromOnly_Motif_Counts",#   "Binary_Combined_Motif_Counts", # "Binary_Combined_Motif_Counts", "Binary_PromOnly_Motif_Counts"
               help="Option of which features to use for input", metavar="character"),
 
   make_option(c("-t", "--predictionTask"), type="character", 
@@ -24,8 +24,12 @@ option_list = list(
         default = "alpha0.5_average", #"alpha0.5_max", # "alpha0.5_average",   # "alpha0.5_max" "alpha0.5_average"
               help="How to quantify the accuracy of a whole run (which comprises many alpha vals and cell types)", metavar="character"),
 
+make_option(c("-l", "--linkSet"), type="character", 
+        default="LyonV1", # "Cicero", 
+              help="Path to cds to process", metavar="character"),
+
   make_option(c("-p", "--paramFile"), type="character", 
-        default="VaryPromotersAllRunsMade",   # "VaryPromotersAllRunsMade.csv",  "VaryDistalParams",  #"VaryPromoters",   #"VaryDistalParams",   # "VaryPromoters" or "VaryDistalParams"
+        default=  "VaryDistalLyon2",   # "VaryPromotersLyon", # "VaryPromotersAllRunsMade",   # "VaryPromotersAllRunsMade.csv",  "VaryDistalParams",  #"VaryPromoters",   #"VaryDistalParams",   # "VaryPromoters" or "VaryDistalParams"
               help="File of which parameter sets to summarize", metavar="character")
 
 )
@@ -63,14 +67,24 @@ monocle_theme_opts <- function()
 
 getFitDF <- function(inputParams, opt){
   # Read the file
-  subDir = paste0(  "Prot_Only_Gene_Prom_Plus_Distal_WithSequence_Sites_Max", inputParams[1,"maxNsites"], "_Upstream",inputParams[1,"Upstream"],
+  if (!(opt$linkSet == "NotSet")){
+    subDir = paste0(  "Prot_Only_Gene_Prom_Plus_Distal_WithSequence_Sites_Max", inputParams[1,"maxNsites"], "_Upstream",inputParams[1,"Upstream"],
                 "_Downstream", inputParams[1,"Downstream"], "_cicCuf", inputParams[1,"coaccessCutoff"],
-                    "peakSize", inputParams[1,"peakSize"],"pVal", as.character(inputParams[1,"pVal"]), "/",
+                    "peakSize", inputParams[1,"peakSize"], "_Links_", opt$linkSet, "pVal", as.character(inputParams[1,"pVal"]), "/",
                     "fitVals", opt$predictionTask, "_from_", opt$featureSelection, ".csv" )
+    } else{
+      subDir = paste0(  "Prot_Only_Gene_Prom_Plus_Distal_WithSequence_Sites_Max", inputParams[1,"maxNsites"], "_Upstream",inputParams[1,"Upstream"],
+                "_Downstream", inputParams[1,"Downstream"], "_cicCuf", inputParams[1,"coaccessCutoff"],
+                    "peakSize", inputParams[1,"peakSize"], "pVal", as.character(inputParams[1,"pVal"]), "/",
+                    "fitVals", opt$predictionTask, "_from_", opt$featureSelection, ".csv" )
+    }
+  # print(subDir)
+
   thisResultFile = paste0("./plots/", opt$predictionFraming, "/", subDir )
   thisFitResult = read.csv(thisResultFile)
   return(thisFitResult)
 }
+# Prot_Only_Gene_Prom_Plus_Distal_WithSequence_Sites_Max1_Upstream5000_Downstream2000_cicCuf0.08peakSize100_Links_LyonV1pVal1e-04
 
 # I want to condense down a whole lot of run information into a single number.
 # Otherwise I'll end up with annoyances that some parameter sets are ever-so-slightly better in one cell type than another
@@ -134,7 +148,7 @@ makePlotThisComparison <- function(paramFileName, dfSummaries, opt){
     }
 
     png(paste0("./plots/summaryPlots/", opt$predictionFraming,
-           "_", paramFileName, "_", opt$summarizationPolicy, ".png"),
+           "_", paramFileName, "_", opt$summarizationPolicy, "_", opt$linkSet, "_", opt$featureSelection, ".png"),
         height=1200, width=1400,res=200)
     myPlot = ggplot(dfSummaries, aes_string(x="Parameter_Set", y=opt$summarizationPolicy, color="pVal") ) + 
           geom_point() + 
@@ -147,7 +161,7 @@ makePlotThisComparison <- function(paramFileName, dfSummaries, opt){
     dev.off()
   }
 
-  if (paramFileName == "VaryPromotersAllRunsMade") {
+  if ((paramFileName == "VaryPromotersAllRunsMade") | (paramFileName == "VaryPromotersLyon") | (paramFileName == "VaryPromotersAllRunsMadeV2")) {
     # Show varied upstrea/downstream sizes and a point per alpha
     dfSummaries$Parameter_Set = paste0(dfSummaries$Upstream, "/", dfSummaries$Downstream)
     dfSummaries$pVal = as.character(dfSummaries$pVal)
@@ -159,7 +173,7 @@ makePlotThisComparison <- function(paramFileName, dfSummaries, opt){
     }
 
     png(paste0("./plots/summaryPlots/", opt$predictionFraming,
-           "_", paramFileName, "_", opt$summarizationPolicy, ".png"),
+           "_", paramFileName, "_", opt$summarizationPolicy, "_", opt$linkSet, "_", opt$featureSelection, ".png"),
         height=1200, width=1400,res=200)
     myPlot = ggplot(dfSummaries, aes_string(x="Parameter_Set", y=opt$summarizationPolicy, color="pVal") ) + 
           geom_point() + 
@@ -173,13 +187,13 @@ makePlotThisComparison <- function(paramFileName, dfSummaries, opt){
   }
 
 
-  if (paramFileName %in% c("VaryDistalAllRunsMade", "VaryDistalParams")) {
+  if (paramFileName %in% c("VaryDistalAllRunsMade", "VaryDistalParams", "VaryDistalLyon1", "VaryDistalLyon2")) {
     # Show varied upstrea/downstream sizes and a point per alpha
     dfSummaries$Parameter_Set = paste0(dfSummaries$coaccessCutoff, "/", dfSummaries$maxNsites, "/", dfSummaries$peakSize)
     dfSummaries$pVal = as.character(dfSummaries$pVal)
 
     png(paste0("./plots/summaryPlots/", opt$predictionFraming,
-           "_", paramFileName, "_", opt$summarizationPolicy, ".png"),
+           "_", paramFileName, "_", opt$summarizationPolicy, "_", opt$linkSet, "_", opt$featureSelection, ".png"),
         height=1000, width=1600,res=200)
     myPlot = ggplot(dfSummaries, aes_string(x="Parameter_Set", y=opt$summarizationPolicy, color="pVal") ) + 
           geom_point() + 
@@ -196,6 +210,41 @@ makePlotThisComparison <- function(paramFileName, dfSummaries, opt){
 print("Plotting Comparison Now")
 # Plot, based on the input file used
 makePlotThisComparison(paramFileName, dfSummaries, opt)
+
+
+
+# Added 10-30-22: Add plot for the relationship between
+lyonDir = "./plots/summaryPlots/LyonWork/"
+dir.create(lyonDir)
+
+
+
+for (eachRowNum in 1:nrow(parameterSets)){
+  thisParamDF = parameterSets[eachRowNum,]
+  fitDF = getFitDF(thisParamDF, opt)
+  # browser()
+  # Now, summarize this fitting acrossGroups
+  thisParamDF[[opt$summarizationPolicy]] = getSummarizedDF(fitDF, opt)
+
+  # Get the number of sites and links going into fitting this model
+  
+
+  # Add this to the summary data frame
+  dfSummaries = rbind(dfSummaries, thisParamDF)
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -245,7 +294,7 @@ makePlotUnsummarizedThisComparison <- function(paramFileName, fitDF, opt){
     yLabToUse = "Validation R^2"
 
     png(paste0("./plots/summaryPlots/ShowCellTypes_", opt$predictionFraming,
-           "_", paramFileName,  ".png"),
+           "_", paramFileName,  "_", opt$linkSet, "_", opt$featureSelection, ".png"),
         height=1200, width=1400,res=200)
     myPlot = ggplot(fitDF, aes_string(x="Parameter_Set", y="Val_R_Squared") ) + 
           geom_boxplot(aes(fill=pVal)) + 
@@ -268,7 +317,7 @@ makePlotUnsummarizedThisComparison <- function(paramFileName, fitDF, opt){
     yLabToUse = "Validation R^2"
 
     png(paste0("./plots/summaryPlots/ShowCellTypes_", opt$predictionFraming,
-           "_", paramFileName,  ".png"),
+           "_", paramFileName,  "_", opt$linkSet, "_", opt$featureSelection, ".png"),
         height=1800, width=2100,res=300)
     myPlot = ggplot(fitDF, aes_string(x="Parameter_Set", y="Val_R_Squared") ) + 
           geom_boxplot(aes(fill=pVal)) + 
@@ -292,7 +341,7 @@ makePlotUnsummarizedThisComparison <- function(paramFileName, fitDF, opt){
     yLabToUse = "Validation R^2"
 
     png(paste0("./plots/summaryPlots/ShowCellTypes_", opt$predictionFraming,
-           "_", paramFileName,  ".png"),
+           "_", paramFileName,  "_", opt$linkSet, "_", opt$featureSelection, ".png"),
         height=1200, width=1800,res=200)
     myPlot = ggplot(fitDF, aes_string(x="Parameter_Set", y="Val_R_Squared") ) + 
           geom_boxplot(aes(fill=pVal)) + 

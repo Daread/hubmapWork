@@ -225,7 +225,6 @@ test_res = tidyr::separate(test_res, term, into = c("Cell_Type", "Term"), sep="[
 
 nonCoefRes = test_res[!(test_res$Term %in% c("(Intercept)")),]
 nonCoefRes = nonCoefRes[order(nonCoefRes$p.value),]
-
 nonCoefRes$q_value = p.adjust(nonCoefRes$p.value, method = "BH")
 
 # Save the results
@@ -233,6 +232,16 @@ nonCoefRes$q_value = p.adjust(nonCoefRes$p.value, method = "BH")
 rownames(nonCoefRes) = NULL
 testResultOutfile = paste0("./fileOutputs/betaBinomFittingMixed.csv")
 write.csv(nonCoefRes, testResultOutfile)
+
+
+
+# Save results only calculated over SexM and Age. More relevant since we aren't reporting anatomical/other variables in any case
+ageSexOnly = test_res[(test_res$Term %in% c("Age", "SexM")),]
+ageSexOnly = ageSexOnly[order(ageSexOnly$p.value),]
+ageSexOnly$q_value = p.adjust(ageSexOnly$p.value, method = "BH")
+
+testResultOutfile = paste0("./fileOutputs/ageSexOnlyBetaBinomFittingMixed.csv")
+write.csv(ageSexOnly, testResultOutfile)
 
 ############ End mixed modeling 8-30-22 addition
 
@@ -243,30 +252,30 @@ write.csv(nonCoefRes, testResultOutfile)
 
 
 
-# Run the regression model on each
+# # Run the regression model on each
 
-# betaBinomFits = getBetaBinomialPropFits(cellTypeRegressionDF)
-fullAndTidyFits = getBetaBinomialPropFits(cellTypeRegressionDF)
-betaBinomFits = fullAndTidyFits[[1]]
-fullFits = fullAndTidyFits[[2]]
+# # betaBinomFits = getBetaBinomialPropFits(cellTypeRegressionDF)
+# fullAndTidyFits = getBetaBinomialPropFits(cellTypeRegressionDF)
+# betaBinomFits = fullAndTidyFits[[1]]
+# fullFits = fullAndTidyFits[[2]]
 
 
-test_res = do.call(rbind, betaBinomFits)
+# test_res = do.call(rbind, betaBinomFits)
 
-nonCoefRes = test_res[!(test_res$term %in% c("(Intercept):1", "(Intercept):2")),]
-nonCoefRes = nonCoefRes[order(nonCoefRes$p.value),]
+# nonCoefRes = test_res[!(test_res$term %in% c("(Intercept):1", "(Intercept):2")),]
+# nonCoefRes = nonCoefRes[order(nonCoefRes$p.value),]
 
-nonCoefRes$q_value = p.adjust(nonCoefRes$p.value, method = "BH")
+# nonCoefRes$q_value = p.adjust(nonCoefRes$p.value, method = "BH")
 
-# Save the results
-# nonCoefRes[1] = NULL
-rownames(nonCoefRes) = NULL
-testResultOutfile = paste0("./fileOutputs/betaBinomFitting.csv")
-write.csv(nonCoefRes, testResultOutfile)
+# # Save the results
+# # nonCoefRes[1] = NULL
+# rownames(nonCoefRes) = NULL
+# testResultOutfile = paste0("./fileOutputs/betaBinomFitting.csv")
+# write.csv(nonCoefRes, testResultOutfile)
 
-# countDF = as.data.frame(countTable)
+# # countDF = as.data.frame(countTable)
 
-# formattedCountDF = getFormattedCountDF(countDF)
+# # formattedCountDF = getFormattedCountDF(countDF)
 
 
 

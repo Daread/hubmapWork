@@ -145,7 +145,8 @@ plotCoefBars <- function(coefList, cellTypes, opt, plotCovar="Age", geneSet = c(
 			 guides(fill=guide_legend(title="Cell Type")) +
 			 theme(axis.text.x = element_text(angle = 45, hjust=1)) +
   				# scale_fill_brewer(palette = "Dark2")
-  				scale_fill_manual(values=cellColors, drop = TRUE, limits=force)
+  				scale_fill_manual(values=cellColors, drop = TRUE, limits=force) +
+  				geom_hline(yintercept=0)
 	print(myPlot)
 	dev.off()
 }
@@ -196,6 +197,9 @@ plotCoefBars(atacResults, cellTypes, opt, plotCovar="Age", geneSet = c("IRF1", "
 				setLabel = "Age_Immunity_and_Senesc")
 
 
+
+plotCoefBars(atacResults, cellTypes, opt, plotCovar="Age", geneSet = c("IRF1", "IRF7", "NFKB2"), 
+				setLabel = "Age_Immunity_Only")
 
 
 

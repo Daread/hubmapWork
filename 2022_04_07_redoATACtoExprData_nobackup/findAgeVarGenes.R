@@ -46,14 +46,14 @@ option_list = list(
               help="Path to genome fasta to use", metavar="character"),
 
   make_option(c("-u", "--promoterUpstream"), type="numeric", 
-        default=1000,
+        default=2000,
               help="Bases upstream of TSS to use for input features", metavar="numeric"),
   make_option(c("-d", "--promoterDownstream"), type="numeric", 
-        default=200,
+        default=1000,
               help="Bases downstream of TSS to use for input features", metavar="numeric"),
 
   make_option(c("-k", "--coaccessCutoff"), type="numeric", 
-        default=.05,
+        default=.015,
               help="Cutoff for keeping coaccessible peaks", metavar="numeric"),
 
   make_option(c("-n", "--maxNdistalSites"), type="numeric", 
@@ -89,10 +89,113 @@ getProteinCodingGenes <- function(rnaData, opt){
   return(protRNA)
 }
 
+# testRowForSig <- function(x, distSiteCount) {
+# 	allDistNames = paste0("Distal_", as.character(1:distSiteCount))
+
+# 	for (eachName in allDistNames){
+
+# 	}
+#   if (character == FALSE) {
+#     x ^ 2
+#   } else {
+#     as.character(x ^2)
+#   }
+# }
+
+assignAgeRelatedGenes = function(inputDF, distSiteCount){
+	# Get DE Genes
+	ageDEfile = "/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_07_19_largeScaleMixedModeling_nobackup/plots/DE_Summaries/Combined_DE_by_Age_q_0.1.csv"
+	ageDE = read.csv(ageDEfile)
+	# Get ensembl names
+	heartCDS = readRDS("/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2021_05_10_HM10_Preprocessing_and_cell_annotations/rdsOutput/allCells_HM10UMI=100_mito=10Scrub=0.2noPackerMNN=sampleNameK=40addAllTypes.rds")
+	shortNameVec = rownames(heartCDS)
+	names(shortNameVec) = rowData(heartCDS)$gene_short_name
+
+	ageDE$ensemblName = shortNameVec[ageDE$gene]
+
+	ageGenes = unique(ageDE$ensemblName)
+
+	inputDF$IsAgeDE = ifelse(inputDF$GeneID %in% ageGenes, "Yes", "No")
+	
+
+	# Get scores of distal sites' age-covariance
+	agePeakFile = "/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2022_04_07_redoATACtoExprData_nobackup/rdsOutputs/RNA_Data/dr_age_specific.Rds"
+	agePeakData = readRDS(agePeakFile)
+
+	ageScores = agePeakData$effect_by_error
+	names(ageScores) = agePeakData$peak
+	ageScores = setNames(c(ageScores, NA), c(names(ageScores), "None"))
+
+	dir.create("./plots/lyonPlots/")
+	png("./plots/lyonPlots/ageScoreHist.png")
+	myPlot = ggplot(agePeakData[(agePeakData$effect_by_error < 5) & (agePeakData$effect_by_error > -5),], aes(x=effect_by_error)) + 
+		geom_histogram()
+	print(myPlot)
+	dev.off()
+
+
+	# Loop for each distal site
+	for (eachSite in 1:distSiteCount){
+		siteName = paste0("Distal_", as.character(eachSite))
+		print(siteName)
+		inputDF[[paste0(siteName, "_Score")]] = ageScores[inputDF[[siteName]]]
+	}
+	
+
+	# Get count with 
+	ageDEonly = inputDF[inputDF$IsAgeDE == "Yes",]
+	allDistNames = paste0("Distal_", as.character(1:distSiteCount), "_Score")
+	ageDEonly$ScoredSites = rowSums(!is.na(ageDEonly[allDistNames]))
+	ageDEonly$HasScoredSites = ageDEonly$ScoredSites > 0
+
+	print("Linked to any:")
+	print(sum(as.numeric(ageDEonly$HasScoredSites)))
+
+	replaceNAdf = ageDEonly
+	replaceNAdf[is.na(replaceNAdf)] = 0
+	replaceNAdf$AgeSpecPeak = rowSums(abs(ageDEonly[allDistNames]) > 1.96)
+
+	
+
+	ageSpecPeakCount = replaceNAdf$AgeSpecPeak[!is.na(replaceNAdf$AgeSpecPeak)]
+	print("Linked to sig")
+	print(sum(ageSpecPeakCount > 0))
+
+	siteVec = character()
+	allDistSites = paste0("Distal_", as.character(1:distSiteCount))
+	for (eachCol in allDistSites){
+		siteVec = c(siteVec, ageDEonly[[eachCol]])
+	}
+
+	browser()
+
+	uniqueSites = unique(siteVec)
+	siteFile = "/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2022_10_30_lyonCiceroComp_nobackup/fileInputs/ageDEsites.rds"
+	saveRDS(uniqueSites, file =siteFile)
+
+	# Get sites with >1.96 test statistic
+	statSigSites = agePeakData$peak[abs(agePeakData$effect_by_error) > 1.96]
+	uniqueSigSites = uniqueSites[uniqueSites %in% statSigSites]
+	siteFile = "/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2022_10_30_lyonCiceroComp_nobackup/fileInputs/sigAgeDEsites.rds"
+	saveRDS(uniqueSigSites, file =siteFile)
+
+	# ageDEonly = ageDEonly[c("")]
+
+	print("Hey")
+	print("Hey")
+	print("Hey")
+	print("Hey")
+	print("Hey")
+
+	return(inputDF)
+
+}
+
 outputSeqContent = function(inputDF, opt, distSiteCount){
   distalCols = paste0("Distal_", as.character(1:distSiteCount))
 
   # Only count protein coding genes
+  print("Getting Prot Coding Genes")
   inputDF = getProteinCodingGenes(inputDF)
   # Get empty entry counts
   miniDF = inputDF[distalCols]
@@ -113,7 +216,16 @@ outputSeqContent = function(inputDF, opt, distSiteCount){
           opt$promoterUpstream, "upstream", opt$promoterDownstream, "down", opt$coaccessCutoff, "coacCut", opt$peakSize, "peaks", ".csv" )
   write.csv(outputDF, file=outFile)
 
+  # 11-1-22: Look at age-related content
+  inputDF = assignAgeRelatedGenes(inputDF, distSiteCount)
+
+  # Plot the histogram distribution
+
+
 }
+
+outputSeqContent(promoterDistalDF, opt, opt$maxNdistalSites)
+
 
 
 getCiceroPathData <- function(opt){

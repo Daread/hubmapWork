@@ -105,7 +105,7 @@ for (row in 1:nrow(sample_df)){
 
   
 
-
+  browser()
 
   
   # filter cells based on Unique reads, FRIP and FRIT  (cutoffs set above)

@@ -99,6 +99,14 @@ getFormattedEffectDirection <- function(combinedCSV, opt){
 }
 
 
+getQvalAsterisk <- function(combinedCSV, opt){
+	# Add a column with one asterisk if < .1, two if < .05, three if < .01
+	combinedCSV$Significance = ifelse(combinedCSV$padj >= .1, "",
+								ifelse(combinedCSV$padj >= .05, "*", 
+									ifelse(combinedCSV$padj >= .01, "**", "***")))
+	return(combinedCSV)
+}
+
 
 
 combinedCSV = getCombinedCSV(opt, cellTypes)
@@ -116,21 +124,29 @@ outDir = "./plots/GSEA_Summaries/"
 dir.create(outDir)
 
 if (opt$covariate == "SexM"){
-	figWidth = 2400
+	figWidth = 3600
 	colorPaletteToUse = "Dark2"
 } else{
-	figWidth = 3200
+	figWidth = 4400
 	colorPaletteToUse = "Set1"
 }
+
+# Add col with labels based on p value
+combinedCSV = getQvalAsterisk(combinedCSV, opt)
+
+# Remove underscores from cell type names
+combinedCSV$cellType = gsub("_", " ", combinedCSV$cellType)
 
 # Output:
 outfile = paste0("OnlySigHits_p", as.character(opt$padjCutoff), "_by_", opt$covariate, ".png" )
 png(paste0(outDir, outfile), res=200, width=figWidth, height=1400)
-myPlot = ggplot(combinedCSV[combinedCSV$padj < opt$padjCutoff,], aes_string(x="pathway", y="cellType", col="Effect_Direction")) +
+myPlot = ggplot(combinedCSV[combinedCSV$padj < opt$padjCutoff,],
+					 aes_string(x="pathway", y="cellType", col="Effect_Direction", label="Significance")) +
 			geom_point(aes(size=Enrichment)) +
+			geom_text(vjust=0, nudge_y=.1, colour="Black") +
 			monocle_theme_opts() + 
 			 theme(axis.text.x = element_text(angle = 45, hjust=1)) +              #theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
-			 theme(text = element_text(size = 18))  + ylab("Cell Type") +
+			 theme(text = element_text(size = 22))  + ylab("Cell Type") +
 			 xlab("Pathway") + 
 			 guides(col=guide_legend(title="Effect Direction"))+
 			 scale_color_brewer(palette=colorPaletteToUse)

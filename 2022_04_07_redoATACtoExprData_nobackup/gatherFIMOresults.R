@@ -33,7 +33,11 @@ option_list = list(
 
   make_option(c("-q", "--peakSize"), type="numeric", 
         default=600,
-              help="-1 -> Keep as is, or enter a positive integer to make all peaks the same size", metavar="numeric")
+              help="-1 -> Keep as is, or enter a positive integer to make all peaks the same size", metavar="numeric"),
+
+  make_option(c("-l", "--linkSet"), type="character", 
+        default="Cicero", 
+              help="Path to cds to process", metavar="character")
 )
 opt_parser = OptionParser(option_list=option_list)
 opt = parse_args(opt_parser)
@@ -44,7 +48,7 @@ opt = parse_args(opt_parser)
 # Get previous output
 dfName = paste0("Gene_Prom_Plus_Distal_WithSequence_Sites_Max", opt$maxNdistalSites, "_Upstream", opt$promoterUpstream,
                 "_Downstream", opt$promoterDownstream, "_cicCuf", opt$coaccessCutoff,
-                    "peakSize", opt$peakSize)
+                    "peakSize", opt$peakSize, "_Links_", opt$linkSet)
 promoterDistalDFWithSeqs = readRDS(paste0("./rdsOutputs/", dfName, ".RDS"))
 
 # Need to load the FIMO results

@@ -39,8 +39,11 @@ option_list = list(
 
   make_option(c("-g", "--gtfFile"), type="character", 
         default="/net/trapnell/vol1/home/readdf/trapLabDir/hubmap/results/2022_04_07_redoMotifModel_nobackup/fileOutputs/protCodingOnlyHumanGTF.gtf",
-              help="Path and file for human gtf", metavar="character")
+              help="Path and file for human gtf", metavar="character"),
 
+  make_option(c("-l", "--linkSet"), type="character", 
+        default="Cicero", 
+              help="Path to cds to process", metavar="character")
 
 )
 opt_parser = OptionParser(option_list=option_list)
@@ -50,7 +53,7 @@ opt = parse_args(opt_parser)
 outDirName = paste0("./plots/regression/",
             "Prot_Only_Gene_Prom_Plus_Distal_WithSequence_Sites_Max", opt$maxNdistalSites, "_Upstream", opt$promoterUpstream,
                 "_Downstream", opt$promoterDownstream, "_cicCuf", opt$coaccessCutoff,
-                    "peakSize", opt$peakSize,"pVal", as.character(opt$pValFIMOcutoff), "/" )
+                    "peakSize", opt$peakSize, "_Links_", opt$linkSet, "pVal", as.character(opt$pValFIMOcutoff), "/" )
 dir.create(outDirName)
 
 getInputDF <- function(opt){
@@ -58,7 +61,7 @@ getInputDF <- function(opt){
   dirName = paste0("../2022_04_07_redoATACtoExprData_nobackup/fileOutputs/", 
             "Gene_Prom_Plus_Distal_WithSequence_Sites_Max", opt$maxNdistalSites, "_Upstream", opt$promoterUpstream,
                 "_Downstream", opt$promoterDownstream, "_cicCuf", opt$coaccessCutoff,
-                    "peakSize", opt$peakSize, "/" )
+                    "peakSize", opt$peakSize, "_Links_", opt$linkSet, "/" )
   # dirName = paste0("../2022_04_07_redoATACtoExprData_nobackup/fileOutputs/backupAllOldIntermediatesBeforeFixRaceConditionBug/", 
   #           "Gene_Prom_Plus_Distal_WithSequence_Sites_Max", opt$maxNdistalSites, "_Upstream", opt$promoterUpstream,
   #               "_Downstream", opt$promoterDownstream, "_cicCuf", opt$coaccessCutoff,
@@ -67,7 +70,7 @@ getInputDF <- function(opt){
   # Get previous output
   dfName = paste0("Gene_Prom_Plus_Distal_WithSequence_Sites_Max", opt$maxNdistalSites, "_Upstream", opt$promoterUpstream,
                 "_Downstream", opt$promoterDownstream, "_cicCuf", opt$coaccessCutoff,
-                    "peakSize", opt$peakSize, "pVal", as.character(opt$pValFIMOcutoff))
+                    "peakSize", opt$peakSize, "_Links_", opt$linkSet, "pVal", as.character(opt$pValFIMOcutoff))
 
   # Read in according to the featureSelection specified
   featureDF = read.csv(paste0(dirName, dfName, "_", opt$featureSelection, ".csv"))

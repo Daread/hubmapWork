@@ -34,11 +34,13 @@ formatCellType <- function(inputColumn){
 	inputColumn = ifelse(inputColumn == "Lymphatic_Endothelium", "Lymphatic Endothelium", inputColumn)
 	inputColumn = ifelse(inputColumn == "Mast_Cell", "Mast Cell", inputColumn)
 
+	inputColumn = gsub("_", " ", inputColumn)
+
 	return(inputColumn)
 }
 
 
-getCombinedCSV <- function(opt, inputCelltypes, inputCovariateList){
+getCombinedCSV <- function(opt, inputCelltypes, inputCovariateList, filterbyQval = TRUE){
 
 	# Loop and get a combined CSV for each covariate
 	for (eachCovariate in names(inputCovariateList)){
@@ -49,7 +51,7 @@ getCombinedCSV <- function(opt, inputCelltypes, inputCovariateList){
 			thisCSV = read.csv(inputDEfile)
 			# Keep only the pathway name, enrichment, and p val. 
 			# browser()
-			thisCSV = thisCSV[c("gene", "coefficientValue", "q_val")]
+			thisCSV = thisCSV[c("gene", "coefficientValue", "q_val", "pval")]
 			# Add a column for the cell type, for tidy format plotting later
 			thisCSV$cellType = eachType
 			myDF = rbind(myDF, thisCSV)
@@ -59,8 +61,10 @@ getCombinedCSV <- function(opt, inputCelltypes, inputCovariateList){
 		myDF$Effect_Magnitude = abs(myDF$coefficientValue)
 		myDF$Effect_Direction = ifelse(myDF$coefficientValue > 0.0, "Positive", "Negative")
 
-		myDF = myDF[myDF$q_val < opt$padjCutoff,]
-
+		if (filterbyQval){
+			myDF = myDF[myDF$q_val < opt$padjCutoff,]
+		}
+		
 		inputCovariateList[[eachCovariate]] = myDF
 	}
 
@@ -69,6 +73,14 @@ getCombinedCSV <- function(opt, inputCelltypes, inputCovariateList){
 	return(inputCovariateList)
 }
 
+
+outputFullCSV = function(inputList){
+	outDir = "./plots/DE_Summaries/"
+	covarToOutput = c("Age", "SexM")
+	for (eachCovar in covarToOutput){
+		write.csv(inputList[[eachCovar]], file=paste0(outDir, eachCovar, "_Combined_DE_All.csv"))
+	}
+}
 
 
 # Get the passed parameters
@@ -95,11 +107,6 @@ covariateCSVs = vector(mode='list', length=length(covariatesToPlot))
 names(covariateCSVs) = covariatesToPlot
 
 combinedCSVlist = getCombinedCSV(opt, cellTypes, covariateCSVs)
-
-
-
-
-
 
 
 
@@ -154,6 +161,52 @@ for (eachCovariate in covariatesToPlot){
 	write.csv(combinedCSVlist[[eachCovariate]], file=fullDEfile)
 
 } 
+
+
+
+
+
+
+
+# Look at all results, not q value filtered:
+
+combinedCSVlistFull = getCombinedCSV(opt, cellTypes, covariateCSVs, filterbyQval = FALSE)
+
+sexResFull = combinedCSVlistFull$SexM
+
+outputFullCSV(combinedCSVlistFull)
+
+# Plot P value distribution
+
+plotPvalDists = function(inputList){
+	outDir = "./plots/DE_Summaries/p_val_dist/"
+	dir.create(outDir)
+
+	covarToOutput = c("Age", "SexM")
+	cellTypes = c("Endothelium", "Fibroblast", "Lymphocyte", "Myeloid", "Perivascular", "Ventricular_Cardiomyocytes", "Neuron", "Adipocytes")
+	for (eachCovar in covarToOutput){
+		thisCovarCSV = inputList[[eachCovar]]
+
+		for (eachType in cellTypes){
+			print(paste0("Working on ", eachType))
+			miniCSV = thisCovarCSV[thisCovarCSV$cellType == eachType,]
+			# Plot a histogram of the p values here
+			png(paste0(outDir, eachType, "_by_", eachCovar, "_pvals.png"), res=200, height=800, width=800)
+			myPlot = ggplot(miniCSV, aes_string(x="pval")) + 
+					geom_histogram() +
+					ggtitle(paste0(eachType, " by ", eachCovar))
+			print(myPlot)
+			dev.off()
+		}
+	}
+
+
+}
+
+
+
+
+plotPvalDists(combinedCSVlistFull)
 
 
 

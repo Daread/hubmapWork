@@ -1,10 +1,41 @@
 
 library(ggplot2)
+library(ggrepel)
 
+monocle_theme_opts <- function()
+{
+  theme(strip.background = element_rect(colour = 'white', fill = 'white')) +
+    theme(panel.border = element_blank()) +
+    theme(axis.line.x = element_line(size=0.25, color="black")) +
+    theme(axis.line.y = element_line(size=0.25, color="black")) +
+    # theme(panel.grid.minor.x = element_blank(),
+    #       panel.grid.minor.y = element_blank()) +
+    # theme(panel.grid.major.x = element_blank(),
+    #       panel.grid.major.y = element_blank()) +
+    theme(panel.background = element_rect(fill='white')) +
+    theme(legend.key=element_blank()) + 
+
+    theme(
+	  panel.grid.major = element_line(size = 0.25, linetype = 'solid',
+	                                colour = "grey"), 
+	  panel.grid.minor = element_line(size = 0.25, linetype = 'solid',
+                                colour = "grey")
+  )
+}
+
+
+formatCellType = function(inputType){
+	if (inputType == "Ventricular_Cardiomyocytes"){
+		return("\nVentricular Cardiomyocytes")
+	}
+	if (inputType == "Neuron"){
+		return("Neurons")
+	}
+	return(inputType)
+}
 
 plotCoefs = function(inputDF, genesToPlot, opt){
 
-	# browser()
 	# Subet to plotting DF
 	plotDF = inputDF[inputDF$gene %in% genesToPlot,]
 	# Add columns for upper/lower CI values
@@ -19,12 +50,29 @@ plotCoefs = function(inputDF, genesToPlot, opt){
 	plotDir = "./plots/CoefficientPlots/"
 	dir.create(plotDir)
 
+	# Re-order genes to plot in order specified in input
+	plotDF$gene = as.factor(plotDF$gene)
+	plotDF$gene = factor(plotDF$gene, levels = rev(genesToPlot))
+
+	# Get covariate label
+	covarLabel = ifelse(opt$covar == "SexM", "Sex", opt$covar)
+	thisCellType = formatCellType(opt$cellType)
+
+	shift_in_set = c("SLC22A15", "KDM6A", "DOK5")
+	plotDF$label_pos = ifelse(as.character(plotDF$gene) %in% shift_in_set, 
+				plotDF$coefficientValue * .6, plotDF$coefficientValue)
+
 	# Plot with ggplot
 	png(paste0(plotDir, opt$cellType, "_Coef_", opt$genes, ".png"), res=300, height = 1500, width=1500)
-	myPlot = ggplot(plotDF, aes_string(x="coefficientValue", y = "gene", label="Q_Annot")) + 
-				geom_point() + 
-				geom_text(vjust=0, nudge_y=.1) +
-				geom_errorbar(aes_string(xmin = "CI_Lower", xmax = "CI_Upper"), width = .1)
+	myPlot = ggplot(plotDF, aes_string( y = "gene", label="Q_Annot")) + 
+				geom_point(aes_string(x="coefficientValue")) + 
+				monocle_theme_opts() + 
+				geom_text(aes_string(x="label_pos"), vjust=0, nudge_y=.1, size=6) +
+				geom_errorbar(aes_string(xmin = "CI_Lower", xmax = "CI_Upper"), width = .1) +
+				xlab(paste0("Coef in ", thisCellType, "\nby ", covarLabel)) +
+				ylab("Gene")+ 
+				theme(text=element_text(size=20)) + 
+				xlim(min(plotDF$CI_Lower) * 1.2, max(plotDF$CI_Upper) * 1.2)
 
 	print(myPlot)
 	dev.off()

@@ -35,3 +35,27 @@ Rscript ./summarizeFitResults.R --featureSelection Binary_Combined_Motif_Counts 
 
 
 
+
+
+
+
+# 10-24-22 Look at Lyon for setting up coaccessibility links
+Rscript ./summarizeFitResults.R --featureSelection Binary_Combined_Motif_Counts --summarizationPolicy alpha0.5_average --predictionFraming regression --paramFile VaryDistalLyon2
+
+
+
+
+
+
+
+# 2-3-23 Double-checking on generation of promoter-only plot
+
+
+
+Rscript ./submissionVersionSummarizeFitResults.R --featureSelection Binary_PromOnly_Motif_Counts --predictionFraming regression --paramFile VaryPromotersAllRunsMade
+
+
+
+
+
+

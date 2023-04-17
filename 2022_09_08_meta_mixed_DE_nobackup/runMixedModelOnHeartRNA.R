@@ -8,7 +8,7 @@ library(monocle3)
 # print(modStatus)
 library("optparse")
 
-library("nebula")
+library("nebula") # Requres R4.1.2 
 
 # library("lme4")
 # Source the draft code for mixed model fitting
@@ -51,7 +51,7 @@ fit_nebula <- function(inputCDS, modelFormula, fixedEffectVec){
   print(str(nebulaDF))
   print(str(offsetVal))
 
-  nebRes = nebula(exprs(inputCDS), colData(inputCDS)$Donor, pred=nebulaDF, offset = colData(inputCDS)$umi)
+  nebRes = nebula(exprs(inputCDS), colData(inputCDS)$Donor, pred=nebulaDF, offset = colData(inputCDS)$umi, covariance = TRUE)
   return(nebRes)
 }
 
@@ -133,6 +133,7 @@ if (!(opt$cellType %in% abundantCellTypes)){
   # Update to require 5% expressing cells
   testCDS = filterByCellsExpressed(testCDS, .05)
 }
+
 # veryRareCellTypes = c("Adipocytes", "Neuron" )
 # if ((opt$cellType %in% veryRareCellTypes)){
 #   # Update to require 5% expressing cells

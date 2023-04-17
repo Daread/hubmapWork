@@ -118,6 +118,10 @@ chaffinCDS = as.cell_data_set(chaffinSeurat)
 colData(chaffinCDS)$disease = as.character(colData(chaffinCDS)$disease)
 chaffinCDS = chaffinCDS[,colData(chaffinCDS)$disease == "NF"]
 
+colData(chaffinCDS)$donor_id = as.character(colData(chaffinCDS)$donor_id)
+tuckerRepeatDonors = c("P1600", "P1702")
+chaffinCDS = chaffinCDS[,!(colData(chaffinCDS)$donor_id %in% tuckerRepeatDonors)]
+
 
 # Get Gene names
 geneNameFile = "./chaffin_et_al_data/DCM_HCM_Expression_Matrix_genes_V1.tsv"

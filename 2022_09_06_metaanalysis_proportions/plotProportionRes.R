@@ -8,6 +8,27 @@ library(stringr)
 source("/net/trapnell/vol1/home/readdf/trapLabDir/sharedProjectCode/utility/singleCellUtilFuncs.R")
 
 
+monocle_theme_opts <- function()
+{
+  theme(strip.background = element_rect(colour = 'white', fill = 'white')) +
+    theme(panel.border = element_blank()) +
+    theme(axis.line.x = element_line(size=0.25, color="black")) +
+    theme(axis.line.y = element_line(size=0.25, color="black")) +
+    # theme(panel.grid.minor.x = element_blank(),
+    #       panel.grid.minor.y = element_blank()) +
+    # theme(panel.grid.major.x = element_blank(),
+    #       panel.grid.major.y = element_blank()) +
+    theme(panel.background = element_rect(fill='white')) +
+    theme(legend.key=element_blank()) + 
+    theme(
+	  panel.grid.major = element_line(size = 0.25, linetype = 'solid',
+	                                colour = "grey"), 
+	  panel.grid.minor = element_line(size = 0.25, linetype = 'solid',
+                                colour = "grey")
+  )
+}
+
+
 getPropDF = function(opt){
 
 	# Read in the file
@@ -61,6 +82,9 @@ adjustProportions = function(thisPropDF, fitInput){
 
 plotProportionAgeFit = function(eachType, fitInput, propInput, opt, adjustProps = TRUE,
 								pointColor = "DataSource"){
+
+
+
 	# browser()
 	# Get the data from this celltype
 	thisPropDF = propInput[propInput$Cell_Type == eachType,]
@@ -96,8 +120,13 @@ plotProportionAgeFit = function(eachType, fitInput, propInput, opt, adjustProps 
 
 	# browser()
 
+	if (pointColor == "DataSource"){
+		pointColor = "Publication"
+		thisPropDF$Publication = thisPropDF$DataSource
+	}
+
 	# Make the plot
-	png(paste0(outDir, eachType, "_Age_Vs_", adjNote, "ColorBy_", pointColor, ".png"), res=200, height=1400, width=1400)
+	png(paste0(outDir, eachType, "_Age_Vs_", adjNote, "ColorBy_", pointColor, ".png"), res=200, height=1400, width=1200)
 	myPlot = ggplot() + 
 				geom_point(data=thisPropDF, aes_string(x="Age", y="Proportion", color=pointColor)) + 
 				geom_line(data=curveDF, aes_string(x="Age", y="Proportion")) + 
@@ -106,7 +135,9 @@ plotProportionAgeFit = function(eachType, fitInput, propInput, opt, adjustProps 
 						 ymin = (exp((logitProp - 2*se*Age))/(1 + exp( (logitProp - 2*se*Age))) ),
 						ymax = (  exp((logitProp + 2*se*Age))/(1 + exp( (logitProp + 2*se*Age))) ) ),
 						 fill = "blue", alpha=.15) + 
-				xlab(paste0(eachType, " Proportion"))
+				ylab(paste0(eachType, " Proportion"))+ 
+				theme(text=element_text(size=24)) +
+				monocle_theme_opts()
 
 				# (data=malePredDF,
 				# aes(ymin =(          exp((logitProp - 2*se))/(1 + exp( (logitProp - 2*se))) ) ,

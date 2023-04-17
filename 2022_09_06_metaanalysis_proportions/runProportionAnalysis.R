@@ -641,97 +641,97 @@ getAdjustedProportions = function(inputPropDF, inputFits,
 # newDFmale = data.frame("Sex" = c("M", "M", "M"), "Anatomical_Site" = c("Apex", "Apex", "Apex"), "Age" = c(25, 45, 60))
 # newDFfemale = data.frame("Sex" = c("F", "F", "F"), "Anatomical_Site" = c("Apex", "Apex", "Apex"), "Age" = c(25, 45, 60))
 
-newDFfemale = data.frame("Sex" = rep("F", 36), "Anatomical_Site" = rep("Apex", 36), "Age" = 25:60)
-newDFmale = data.frame("Sex" = rep("M", 36), "Anatomical_Site" = rep("Apex", 36), "Age" = 25:60)
+# newDFfemale = data.frame("Sex" = rep("F", 36), "Anatomical_Site" = rep("Apex", 36), "Age" = 25:60)
+# newDFmale = data.frame("Sex" = rep("M", 36), "Anatomical_Site" = rep("Apex", 36), "Age" = 25:60)
 
 
-darkPalette = brewer.pal(8, "Dark2")
+# darkPalette = brewer.pal(8, "Dark2")
 
 
-# Make age vs. adjusted proportion plots, regressing out sex + anatomical site
+# # Make age vs. adjusted proportion plots, regressing out sex + anatomical site
+
+# # cellTypeRegressionDF$adjustedPropSexSite = getAdjustedProportions(cellTypeRegressionDF, test_res, 
+# # 																regressOut=c("Sex", "Anatomical_Site"))
 
 # cellTypeRegressionDF$adjustedPropSexSite = getAdjustedProportions(cellTypeRegressionDF, test_res, 
-# 																regressOut=c("Sex", "Anatomical_Site"))
+# 																regressOut=c( "Anatomical_Site"))
 
-cellTypeRegressionDF$adjustedPropSexSite = getAdjustedProportions(cellTypeRegressionDF, test_res, 
-																regressOut=c( "Anatomical_Site"))
+# # Format test_res to have cell type names match
+# test_res$Cell_Type = formatCellType(test_res$Cell_Type)
+# cellTypeRegressionDF$Cell_Type = formatCellType(cellTypeRegressionDF$Cell_Type)
 
-# Format test_res to have cell type names match
-test_res$Cell_Type = formatCellType(test_res$Cell_Type)
-cellTypeRegressionDF$Cell_Type = formatCellType(cellTypeRegressionDF$Cell_Type)
+# # Scatter plot for adjusted props in each cell type vs. age
+# for (eachCelltype in cellTypesToTest){
 
-# Scatter plot for adjusted props in each cell type vs. age
-for (eachCelltype in cellTypesToTest){
+# 	subsetDF = cellTypeRegressionDF[cellTypeRegressionDF$Cell_Type == eachCelltype,]
 
-	subsetDF = cellTypeRegressionDF[cellTypeRegressionDF$Cell_Type == eachCelltype,]
+# 	malePred = predict(fullFits[[eachCelltype]], newdata = newDFmale, se=T)
+# 	# browser()
+# 	malePredDF = data.frame("logitlink_mu"=as.data.frame(malePred$fitted.values)[["logitlink(mu)"]], 
+# 							"se" = as.data.frame(malePred$se.fit)[["logitlink(mu)"]],
+# 							"adjustedPropSexSite" = exp(as.data.frame(malePred$fitted.values)[["logitlink(mu)"]]) / 
+# 											(1 + exp(as.data.frame(malePred$fitted.values)[["logitlink(mu)"]]))	,
+# 							   "Age" = newDFmale$Age)
+# 	maleColor = darkPalette[2]
 
-	malePred = predict(fullFits[[eachCelltype]], newdata = newDFmale, se=T)
-	# browser()
-	malePredDF = data.frame("logitlink_mu"=as.data.frame(malePred$fitted.values)[["logitlink(mu)"]], 
-							"se" = as.data.frame(malePred$se.fit)[["logitlink(mu)"]],
-							"adjustedPropSexSite" = exp(as.data.frame(malePred$fitted.values)[["logitlink(mu)"]]) / 
-											(1 + exp(as.data.frame(malePred$fitted.values)[["logitlink(mu)"]]))	,
-							   "Age" = newDFmale$Age)
-	maleColor = darkPalette[2]
+# 	femalePred = predict(fullFits[[eachCelltype]], newdata = newDFfemale, se=T)
+# 	# browser()
+# 	femalePredDF = data.frame("logitlink_mu"=as.data.frame(femalePred$fitted.values)[["logitlink(mu)"]], 
+# 							"se" = as.data.frame(femalePred$se.fit)[["logitlink(mu)"]],
+# 							"adjustedPropSexSite" = exp(as.data.frame(femalePred$fitted.values)[["logitlink(mu)"]]) / 
+# 											(1 + exp(as.data.frame(femalePred$fitted.values)[["logitlink(mu)"]]))	,
+# 							   "Age" = newDFfemale$Age)
+# 	femaleColor = darkPalette[1]
 
-	femalePred = predict(fullFits[[eachCelltype]], newdata = newDFfemale, se=T)
-	# browser()
-	femalePredDF = data.frame("logitlink_mu"=as.data.frame(femalePred$fitted.values)[["logitlink(mu)"]], 
-							"se" = as.data.frame(femalePred$se.fit)[["logitlink(mu)"]],
-							"adjustedPropSexSite" = exp(as.data.frame(femalePred$fitted.values)[["logitlink(mu)"]]) / 
-											(1 + exp(as.data.frame(femalePred$fitted.values)[["logitlink(mu)"]]))	,
-							   "Age" = newDFfemale$Age)
-	femaleColor = darkPalette[1]
+# 	colnames(malePred$fitted.values)[1]
 
-	colnames(malePred$fitted.values)[1]
+# 	# Get the predictions
 
-	# Get the predictions
+# 	# Get the intercept and age coefficient for this cell type
+# 	cellTypeFits = test_res[test_res$Cell_Type == eachCelltype,]
+# 	cellTypeFitVec = cellTypeFits$estimate
+# 	cellTypeSEvec = cellTypeFits$std.error
+# 	names(cellTypeFitVec) = cellTypeFits$term
+# 	names(cellTypeSEvec) =  cellTypeFits$term
+# 	thisInt = cellTypeFitVec["(Intercept):1"]
+# 	ageCoef = cellTypeFitVec["Age"]
+# 	ageSE   = cellTypeSEvec["Age"]
 
-	# Get the intercept and age coefficient for this cell type
-	cellTypeFits = test_res[test_res$Cell_Type == eachCelltype,]
-	cellTypeFitVec = cellTypeFits$estimate
-	cellTypeSEvec = cellTypeFits$std.error
-	names(cellTypeFitVec) = cellTypeFits$term
-	names(cellTypeSEvec) =  cellTypeFits$term
-	thisInt = cellTypeFitVec["(Intercept):1"]
-	ageCoef = cellTypeFitVec["Age"]
-	ageSE   = cellTypeSEvec["Age"]
+# 	# browser()
 
-	# browser()
+# 	png(paste0(jitterDir, "Age_vs_adjustedProp_for_", eachCelltype, ".png"), 
+# 			res=200, height=1000,width=1200)
+# 	myPlot = ggplot(data = subsetDF, aes_string(x="Age", y="adjustedPropSexSite")) + 
+# 			# geom_point()  +
+# 			 geom_point(aes(col=Sex)) +
+# 			 monocle_theme_opts() + 
+# 			theme(text=element_text(size=20)) + 
+# 			ylab(paste0(eachCelltype, " Adjusted Proportion")) +
+# 			# geom_smooth(method = "lm", se = FALSE, col="black")
+# 			# geom_function(fun = function(x) exp(thisInt + ageCoef*x)/(1 + exp(thisInt + ageCoef*x))) + 
+# 			# geom_ribbon(aes(ymin =(  exp(thisInt + (ageCoef - 2*ageSE)*Age)/(1 + exp(thisInt + (ageCoef - 2*ageSE)*Age)) ) ,
+# 			# 				ymax =(  exp(thisInt + (ageCoef + 2*ageSE)*Age)/(1 + exp(thisInt + (ageCoef + 2*ageSE)*Age)) ) ), fill="grey70", 
+# 			# 				alpha=.15 ) + 
+# 			# Male SE and predictions
+# 			geom_line(data=malePredDF, color=maleColor) + 
+# 			geom_ribbon(data=malePredDF,
+# 				aes(ymin =(          exp((logitlink_mu - 2*se))/(1 + exp( (logitlink_mu - 2*se))) ) ,
+# 							ymax =(  exp((logitlink_mu + 2*se))/(1 + exp( (logitlink_mu + 2*se))) ) ), fill=maleColor, 
+# 							alpha=.15 ) +
+# 			# ...and for female
+# 			geom_line(data=femalePredDF, color=femaleColor) + 
+# 			geom_ribbon(data=femalePredDF,
+# 				aes(ymin =(          exp((logitlink_mu - 2*se))/(1 + exp( (logitlink_mu - 2*se))) ) ,
+# 							ymax =(  exp((logitlink_mu + 2*se))/(1 + exp( (logitlink_mu + 2*se))) ) ), fill=femaleColor, 
+# 							alpha=.15 ) +
 
-	png(paste0(jitterDir, "Age_vs_adjustedProp_for_", eachCelltype, ".png"), 
-			res=200, height=1000,width=1200)
-	myPlot = ggplot(data = subsetDF, aes_string(x="Age", y="adjustedPropSexSite")) + 
-			# geom_point()  +
-			 geom_point(aes(col=Sex)) +
-			 monocle_theme_opts() + 
-			theme(text=element_text(size=20)) + 
-			ylab(paste0(eachCelltype, " Adjusted Proportion")) +
-			# geom_smooth(method = "lm", se = FALSE, col="black")
-			# geom_function(fun = function(x) exp(thisInt + ageCoef*x)/(1 + exp(thisInt + ageCoef*x))) + 
-			# geom_ribbon(aes(ymin =(  exp(thisInt + (ageCoef - 2*ageSE)*Age)/(1 + exp(thisInt + (ageCoef - 2*ageSE)*Age)) ) ,
-			# 				ymax =(  exp(thisInt + (ageCoef + 2*ageSE)*Age)/(1 + exp(thisInt + (ageCoef + 2*ageSE)*Age)) ) ), fill="grey70", 
-			# 				alpha=.15 ) + 
-			# Male SE and predictions
-			geom_line(data=malePredDF, color=maleColor) + 
-			geom_ribbon(data=malePredDF,
-				aes(ymin =(          exp((logitlink_mu - 2*se))/(1 + exp( (logitlink_mu - 2*se))) ) ,
-							ymax =(  exp((logitlink_mu + 2*se))/(1 + exp( (logitlink_mu + 2*se))) ) ), fill=maleColor, 
-							alpha=.15 ) +
-			# ...and for female
-			geom_line(data=femalePredDF, color=femaleColor) + 
-			geom_ribbon(data=femalePredDF,
-				aes(ymin =(          exp((logitlink_mu - 2*se))/(1 + exp( (logitlink_mu - 2*se))) ) ,
-							ymax =(  exp((logitlink_mu + 2*se))/(1 + exp( (logitlink_mu + 2*se))) ) ), fill=femaleColor, 
-							alpha=.15 ) +
+# 			 scale_color_brewer(palette="Dark2")
+# 	print(myPlot)
+# 	dev.off()
 
-			 scale_color_brewer(palette="Dark2")
-	print(myPlot)
-	dev.off()
+# 	print(eachCelltype)
 
-	print(eachCelltype)
-
-}
+# }
 
 
 
@@ -802,180 +802,180 @@ for (eachCelltype in cellTypesToTest){
 
 ################ End beta binomial fitting
 
-##############################################################################################################
-# Formatting for generating panel correlation plots
-unmeltedPropDF = dcast(propDF, Var2 ~ Var1)
-colnames(unmeltedPropDF)[1] = opt$colToUse
-rownames(unmeltedPropDF) = unmeltedPropDF[[opt$colToUse]]
-unmeltedPropDF = unmeltedPropDF[, -which(names(unmeltedPropDF) %in% c(opt$colToUse))]
+# ##############################################################################################################
+# # Formatting for generating panel correlation plots
+# unmeltedPropDF = dcast(propDF, Var2 ~ Var1)
+# colnames(unmeltedPropDF)[1] = opt$colToUse
+# rownames(unmeltedPropDF) = unmeltedPropDF[[opt$colToUse]]
+# unmeltedPropDF = unmeltedPropDF[, -which(names(unmeltedPropDF) %in% c(opt$colToUse))]
 
 
-# From https://r-coder.com/correlation-plot-r/
+# # From https://r-coder.com/correlation-plot-r/
 
-# Function to add correlation coefficients
-panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...) {
-    usr <- par("usr")
-    on.exit(par(usr))
-    par(usr = c(0, 1, 0, 1))
-    Cor <- (cor(x, y)) # Remove abs function if desired
-    txt <- paste0(prefix, format(c(Cor, 0.123456789), digits = digits)[1])
-    if(missing(cex.cor)) {
-        cex.cor <- 0.4 / strwidth(txt)
-    }
-    text(0.5, 0.5, txt,
-         cex = 1 + cex.cor * abs(Cor)) # Resize the text by level of correlation
-}
-######
-
-
-png(paste0(outputPath, "scatterPlotMatrix_", opt$colToUse, ".png"),
-				width=2000, height=2000, res=200)
-thisPlot = pairs(t(unmeltedPropDF),
-				upper.panel = panel.cor)
-print(thisPlot)
-dev.off()
+# # Function to add correlation coefficients
+# panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...) {
+#     usr <- par("usr")
+#     on.exit(par(usr))
+#     par(usr = c(0, 1, 0, 1))
+#     Cor <- (cor(x, y)) # Remove abs function if desired
+#     txt <- paste0(prefix, format(c(Cor, 0.123456789), digits = digits)[1])
+#     if(missing(cex.cor)) {
+#         cex.cor <- 0.4 / strwidth(txt)
+#     }
+#     text(0.5, 0.5, txt,
+#          cex = 1 + cex.cor * abs(Cor)) # Resize the text by level of correlation
+# }
+# ######
 
 
-# Make a plot just showing fibroblast vs cardiomyocyte abundance
-fibCardioDF = data.frame("Fibroblasts" = as.numeric(unmeltedPropDF["Fibroblast",]), 
-						"Cardiomyocytes" = as.numeric(unmeltedPropDF["Cardiomyocyte",]))
-
-png(paste0(outputPath, "_FibroblastVsCardiomyocytes",".png"),
-				width=1400, height=1400, res=200)
-thisPlot = ggplot(fibCardioDF, aes(x=Fibroblasts, y=Cardiomyocytes)) + 
-			geom_point() + ggtitle("Proportion of Fibroblasts Vs Cardiomyocytes") + 
-			theme(text=element_text(size=18)) 
-print(thisPlot)
-dev.off()
+# png(paste0(outputPath, "scatterPlotMatrix_", opt$colToUse, ".png"),
+# 				width=2000, height=2000, res=200)
+# thisPlot = pairs(t(unmeltedPropDF),
+# 				upper.panel = panel.cor)
+# print(thisPlot)
+# dev.off()
 
 
+# # Make a plot just showing fibroblast vs cardiomyocyte abundance
+# fibCardioDF = data.frame("Fibroblasts" = as.numeric(unmeltedPropDF["Fibroblast",]), 
+# 						"Cardiomyocytes" = as.numeric(unmeltedPropDF["Cardiomyocyte",]))
 
-
-
-# Just make a plot to show the UMAP
-plotUMAP_Monocle(allCellCDS, processingNote, "highLevelCellType", textSize=4,
-				show_labels=TRUE, outputPath=outputPath)
-
-
-
-
-# 8-17-21: Get a dataframe with proportions of each cell type for each sample, labeling donor and site.
-#.         Then use this to look at inter-site vs inter-donor variation, as well as 
-
-cellTypePropDF = transpose(unmeltedPropDF)
-rownames(cellTypePropDF) = colnames(unmeltedPropDF)
-colnames(cellTypePropDF) = rownames(unmeltedPropDF)
-
-cellTypePropDF$sampleName = rownames(cellTypePropDF)
-
-meltedPropDF = reshape::melt(cellTypePropDF, id="sampleName")
-colnames(meltedPropDF) = c("sampleName", "Cell_Type", "Proportion")
-
-
-
-meltedPropDF = tidyr::separate(meltedPropDF, col="sampleName", into=c("Donor", "Anatomical_Site"), 
-				sep="[.]", remove=FALSE, extra="merge")
+# png(paste0(outputPath, "_FibroblastVsCardiomyocytes",".png"),
+# 				width=1400, height=1400, res=200)
+# thisPlot = ggplot(fibCardioDF, aes(x=Fibroblasts, y=Cardiomyocytes)) + 
+# 			geom_point() + ggtitle("Proportion of Fibroblasts Vs Cardiomyocytes") + 
+# 			theme(text=element_text(size=18)) 
+# print(thisPlot)
+# dev.off()
 
 
 
 
 
-
-# Now, time to get 
-varianceComparisonDF = data.frame("Mean_Value" = double(),
-								"Comparison" = character(),
-								  "Cell_Type" = character())
-
-cellTypes = c("Adipocytes", "B_Cell", "Cardiomyocyte", "Endocardium", "Fibroblast", 
-              "Lymphatic_Endothelium", "Macrophage", "Mast_Cell", "Neuronal", "T_Cell",
-                "Vascular_Endothelium", "VSM_and_Pericyte")
+# # Just make a plot to show the UMAP
+# plotUMAP_Monocle(allCellCDS, processingNote, "highLevelCellType", textSize=4,
+# 				show_labels=TRUE, outputPath=outputPath)
 
 
 
-getInterDonorSetSite <- function(subsetDF, siteToUse){
-	thisDF = subsetDF[subsetDF$Anatomical_Site == siteToUse,]
-	# Loop over all combinations
-	comboMeanVec = numeric()
 
-	for (eachInd in 1:(nrow(thisDF) - 1)){
-		for (eachComp in (eachInd + 1):nrow(thisDF)){
-			thisAbsDiff = abs(thisDF[eachInd, "Proportion"] - thisDF[eachComp, "Proportion"] )
+# # 8-17-21: Get a dataframe with proportions of each cell type for each sample, labeling donor and site.
+# #.         Then use this to look at inter-site vs inter-donor variation, as well as 
 
-			comboMeanVec = c(comboMeanVec, thisAbsDiff)
-		}
-	}
-	return ( mean(comboMeanVec))
-}
+# cellTypePropDF = transpose(unmeltedPropDF)
+# rownames(cellTypePropDF) = colnames(unmeltedPropDF)
+# colnames(cellTypePropDF) = rownames(unmeltedPropDF)
 
+# cellTypePropDF$sampleName = rownames(cellTypePropDF)
 
-getIntraDonorDiff <- function(subsetDF, siteOne, siteTwo){
-	thisDF = subsetDF[subsetDF$Anatomical_Site %in% c(siteOne, siteTwo),]
-
-	interSiteVec = numeric()
-	# Get all the intra donor combos
-	for (eachDonor in levels(as.factor(subsetDF$Donor))){
-		miniDF = thisDF[thisDF$Donor == eachDonor,]
-		# If only one, skip
-		if (nrow(miniDF) == 1){
-			next 
-		}
-		# Otherwise, get the comparison
-		interSiteDiff = abs(miniDF[1, "Proportion"] - miniDF[2, "Proportion"])
-		interSiteVec = c(interSiteVec, interSiteDiff)
-	}
-
-	return(mean(interSiteVec))
-}
+# meltedPropDF = reshape::melt(cellTypePropDF, id="sampleName")
+# colnames(meltedPropDF) = c("sampleName", "Cell_Type", "Proportion")
 
 
 
-for (eachCellType in cellTypes){
-	subsetDF = meltedPropDF[meltedPropDF$Cell_Type == eachCellType,]
-	interLV = getInterDonorSetSite(subsetDF, "Left.Vent")
-	interApex = getInterDonorSetSite(subsetDF, "Apex")
-
-	interSiteIntraDonor = getIntraDonorDiff(subsetDF, "Left.Vent", "Apex")
-
-	cellTypeDF = data.frame("Mean_Value" = c(interLV, interApex, interSiteIntraDonor))
-	cellTypeDF$Comparison = c("Inter_Donor_LV", "Inter_Donor_Apex", "Inter_Site_Within_Donor")
-	cellTypeDF$Cell_Type = eachCellType
-	varianceComparisonDF = rbind(varianceComparisonDF, cellTypeDF)
-
-}
-
-# Make a plot
-
-
-png(paste0(outputPath, "Compare_InterSite_vs_InterDonor_Differences", ".png"),
-				width=2000, height=2000, res=200)
-thisPlot = ggplot(varianceComparisonDF, aes_string(x="Cell_Type", y="Mean_Value", color="Comparison")) +
-				geom_point()+ 
-     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
-print(thisPlot)
-dev.off()
+# meltedPropDF = tidyr::separate(meltedPropDF, col="sampleName", into=c("Donor", "Anatomical_Site"), 
+# 				sep="[.]", remove=FALSE, extra="merge")
 
 
 
-# Calculate the t test for LV vs apex proportions
-tTestDF = data.frame("Cell_Type" = cellTypes)
-rownames(tTestDF) = tTestDF$Cell_Type
 
-for (eachCellType in cellTypes){
-	subsetDF = meltedPropDF[meltedPropDF$Cell_Type == eachCellType,]
-	subsetDF = subsetDF[subsetDF$Anatomical_Site %in% c("Left.Vent", "Apex"),]
 
-	# Get the t test
-	xVec = subsetDF[subsetDF$Anatomical_Site == "Left.Vent",]$Proportion
-	yVec = subsetDF[subsetDF$Anatomical_Site == "Apex",]$Proportion
-	tRes = t.test(xVec, yVec)
 
-	tTestDF[eachCellType, "P_Value_LV_vs_Apex"] = tRes$p.value
+# # Now, time to get 
+# varianceComparisonDF = data.frame("Mean_Value" = double(),
+# 								"Comparison" = character(),
+# 								  "Cell_Type" = character())
 
-}
+# cellTypes = c("Adipocytes", "B_Cell", "Cardiomyocyte", "Endocardium", "Fibroblast", 
+#               "Lymphatic_Endothelium", "Macrophage", "Mast_Cell", "Neuronal", "T_Cell",
+#                 "Vascular_Endothelium", "VSM_and_Pericyte")
 
-# Save this
 
-write.csv(tTestDF, paste0(outputPath, "tTestsForProportions.csv"))
+
+# getInterDonorSetSite <- function(subsetDF, siteToUse){
+# 	thisDF = subsetDF[subsetDF$Anatomical_Site == siteToUse,]
+# 	# Loop over all combinations
+# 	comboMeanVec = numeric()
+
+# 	for (eachInd in 1:(nrow(thisDF) - 1)){
+# 		for (eachComp in (eachInd + 1):nrow(thisDF)){
+# 			thisAbsDiff = abs(thisDF[eachInd, "Proportion"] - thisDF[eachComp, "Proportion"] )
+
+# 			comboMeanVec = c(comboMeanVec, thisAbsDiff)
+# 		}
+# 	}
+# 	return ( mean(comboMeanVec))
+# }
+
+
+# getIntraDonorDiff <- function(subsetDF, siteOne, siteTwo){
+# 	thisDF = subsetDF[subsetDF$Anatomical_Site %in% c(siteOne, siteTwo),]
+
+# 	interSiteVec = numeric()
+# 	# Get all the intra donor combos
+# 	for (eachDonor in levels(as.factor(subsetDF$Donor))){
+# 		miniDF = thisDF[thisDF$Donor == eachDonor,]
+# 		# If only one, skip
+# 		if (nrow(miniDF) == 1){
+# 			next 
+# 		}
+# 		# Otherwise, get the comparison
+# 		interSiteDiff = abs(miniDF[1, "Proportion"] - miniDF[2, "Proportion"])
+# 		interSiteVec = c(interSiteVec, interSiteDiff)
+# 	}
+
+# 	return(mean(interSiteVec))
+# }
+
+
+
+# for (eachCellType in cellTypes){
+# 	subsetDF = meltedPropDF[meltedPropDF$Cell_Type == eachCellType,]
+# 	interLV = getInterDonorSetSite(subsetDF, "Left.Vent")
+# 	interApex = getInterDonorSetSite(subsetDF, "Apex")
+
+# 	interSiteIntraDonor = getIntraDonorDiff(subsetDF, "Left.Vent", "Apex")
+
+# 	cellTypeDF = data.frame("Mean_Value" = c(interLV, interApex, interSiteIntraDonor))
+# 	cellTypeDF$Comparison = c("Inter_Donor_LV", "Inter_Donor_Apex", "Inter_Site_Within_Donor")
+# 	cellTypeDF$Cell_Type = eachCellType
+# 	varianceComparisonDF = rbind(varianceComparisonDF, cellTypeDF)
+
+# }
+
+# # Make a plot
+
+
+# png(paste0(outputPath, "Compare_InterSite_vs_InterDonor_Differences", ".png"),
+# 				width=2000, height=2000, res=200)
+# thisPlot = ggplot(varianceComparisonDF, aes_string(x="Cell_Type", y="Mean_Value", color="Comparison")) +
+# 				geom_point()+ 
+#      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+# print(thisPlot)
+# dev.off()
+
+
+
+# # Calculate the t test for LV vs apex proportions
+# tTestDF = data.frame("Cell_Type" = cellTypes)
+# rownames(tTestDF) = tTestDF$Cell_Type
+
+# for (eachCellType in cellTypes){
+# 	subsetDF = meltedPropDF[meltedPropDF$Cell_Type == eachCellType,]
+# 	subsetDF = subsetDF[subsetDF$Anatomical_Site %in% c("Left.Vent", "Apex"),]
+
+# 	# Get the t test
+# 	xVec = subsetDF[subsetDF$Anatomical_Site == "Left.Vent",]$Proportion
+# 	yVec = subsetDF[subsetDF$Anatomical_Site == "Apex",]$Proportion
+# 	tRes = t.test(xVec, yVec)
+
+# 	tTestDF[eachCellType, "P_Value_LV_vs_Apex"] = tRes$p.value
+
+# }
+
+# # Save this
+
+# write.csv(tTestDF, paste0(outputPath, "tTestsForProportions.csv"))
 
 
 

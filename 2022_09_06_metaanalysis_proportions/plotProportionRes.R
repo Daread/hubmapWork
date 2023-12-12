@@ -95,8 +95,10 @@ plotProportionAgeFit = function(eachType, fitInput, propInput, opt, adjustProps 
 	if (adjustProps){
 		thisPropDF = adjustProportions(thisPropDF, thisFitDF)
 		adjNote = "Adjusted_Props"
+		y_lab_note = paste0(eachType, " Normalized Proportion")
 	} else{
 		adjNote = "Raw_Props"
+		y_lab_note = paste0(eachType, " Proportion")
 	}
 
 	# Get the points for the curve 
@@ -135,8 +137,9 @@ plotProportionAgeFit = function(eachType, fitInput, propInput, opt, adjustProps 
 						 ymin = (exp((logitProp - 2*se*Age))/(1 + exp( (logitProp - 2*se*Age))) ),
 						ymax = (  exp((logitProp + 2*se*Age))/(1 + exp( (logitProp + 2*se*Age))) ) ),
 						 fill = "blue", alpha=.15) + 
-				ylab(paste0(eachType, " Proportion"))+ 
-				theme(text=element_text(size=24)) +
+				ylab(y_lab_note)+ 
+				theme(text=element_text(size=24))  + 
+				guides(colour = guide_legend(override.aes = list(size=10))) +
 				monocle_theme_opts()
 
 				# (data=malePredDF,

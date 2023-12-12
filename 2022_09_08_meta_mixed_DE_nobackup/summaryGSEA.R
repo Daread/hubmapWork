@@ -136,6 +136,7 @@ combinedCSV = getQvalAsterisk(combinedCSV, opt)
 
 # Remove underscores from cell type names
 combinedCSV$cellType = gsub("_", " ", combinedCSV$cellType)
+# combinedCSV[["Effect Direction"]] = combinedCSV$Effect_Direction
 
 # Output:
 outfile = paste0("OnlySigHits_p", as.character(opt$padjCutoff), "_by_", opt$covariate, ".png" )
@@ -148,7 +149,9 @@ myPlot = ggplot(combinedCSV[combinedCSV$padj < opt$padjCutoff,],
 			 theme(axis.text.x = element_text(angle = 45, hjust=1)) +              #theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
 			 theme(text = element_text(size = 22))  + ylab("Cell Type") +
 			 xlab("Pathway") + 
-			 guides(col=guide_legend(title="Effect Direction"))+
+			 # theme(legend.key.size = unit(2, 'cm')) +
+			 guides(colour = guide_legend(title="Effect Direction", override.aes = list(size=10)))+
+			 # guides(col=guide_legend(title="Effect Direction"))+ 
 			 scale_color_brewer(palette=colorPaletteToUse)
 
 print(myPlot)

@@ -94,6 +94,12 @@ getFormattedEffectDirection <- function(combinedCSV, opt){
 		combinedCSV$Effect_Direction = ifelse(combinedCSV$Effect_Direction == "Positive", "Higher in Age", 
 																				"Lower in Age")
 	}
+
+	if (grepl("Anatomical_Site", opt$covariate)){
+		this_site <- gsub("Anatomical_Site", "", opt$covariate)
+		combinedCSV$Effect_Direction = ifelse(combinedCSV$Effect_Direction == "Positive", paste0("Higher in ", this_site), 
+																				"Higher in LV")
+	}
  
 	return(combinedCSV)
 }

@@ -44,9 +44,9 @@ modelFitDescription = opt$modelNotes
 rdsPath = "./rdsOutput/mixedModels/"
 outputDir = paste0("./plots/", cellType, modelFitDescription, "/")
 
-# fixedCoefsToGet = c("SexM", "Age", "Anatomical_SiteRight_Vent", 
-# 					"Anatomical_SiteApex", "Anatomical_SiteSeptum" )
-fixedCoefsToGet = c("SexM")
+fixedCoefsToGet = c("SexM", "Age", "Anatomical_SiteApex", 
+          "Anatomical_SiteRV", "Anatomical_SiteSeptum") 
+# fixedCoefsToGet = c("SexM")
 
 msigdbr_df = msigdbr(species = "Homo sapiens", category = "H")
 msigdbr_list = split(x = msigdbr_df$gene_symbol, f = msigdbr_df$gs_name)

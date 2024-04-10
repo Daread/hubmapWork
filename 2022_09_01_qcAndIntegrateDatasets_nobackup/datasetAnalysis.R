@@ -148,14 +148,17 @@ plotUMAP_Monocle(fullCDS, processingNote, "Cell_Shared_Label",
 plotUMAP_Monocle(fullCDS, processingNote, "Anatomical_Site", 
 	outputPath= "./plots/", show_labels=FALSE)
 
-
 plotUMAP_Monocle(fullCDS, processingNote, "log10_umi", 
 	outputPath= "./plots/", show_labels=FALSE)
 
 plotUMAP_Monocle(fullCDS, processingNote, "DataType", 
 	outputPath= "./plots/", show_labels=FALSE)
 
+plotUMAP_Monocle(fullCDS, processingNote, "Sex", 
+  outputPath= "./plots/", show_labels=FALSE)
 
+plotUMAP_Monocle(fullCDS, processingNote, "Age", 
+  outputPath= "./plots/", show_labels=FALSE)
 
 
 

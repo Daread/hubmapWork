@@ -34,7 +34,8 @@ option_list = list(
               help="Number of sub-jobs to split the DE testing task into", metavar="numeric"),
     make_option(c("-v", "--covariates"), type="character", 
   			# default="Endocardium", 
-  			default="SexM,Age",
+  			# default="SexM,Age",
+  			default="SexM,Age,Anatomical_SiteApex,Anatomical_SiteRV,Anatomical_SiteSeptum",
               help="Covariates to summarize", metavar="character")
     )
 opt_parser = OptionParser(option_list=option_list)

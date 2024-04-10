@@ -158,7 +158,8 @@ myPlot = ggplot(combinedCSV[combinedCSV$padj < opt$padjCutoff,],
 			 theme(text = element_text(size = 18))  + 
 			 ylab("Cell Type") +
 			 xlab("Pathway") + 
-			 guides(col=guide_legend(title="Effect Direction"))+
+			 # guides(col=guide_legend(title="Effect Direction"))+
+			  guides(colour = guide_legend(title="Effect Direction", override.aes = list(size=10)))+
 			 scale_color_brewer(palette=colorPaletteToUse)
 
 print(myPlot)

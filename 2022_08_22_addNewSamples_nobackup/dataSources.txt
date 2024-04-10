@@ -2,7 +2,8 @@
 
 #############
 Koenig et al 
-(https://www.nature.com/articles/s44161-022-00028-6) data at https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE183852
+(https://www.nature.com/articles/s44161-022-00028-6) 
+data at https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE183852
 (Note: has both cells and nuclei. 2 healthy cells, 25 healthy nuclei. Going to try just using nuclei)
 
 (Seurat file?)
@@ -28,6 +29,7 @@ data at https://singlecell.broadinstitute.org/single_cell/study/SCP498/transcrip
 7 donors
 https://www.ahajournals.org/doi/10.1161/CIRCULATIONAHA.119.045401 table 1 has donor metadat
 
+Gene naming under genes_v2.tsv
 
 
 ########
@@ -41,7 +43,7 @@ Data at https://cellxgene.cziscience.com/collections/e75342a8-0f3b-4ec5-8ee1-245
 #######
 Chaffin et al
 https://www.nature.com/articles/s41586-022-04817-8
-16 healthy controls
+14 healthy controls (16 in data but two of these, P1600 and P1702, appear to be repeat donors from those sampled in Tucker et al)
 Data at https://singlecell.broadinstitute.org/single_cell/study/SCP1303/single-nuclei-profiling-of-human-dilated-and-hypertrophic-cardiomyopathy#study-download
 Downloaded the h5.ad archive there (human_dcm_hcm_scportal_03.17.2022.h5ad) and uploaded manually
 

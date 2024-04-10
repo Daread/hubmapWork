@@ -103,6 +103,9 @@ cellTypes = c("Endothelium", "Fibroblast", "Lymphocyte", "Myeloid", "Perivascula
 
 
 covariatesToPlot = c("SexM", "Age")
+# covariatesToPlot = c("SexM", "Age", "Anatomical_SiteApex", 
+# 					"Anatomical_SiteRV", "Anatomical_SiteSeptum") 
+
 covariateCSVs = vector(mode='list', length=length(covariatesToPlot))
 names(covariateCSVs) = covariatesToPlot
 
@@ -130,7 +133,7 @@ deCounts = getDEcounts(combinedCSVlist, covariatesToPlot)
 deCounts$cellType = formatCellType(deCounts$cellType)
 # Format the coviarate column
 deCounts$Covariate = ifelse(deCounts$covariate == "SexM", "Sex", deCounts$covariate)
-
+deCounts$Covariate = gsub("Anatomical_Site", "", deCounts$covariate) #ifelse(deCounts$covariate == "SexM", "Sex", deCounts$covariate)
 
 # Simplest version: only plot those that 
 outDir = "./plots/DE_Summaries/"
@@ -142,6 +145,7 @@ deCounts$cellType = formatCellType(deCounts$cellType)
 # Output:
 outfile = paste0("DE_hits_qVal_", as.character(opt$padjCutoff), "_by_", paste0(covariatesToPlot, collapse="_"), ".png" )
 png(paste0(outDir, outfile), res=200, width=1200, height=1000)
+# png(paste0(outDir, outfile), res=200, width=1600, height=1000)
 myPlot = ggplot(deCounts, aes_string(x="cellType", y="n", fill="Covariate")) +
 			geom_bar(position="dodge", stat="identity") +
 			monocle_theme_opts() + 

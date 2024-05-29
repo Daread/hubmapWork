@@ -262,7 +262,20 @@ set.seed(7)
 allCellCDS = allCellCDS[,sample(ncol(allCellCDS))]
 
 allCellCDS = hardAssignDonorSexes(allCellCDS)
-allCellCDS = hardAssignDonorSexes(allCellCDS)
+# allCellCDS = hardAssignDonorSexes(allCellCDS)
+
+# Output the CDS here for sharing later as A) A monocle CDS, or B) metadata + count matrix format
+common_out <- "../combined_processed_data/"
+dir.create(common_out)
+saveRDS(allCellCDS, paste0(common_out, "heart_snRNA_Seq_CDS.rds"))
+
+library(readr)
+library(Matrix)
+
+# Matrix form
+write_csv(as.data.frame(colData(allCellCDS)), paste0(common_out, "heart_snRNA_Seq_cell_data.csv"))
+write_csv(as.data.frame(rowData(allCellCDS)), paste0(common_out, "heart_snRNA_Seq_gene_data.csv"))
+writeMM(exprs(allCellCDS), paste0(common_out, "heart_snRNA_Seq_counts_mm_file.txt"))
 
 
 colData(allCellCDS)$Sample = colData(allCellCDS)$sampleName

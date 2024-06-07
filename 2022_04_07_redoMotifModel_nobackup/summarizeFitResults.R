@@ -8,42 +8,30 @@ library("optparse")
 # Get the passed parameters
 option_list = list(
 
-  make_option(c("-f", "--featureSelection"), type="character", 
-        default= "Binary_PromOnly_Motif_Counts", #"Binary_Combined_Motif_Counts", #"Binary_PromOnly_Motif_Counts",#   "Binary_Combined_Motif_Counts", # "Binary_Combined_Motif_Counts", "Binary_PromOnly_Motif_Counts"
+  make_option(c("-f", "--featureSelection"), type="character",
+        default="Binary_PromOnly_Motif_Counts", #"Binary_Combined_Motif_Counts", # "Binary_Combined_Motif_Counts", "Binary_PromOnly_Motif_Counts"
               help="Option of which features to use for input", metavar="character"),
 
-  make_option(c("-t", "--predictionTask"), type="character", 
+  make_option(c("-t", "--predictionTask"), type="character",
         default="_log2_CPM",   # "_log2_ratio_Vs_AllTypeMean", #  "_log2_CPM"
               help="Option of which RNA data to predict", metavar="character"),
 
-  make_option(c("-y", "--predictionFraming"), type="character", 
+  make_option(c("-y", "--predictionFraming"), type="character",
         default= "regression", #"classification",   # "classification" or "regression"
               help="Option of which RNA data to predict", metavar="character"),
 
-  make_option(c("-s", "--summarizationPolicy"), type="character", 
+  make_option(c("-s", "--summarizationPolicy"), type="character",
         default = "alpha0.5_average", #"alpha0.5_max", # "alpha0.5_average",   # "alpha0.5_max" "alpha0.5_average"
               help="How to quantify the accuracy of a whole run (which comprises many alpha vals and cell types)", metavar="character"),
 
-make_option(c("-l", "--linkSet"), type="character", 
-        default="LyonV1", # "Cicero", 
-              help="Path to cds to process", metavar="character"),
-
-  make_option(c("-p", "--paramFile"), type="character", 
-        default=  "VaryPromotersAllRunsMade",  #"VaryDistalLyon2",   # "VaryPromotersLyon", # "VaryPromotersAllRunsMade",   # "VaryPromotersAllRunsMade.csv",  "VaryDistalParams",  #"VaryPromoters",   #"VaryDistalParams",   # "VaryPromoters" or "VaryDistalParams"
+  make_option(c("-p", "--paramFile"), type="character",
+        default="VaryPromotersAllRunsMade",   # "VaryPromotersAllRunsMade.csv",  "VaryDistalParams",  #"VaryPromoters",   #"VaryDistalParams",   # "VaryPromoters" or "VaryDistalParams"
               help="File of which parameter sets to summarize", metavar="character")
+
 )
 
 opt_parser = OptionParser(option_list=option_list)
 opt = parse_args(opt_parser)
-
-# 2024_06_06: Hard code (comment out after!) to output the particular data/run used to generate fig 5A
-
-opt$paramFile =  "VaryPromotersAllRunsMade"
-opt$featureSelection = "Binary_PromOnly_Motif_Counts"
-
-
-################
-
 opt$variableParams = paste0(opt$promoterUpstream, "_", opt$promoterDownstream, "_",
                            opt$coaccessCutoff, "_", opt$maxNdistalSites, "_", opt$peakSize )
 
@@ -75,24 +63,14 @@ monocle_theme_opts <- function()
 
 getFitDF <- function(inputParams, opt){
   # Read the file
-  if (!(opt$linkSet == "NotSet")){
-    subDir = paste0(  "Prot_Only_Gene_Prom_Plus_Distal_WithSequence_Sites_Max", inputParams[1,"maxNsites"], "_Upstream",inputParams[1,"Upstream"],
+  subDir = paste0(  "Prot_Only_Gene_Prom_Plus_Distal_WithSequence_Sites_Max", inputParams[1,"maxNsites"], "_Upstream",inputParams[1,"Upstream"],
                 "_Downstream", inputParams[1,"Downstream"], "_cicCuf", inputParams[1,"coaccessCutoff"],
-                    "peakSize", inputParams[1,"peakSize"], "_Links_", opt$linkSet, "pVal", as.character(inputParams[1,"pVal"]), "/",
+                    "peakSize", inputParams[1,"peakSize"],"pVal", as.character(inputParams[1,"pVal"]), "/",
                     "fitVals", opt$predictionTask, "_from_", opt$featureSelection, ".csv" )
-    } else{
-      subDir = paste0(  "Prot_Only_Gene_Prom_Plus_Distal_WithSequence_Sites_Max", inputParams[1,"maxNsites"], "_Upstream",inputParams[1,"Upstream"],
-                "_Downstream", inputParams[1,"Downstream"], "_cicCuf", inputParams[1,"coaccessCutoff"],
-                    "peakSize", inputParams[1,"peakSize"], "pVal", as.character(inputParams[1,"pVal"]), "/",
-                    "fitVals", opt$predictionTask, "_from_", opt$featureSelection, ".csv" )
-    }
-  # print(subDir)
-
   thisResultFile = paste0("./plots/", opt$predictionFraming, "/", subDir )
   thisFitResult = read.csv(thisResultFile)
   return(thisFitResult)
 }
-# Prot_Only_Gene_Prom_Plus_Distal_WithSequence_Sites_Max1_Upstream5000_Downstream2000_cicCuf0.08peakSize100_Links_LyonV1pVal1e-04
 
 # I want to condense down a whole lot of run information into a single number.
 # Otherwise I'll end up with annoyances that some parameter sets are ever-so-slightly better in one cell type than another
@@ -156,20 +134,20 @@ makePlotThisComparison <- function(paramFileName, dfSummaries, opt){
     }
 
     png(paste0("./plots/summaryPlots/", opt$predictionFraming,
-           "_", paramFileName, "_", opt$summarizationPolicy, "_", opt$linkSet, "_", opt$featureSelection, ".png"),
+           "_", paramFileName, "_", opt$summarizationPolicy, ".png"),
         height=1200, width=1400,res=200)
-    myPlot = ggplot(dfSummaries, aes_string(x="Parameter_Set", y=opt$summarizationPolicy, color="pVal") ) + 
-          geom_point() + 
+    myPlot = ggplot(dfSummaries, aes_string(x="Parameter_Set", y=opt$summarizationPolicy, color="pVal") ) +
+          geom_point() +
           xlab("TSS Up/Downstream Lengths") + #+ ggtitle(paste0(paramFileName, "_", opt$summarizationPolicy)) +
-            theme(text = element_text(size = 20)) + 
-              ylab(yLabToUse) + 
-               guides(color=guide_legend(title="Motif p Value"))+ 
+            theme(text = element_text(size = 20)) +
+              ylab(yLabToUse) +
+               guides(color=guide_legend(title="Motif p Value"))+
           theme(axis.text.x = element_text(angle = 45, vjust = 0.5))
     print(myPlot)
     dev.off()
   }
 
-  if ((paramFileName == "VaryPromotersAllRunsMade") | (paramFileName == "VaryPromotersLyon") | (paramFileName == "VaryPromotersAllRunsMadeV2")) {
+  if (paramFileName == "VaryPromotersAllRunsMade") {
     # Show varied upstrea/downstream sizes and a point per alpha
     dfSummaries$Parameter_Set = paste0(dfSummaries$Upstream, "/", dfSummaries$Downstream)
     dfSummaries$pVal = as.character(dfSummaries$pVal)
@@ -181,33 +159,33 @@ makePlotThisComparison <- function(paramFileName, dfSummaries, opt){
     }
 
     png(paste0("./plots/summaryPlots/", opt$predictionFraming,
-           "_", paramFileName, "_", opt$summarizationPolicy, "_", opt$linkSet, "_", opt$featureSelection, ".png"),
+           "_", paramFileName, "_", opt$summarizationPolicy, ".png"),
         height=1200, width=1400,res=200)
-    myPlot = ggplot(dfSummaries, aes_string(x="Parameter_Set", y=opt$summarizationPolicy, color="pVal") ) + 
-          geom_point() + 
+    myPlot = ggplot(dfSummaries, aes_string(x="Parameter_Set", y=opt$summarizationPolicy, color="pVal") ) +
+          geom_point() +
           xlab("TSS Up/Downstream Lengths") + #+ ggtitle(paste0(paramFileName, "_", opt$summarizationPolicy)) +
-            theme(text = element_text(size = 20)) + 
-              ylab(yLabToUse) + 
-               guides(color=guide_legend(title="Motif p Value"))+ 
+            theme(text = element_text(size = 20)) +
+              ylab(yLabToUse) +
+               guides(color=guide_legend(title="Motif p Value"))+
           theme(axis.text.x = element_text(angle = 45, vjust = 0.5))
     print(myPlot)
     dev.off()
   }
 
 
-  if (paramFileName %in% c("VaryDistalAllRunsMade", "VaryDistalParams", "VaryDistalLyon1", "VaryDistalLyon2")) {
+  if (paramFileName %in% c("VaryDistalAllRunsMade", "VaryDistalParams")) {
     # Show varied upstrea/downstream sizes and a point per alpha
     dfSummaries$Parameter_Set = paste0(dfSummaries$coaccessCutoff, "/", dfSummaries$maxNsites, "/", dfSummaries$peakSize)
     dfSummaries$pVal = as.character(dfSummaries$pVal)
 
     png(paste0("./plots/summaryPlots/", opt$predictionFraming,
-           "_", paramFileName, "_", opt$summarizationPolicy, "_", opt$linkSet, "_", opt$featureSelection, ".png"),
+           "_", paramFileName, "_", opt$summarizationPolicy, ".png"),
         height=1000, width=1600,res=200)
-    myPlot = ggplot(dfSummaries, aes_string(x="Parameter_Set", y=opt$summarizationPolicy, color="pVal") ) + 
-          geom_point() + 
+    myPlot = ggplot(dfSummaries, aes_string(x="Parameter_Set", y=opt$summarizationPolicy, color="pVal") ) +
+          geom_point() +
           xlab("Cicero Cutoff/Max Distal Sites Linked/Distal Site Size in bp") + ylab("R^2 Average") +
-          #ggtitle(paste0(paramFileName, "_", opt$summarizationPolicy))+ 
-          guides(color=guide_legend(title="Motif p Value"))+ 
+          #ggtitle(paste0(paramFileName, "_", opt$summarizationPolicy))+
+          guides(color=guide_legend(title="Motif p Value"))+
           theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
     print(myPlot)
     dev.off()
@@ -218,41 +196,6 @@ makePlotThisComparison <- function(paramFileName, dfSummaries, opt){
 print("Plotting Comparison Now")
 # Plot, based on the input file used
 makePlotThisComparison(paramFileName, dfSummaries, opt)
-
-
-
-# Added 10-30-22: Add plot for the relationship between
-# lyonDir = "./plots/summaryPlots/LyonWork/"
-# dir.create(lyonDir)
-
-
-
-for (eachRowNum in 1:nrow(parameterSets)){
-  thisParamDF = parameterSets[eachRowNum,]
-  fitDF = getFitDF(thisParamDF, opt)
-  # browser()
-  # Now, summarize this fitting acrossGroups
-  thisParamDF[[opt$summarizationPolicy]] = getSummarizedDF(fitDF, opt)
-
-  # Get the number of sites and links going into fitting this model
-  
-
-  # Add this to the summary data frame
-  dfSummaries = rbind(dfSummaries, thisParamDF)
-
-
-}
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -302,16 +245,16 @@ makePlotUnsummarizedThisComparison <- function(paramFileName, fitDF, opt){
     yLabToUse = "Validation R^2"
 
     png(paste0("./plots/summaryPlots/ShowCellTypes_", opt$predictionFraming,
-           "_", paramFileName,  "_", opt$linkSet, "_", opt$featureSelection, ".png"),
+           "_", paramFileName,  ".png"),
         height=1200, width=1400,res=200)
-    myPlot = ggplot(fitDF, aes_string(x="Parameter_Set", y="Val_R_Squared") ) + 
-          geom_boxplot(aes(fill=pVal)) + 
+    myPlot = ggplot(fitDF, aes_string(x="Parameter_Set", y="Val_R_Squared") ) +
+          geom_boxplot(aes(fill=pVal)) +
           geom_point(position=position_dodge(width=0.75), aes(group=pVal)) +
-          monocle_theme_opts() + 
+          monocle_theme_opts() +
           xlab("TSS Up/Downstream Lengths") + #+ ggtitle(paste0(paramFileName, "_", opt$summarizationPolicy)) +
-            theme(text = element_text(size = 20)) + 
-              ylab(yLabToUse) + 
-               guides(fill=guide_legend(title="Motif p Value"))+ 
+            theme(text = element_text(size = 20)) +
+              ylab(yLabToUse) +
+               guides(fill=guide_legend(title="Motif p Value"))+
           theme(axis.text.x = element_text(angle = 45, vjust = 0.5))
     print(myPlot)
     dev.off()
@@ -325,16 +268,16 @@ makePlotUnsummarizedThisComparison <- function(paramFileName, fitDF, opt){
     yLabToUse = "Validation R^2"
 
     png(paste0("./plots/summaryPlots/ShowCellTypes_", opt$predictionFraming,
-           "_", paramFileName,  "_", opt$linkSet, "_", opt$featureSelection, ".png"),
+           "_", paramFileName,  ".png"),
         height=1800, width=2100,res=300)
-    myPlot = ggplot(fitDF, aes_string(x="Parameter_Set", y="Val_R_Squared") ) + 
-          geom_boxplot(aes(fill=pVal)) + 
+    myPlot = ggplot(fitDF, aes_string(x="Parameter_Set", y="Val_R_Squared") ) +
+          geom_boxplot(aes(fill=pVal)) +
           geom_point(position=position_dodge(width=0.75), aes(group=pVal)) +
-          monocle_theme_opts() + 
+          monocle_theme_opts() +
           xlab("TSS Up/Downstream Lengths") + #+ ggtitle(paste0(paramFileName, "_", opt$summarizationPolicy)) +
-            theme(text = element_text(size = 20)) + 
-              ylab(yLabToUse) + 
-               guides(fill=guide_legend(title="Motif p Value"))+ 
+            theme(text = element_text(size = 20)) +
+              ylab(yLabToUse) +
+               guides(fill=guide_legend(title="Motif p Value"))+
           theme(axis.text.x = element_text(angle = 45, vjust = 0.5)) +
           scale_fill_brewer(palette="Set1")
     print(myPlot)
@@ -349,22 +292,23 @@ makePlotUnsummarizedThisComparison <- function(paramFileName, fitDF, opt){
     yLabToUse = "Validation R^2"
 
     png(paste0("./plots/summaryPlots/ShowCellTypes_", opt$predictionFraming,
-           "_", paramFileName,  "_", opt$linkSet, "_", opt$featureSelection, ".png"),
+           "_", paramFileName,  ".png"),
         height=1200, width=1800,res=200)
-    myPlot = ggplot(fitDF, aes_string(x="Parameter_Set", y="Val_R_Squared") ) + 
-          geom_boxplot(aes(fill=pVal)) + 
+    myPlot = ggplot(fitDF, aes_string(x="Parameter_Set", y="Val_R_Squared") ) +
+          geom_boxplot(aes(fill=pVal)) +
           geom_point(position=position_dodge(width=0.75), aes(group=pVal)) +
-          monocle_theme_opts() + 
+          monocle_theme_opts() +
           xlab("Cicero Cutoff/Max Sites Linked/Distal Site Size in BP") + #+ ggtitle(paste0(paramFileName, "_", opt$summarizationPolicy)) +
-            theme(text = element_text(size = 20)) + 
-              ylab(yLabToUse) + 
-               guides(fill=guide_legend(title="Motif p Value"))+ 
+            theme(text = element_text(size = 20)) +
+              ylab(yLabToUse) +
+               guides(fill=guide_legend(title="Motif p Value"))+
           theme(axis.text.x = element_text(angle = 45, vjust = 0.5)) +
           scale_fill_brewer(palette="Set1")
     print(myPlot)
     dev.off()
   }
 }
+
 
 
 # Plot, based on the input file used
@@ -381,6 +325,37 @@ makePlotUnsummarizedThisComparison(paramFileName, dfFullData, opt)
 
 
 
+
+
+# Add 2024-06-06: Output the dataframe used in plotting Figure 5A
+fitDF = dfFullData
+if (paramFileName == "VaryPromotersAllRunsMade") {
+  # Show varied upstrea/downstream sizes and a point per alpha
+  fitDF$Parameter_Set = paste0(fitDF$Upstream, "/", fitDF$Downstream)
+  fitDF$pVal = as.character(fitDF$pVal)
+
+  # Now write this csv to the combined data folder, now that I've double-checked it's the right df for panel 5A
+  library(readr)
+  common_out = "../combined_processed_data/"
+  write_csv(fitDF, paste0(common_out, "Promoter_Hyperparameter_Test_Res.csv"))
+
+  yLabToUse = "Validation R^2"
+  png(paste0("./plots/summaryPlots/Verify_PlotVersion.png"),
+      height=1800, width=2100,res=300)
+  myPlot = ggplot(fitDF, aes_string(x="Parameter_Set", y="Val_R_Squared") ) +
+        geom_boxplot(aes(fill=pVal)) +
+        geom_point(position=position_dodge(width=0.75), aes(group=pVal)) +
+        monocle_theme_opts() +
+        xlab("TSS Up/Downstream Lengths") + #+ ggtitle(paste0(paramFileName, "_", opt$summarizationPolicy)) +
+          theme(text = element_text(size = 20)) +
+            ylab(yLabToUse) +
+             guides(fill=guide_legend(title="Motif p Value"))+
+        theme(axis.text.x = element_text(angle = 45, vjust = 0.5)) +
+        scale_fill_brewer(palette="Set1")
+  print(myPlot)
+  dev.off()
+}
+##################
 
 
 

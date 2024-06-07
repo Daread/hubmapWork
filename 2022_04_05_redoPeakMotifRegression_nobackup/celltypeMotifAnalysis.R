@@ -351,6 +351,15 @@ adultCombinedCSV = getCombinedCSV(opt, cellTypes, cellTypeCSVs)
 fetalCombinedCSV = getFetalCSV(opt, cellTypes)
 
 
+# 2024_05_28: Update to output data for figure plots
+library(readr)
+common_out <- "../combined_processed_data/"
+dir.create(common_out)
+
+write_csv(adultCombinedCSV,  paste0(common_out, "adult_motif_enrichments.csv"))
+write_csv(fetalCombinedCSV,  paste0(common_out, "fetal_motif_enrichments.csv"))
+####################
+
 
 correlationDF = plotCSVcomparisons(adultCombinedCSV, fetalCombinedCSV, opt, cellTypes, outDir=outputDir)
 

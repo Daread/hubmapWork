@@ -9,7 +9,7 @@ library("optparse")
 option_list = list(
 
   make_option(c("-f", "--featureSelection"), type="character", 
-        default= "Binary_Combined_Motif_Counts", #"Binary_PromOnly_Motif_Counts",#   "Binary_Combined_Motif_Counts", # "Binary_Combined_Motif_Counts", "Binary_PromOnly_Motif_Counts"
+        default= "Binary_PromOnly_Motif_Counts", #"Binary_Combined_Motif_Counts", #"Binary_PromOnly_Motif_Counts",#   "Binary_Combined_Motif_Counts", # "Binary_Combined_Motif_Counts", "Binary_PromOnly_Motif_Counts"
               help="Option of which features to use for input", metavar="character"),
 
   make_option(c("-t", "--predictionTask"), type="character", 
@@ -29,13 +29,21 @@ make_option(c("-l", "--linkSet"), type="character",
               help="Path to cds to process", metavar="character"),
 
   make_option(c("-p", "--paramFile"), type="character", 
-        default=  "VaryDistalLyon2",   # "VaryPromotersLyon", # "VaryPromotersAllRunsMade",   # "VaryPromotersAllRunsMade.csv",  "VaryDistalParams",  #"VaryPromoters",   #"VaryDistalParams",   # "VaryPromoters" or "VaryDistalParams"
+        default=  "VaryPromotersAllRunsMade",  #"VaryDistalLyon2",   # "VaryPromotersLyon", # "VaryPromotersAllRunsMade",   # "VaryPromotersAllRunsMade.csv",  "VaryDistalParams",  #"VaryPromoters",   #"VaryDistalParams",   # "VaryPromoters" or "VaryDistalParams"
               help="File of which parameter sets to summarize", metavar="character")
-
 )
 
 opt_parser = OptionParser(option_list=option_list)
 opt = parse_args(opt_parser)
+
+# 2024_06_06: Hard code (comment out after!) to output the particular data/run used to generate fig 5A
+
+opt$paramFile =  "VaryPromotersAllRunsMade"
+opt$featureSelection = "Binary_PromOnly_Motif_Counts"
+
+
+################
+
 opt$variableParams = paste0(opt$promoterUpstream, "_", opt$promoterDownstream, "_",
                            opt$coaccessCutoff, "_", opt$maxNdistalSites, "_", opt$peakSize )
 
@@ -214,8 +222,8 @@ makePlotThisComparison(paramFileName, dfSummaries, opt)
 
 
 # Added 10-30-22: Add plot for the relationship between
-lyonDir = "./plots/summaryPlots/LyonWork/"
-dir.create(lyonDir)
+# lyonDir = "./plots/summaryPlots/LyonWork/"
+# dir.create(lyonDir)
 
 
 

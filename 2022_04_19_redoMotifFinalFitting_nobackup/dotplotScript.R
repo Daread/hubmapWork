@@ -90,6 +90,14 @@ allCoefDF = read.csv(inputFile)
 allCoefDF = allCoefDF[,-which(colnames(allCoefDF) == "X")]
 
 
+# Output this (2024-06-06 edit)
+library(readr)
+common_out = "../combined_processed_data/"
+write_csv(allCoefDF, paste0(common_out, "All_Elastic_Net_Motif_Coefficients.csv"))
+
+
+#########
+
 cellTypes = c("Adipocytes", "B_Cell", "Cardiomyocyte", "Endocardium", "Fibroblast", 
               "Lymphatic_Endothelium", "Macrophage", "Mast_Cell", "Neuronal", "T_Cell",
                 "Vascular_Endothelium", "VSM_and_Pericyte")

@@ -52,7 +52,7 @@ option_list = list(
               help="Cutoff for keeping coaccessible peaks", metavar="numeric"),
 
   make_option(c("-n", "--maxNdistalSites"), type="numeric", 
-        default=5,
+        default=20,
               help="Max number of sites to link to a gene's promoter", metavar="numeric"),
 
   make_option(c("-q", "--peakSize"), type="numeric", 
@@ -167,6 +167,21 @@ if (file.exists(outFile)){
     # Save in case needed later
     write.csv(fullFitDF, outFile)
 }
+
+
+
+########## 2024_06_06: Output file used to generate plots
+
+
+# Output this (2024-06-06 edit)
+library(readr)
+common_out = "../combined_processed_data/"
+write_csv(fullFitDF, paste0(common_out, "Promoter_vs_Prom_and_Distal_Fit_Results.csv"))
+
+
+
+
+###########
 
 
 
